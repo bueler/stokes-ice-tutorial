@@ -50,6 +50,8 @@
 \newcommand{\bG}{\mathbf{G}}
 \newcommand{\bQ}{\mathbf{Q}}
 
+\newcommand{\bzero}{\mathbf{0}}
+
 \newcommand{\grad}{\nabla}
 \newcommand{\Div}{\nabla\cdot}
 \newcommand{\minmod}{\operatorname{minmod}}
@@ -65,13 +67,6 @@
 
 \newcommand{\ip}[2]{\left<#1,#2\right>}
 
-\newcommand{\xiphalf}{{x_{i+\frac{1}{2}}}}
-\newcommand{\ximhalf}{{x_{i-\frac{1}{2}}}}
-\newcommand{\Fiphalf}{{F_{i+\frac{1}{2}}}}
-\newcommand{\Fimhalf}{{F_{i-\frac{1}{2}}}}
-\newcommand{\Fiphalfn}{{F^n_{i+\frac{1}{2}}}}
-\newcommand{\Fimhalfn}{{F^n_{i-\frac{1}{2}}}}
-
 \newcommand{\trefcolumn}[1]{\begin{bmatrix} \phantom{x} \\ #1 \\ \phantom{x} \end{bmatrix}}
 \newcommand{\trefmatrixtwo}[2]{\left[\begin{array}{c|c|c} & & \\ #1 & \dots & #2 \\ & & \end{array}\right]}
 \newcommand{\trefmatrixthree}[3]{\left[\begin{array}{c|c|c|c} & & & \\ #1 & #2 & \dots & #3 \\ & & & \end{array}\right]}
@@ -79,33 +74,18 @@
 
 \newcommand{\blocktwo}[4]{\left[\begin{array}{c|c} #1 & #2 \\ \hline #3 & #4 \end{array}\right]}
 
-\newcommand{\bqed}{{\color{blue}\qed}}
 \newcommand{\ds}{\displaystyle}
-
-\newcommand\mynum[1]{{\renewcommand{\insertenumlabel}{#1}%
-      \usebeamertemplate{enumerate item} \,}}
 
 
 \title{Stokes problems using Firedrake}
 
-\subtitle{A tutorial in stages for glaciologists}
+\subtitle{A tutorial for glaciologists}
 
 \author{Ed Bueler}
 
 \institute[UAF]{University of Alaska Fairbanks}
 
 \date{April 2021}
-
-%% this nonsense needed to start section counter at 0; see
-%% https://tex.stackexchange.com/questions/170222/change-the-numbering-in-beamers-table-of-content
-%\makeatletter
-%\patchcmd{\beamer@sectionintoc}
-%  {\ifnum\beamer@tempcount>0}
-%  {\ifnum\beamer@tempcount>-1}
-%  {}
-%  {}
-%\beamer@tocsectionnumber=-1
-%\makeatother
 
 
 \begin{document}
@@ -117,32 +97,94 @@
 
 \begin{frame}
   \frametitle{Outline}
+
+\centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\alert{\texttt{github.com/bueler/stokes-ice-tutorial}}}}
+
+\bigskip
   \tableofcontents[hideallsubsections]
 \end{frame}
 
 
-\section{the problem, and the equations}
+\section{the problem}
 
-\begin{frame}{fluid equations}
+\begin{frame}{the glacier dynamics problem}
 
 \begin{itemize}
-\item FIXME
+\item FIXME show results on velocity and pressure
+\end{itemize}
+\end{frame}
+
+\section{the equations}
+
+\newcommand{\rhoi}{\rho_{\text{i}}}
+\begin{frame}{Glen-Stokes equations}
+
+\begin{columns}
+\begin{column}{0.8\textwidth}
+\begin{align*}
+- \nabla \cdot \tau + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
+\nabla \cdot \bu &= 0 &&\text{\emph{incompressibility}} \\
+\tau &= B_n |D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{flow law}}
+\end{align*}
+\end{column}
+
+\begin{column}{0.2\textwidth}
+
+\vspace{5mm}
+%https://www.bl.uk/voices-of-science/interviewees/john-glen#
+\hfill \includegraphics[width=0.8\textwidth]{figs/people/jglen.png}
+\end{column}
+\end{columns}
+
+\bigskip
+\begin{itemize}
+\item constants: {\small $\rhoi=910 \,\text{kg}\,\text{m}^{-3}$, $g=9.81\,\text{m}\,\text{s}^{-2}$, $n=3$, $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$}
+\item viscosity regularization with $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$:
+\begin{equation*}
+\nu_\eps(|D\bu|) = \frac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}
+\end{equation*}
+\item combine as system for $\bu,p$:
+\begin{align}
+- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \label{stokes} \\
+\Div \bu &= 0 \label{incompressible}
+\end{align}
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}{the Stokes equations}
+\begin{frame}{the linear Stokes equations}
 
-\hfill \includegraphics[width=0.25\textwidth]{figs/gstokes.jpg}
+\begin{columns}
 
-\vspace{-20mm}
+\begin{column}{0.6\textwidth}
 \begin{itemize}
-\item FIXME
+\item if we make viscosity constant ($\nu_0$) then we get the linear Stokes system:
+\begin{align*}
+- \nabla \cdot \left(2 \nu_0\, D\bu\right) + \nabla p &= \rhoi \mathbf{g}  \\
+\Div \bu &= 0
+\end{align*}
+\item with reformatting:
+\begin{align*}
+- \nu_0 \nabla^2 \bu + \nabla p &= \rhoi \mathbf{g}  \\
+-\Div \bu \qquad \,\,\,\, &= 0
+\end{align*}
+\item it has block structure
+  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix}$$
 \end{itemize}
+\end{column}
+
+\begin{column}{0.4\textwidth}
+\hfill \includegraphics[width=0.4\textwidth]{figs/people/gstokes.jpg}
+
+\vspace{10mm}
+\hfill \includegraphics[width=0.8\textwidth]{figs/Kstokes.pdf}
+\end{column}
+
+\end{columns}
 \end{frame}
 
 
-\section{stage 1: simple geometry, linear Stokes}
+\section{\texttt{stage1/} \qquad linear Stokes}
 
 \begin{frame}{matrix for Stokes}
 
@@ -150,21 +192,35 @@
 \item simplest possible solver for linear stokes is direct method
 \item FIXME
 \begin{center}
-\includegraphics[width=0.5\textwidth]{figs/Kstokes.pdf}
+\includegraphics[width=0.2\textwidth]{figs/Kstokes.pdf}
 \end{center}
 \end{itemize}
 \end{frame}
 
 
-\section{stage 2: profile geometry, Glen-law Stokes}
+\section{\texttt{stage2/} \qquad Glen-Stokes}
 
 \begin{frame}{Newton's method}
 
-\hfill \includegraphics[width=0.25\textwidth]{figs/inewton.jpg}
+\hfill \includegraphics[width=0.25\textwidth]{figs/people/inewton.jpg}
 
 \vspace{-20mm}
 \begin{itemize}
 \item FIXME
+\end{itemize}
+\end{frame}
+
+\begin{frame}{boundary conditions}
+
+\begin{itemize}
+\item stress-free top:
+\begin{equation*}
+\sigma \bn = \left(2 \nu_\eps(|D\bu|) D\bu - pI\right) \bn = \bzero
+\end{equation*}
+\item no slip base:
+\begin{equation*}
+\bu = \bzero
+\end{equation*}
 \end{itemize}
 \end{frame}
 
@@ -177,14 +233,14 @@
 \end{frame}
 
 
-\section{stage 3: alternative extruded meshes}
+\section{\texttt{stage3/} \qquad extruded meshes}
 
 
-\section{stage 4: solving faster and finer}
+\section{\texttt{stage4/} \qquad faster and finer}
 
 \begin{frame}{iterative linear methods}
 
-\hfill \includegraphics[width=0.25\textwidth]{figs/akrylov.jpg}
+\hfill \includegraphics[width=0.25\textwidth]{figs/people/akrylov.jpg}
 
 \vspace{-20mm}
 \begin{itemize}
@@ -200,28 +256,56 @@
 \end{frame}
 
 
-\section{stage 5: 3D}
+\section{\texttt{stage5/} \qquad 3D}
 
-\begin{frame}{references}
+\begin{frame}{learn more}
+
+\centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\alert{\texttt{github.com/bueler/stokes-ice-tutorial}}}}
+
+\medskip
+\hrulefill
+
+
 \begin{columns}
-
 \begin{column}{0.6\textwidth}
+\small
+
 \begin{itemize}
-\item Firedrake website
-\item PETSc website
-\item Elman
-\item E.~Bueler, \emph{PETSc for Partial Differential Equations: Numerical Solutions in C and Python}, SIAM Press, 2021
+\item Firedrake: \href{https://www.firedrakeproject.org/}{\texttt{firedrakeproject.org}}
+
+    \begin{itemize}
+    \scriptsize
+    \item tutorials \& manual: \href{https://www.firedrakeproject.org/documentation.html}{\texttt{.../documentation.html}}
+    \item Jupyter notebooks page: \href{https://www.firedrakeproject.org/notebooks.html}{\texttt{.../notebooks.html}}
+    \end{itemize}
+\item PETSc website: \href{https://www.mcs.anl.gov/petsc/}{\texttt{www.mcs.anl.gov/petsc}}
+\item for glacier Stokes eqns, see Ch.~1 by Hewitt:
+
+
+{\scriptsize Fowler \& Ng, ed., \emph{Glaciers and Ice Sheets in the Climate System: The Karthaus Summer School Lecture Notes}, Springer 2021}
+
+\item for finite elements and linear Stokes:
+
+{\scriptsize Elman, Silvester, \& Wathen, \emph{Finite Elements and Fast Iterative Solvers, With Applications in Incompressible Fluid Dynamics}, Oxford 2014, 2nd ed.}
+
+\item for PETSc, Firedrake, and Stokes (Ch.~14):
+
+{\scriptsize Bueler, \emph{PETSc for Partial Differential Equations: Numerical Solutions in C and Python}, SIAM 2021}
 \end{itemize}
 \end{column}
 
 \begin{column}{0.4\textwidth}
-\includegraphics[width=\textwidth]{figs/firedrakebanner.png}
 
 \bigskip
-\hfill \includegraphics[width=0.8\textwidth]{figs/petscbanner.png}
+\href{https://www.firedrakeproject.org/}{\includegraphics[width=\textwidth]{figs/firedrakebanner.png}}
 
 \bigskip
-\includegraphics[width=0.42\textwidth]{figs/elmancover.jpg} \quad  \includegraphics[width=0.44\textwidth]{figs/frontcover.jpg}
+\hfill \href{https://www.mcs.anl.gov/petsc/}{\includegraphics[width=0.6\textwidth]{figs/petscbanner.png}}
+
+\vspace{25mm}
+\includegraphics[width=0.31\textwidth]{figs/covers/karthaus.png} \hfill
+\includegraphics[width=0.31\textwidth]{figs/covers/elman.jpg} \hfill
+\href{https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137}{\includegraphics[width=0.32\textwidth]{figs/covers/bueler.jpg}}
 \end{column}
 
 \end{columns}
