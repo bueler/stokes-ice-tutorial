@@ -186,15 +186,25 @@
 
 \section{\texttt{stage1/} \qquad linear Stokes}
 
-\begin{frame}{matrix for Stokes}
+\begin{frame}[fragile]
+\frametitle{\texttt{stage1/} \qquad linear Stokes}
 
 \begin{itemize}
-\item simplest possible solver for linear stokes is direct method
-\item FIXME
-\begin{center}
-\includegraphics[width=0.2\textwidth]{figs/Kstokes.pdf}
-\end{center}
+\item \emph{purpose:} solve linear stokes on a trapezoidal glacier
+\item \emph{files:} \texttt{domain.geo}, \texttt{solve.py}
 \end{itemize}
+
+\bigskip
+\begin{Verbatim}
+$ cd stage1/
+$ ed domain.geo                       # show description
+$ gmsh -2 domain.geo                  # mesh the domain
+$ gmsh domain.msh                     # show mesh
+$ unset PETSC_DIR; unset PETSC_ARCH;  # Firedrake venv
+$ source ~/firedrake/bin/activate
+$ ./solve.py                          # solve Stokes
+$ paraview domain.pvd                 # view the solution
+\end{Verbatim}
 \end{frame}
 
 
