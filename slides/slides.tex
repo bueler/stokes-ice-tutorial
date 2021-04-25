@@ -297,7 +297,32 @@ $ paraview dome.pvd             # view solution
 \end{center}
 \end{frame}
 
+
 \section{\texttt{stage3/} \qquad extruded meshes}
+
+\begin{frame}[fragile]
+\frametitle{\texttt{stage3/} \qquad extruded meshes}
+
+\begin{itemize}
+\item \emph{purpose:} solve same problem using an extruded quadrilateral mesh
+\item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
+\item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
+\end{itemize}
+
+\bigskip
+\begin{Verbatim}
+$ cd stage3/
+$ ./solve.py -s_snes_monitor -s_snes_converged_reason
+$ paraview dome.pvd
+\end{Verbatim}
+%$
+
+\vspace{10mm}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{figs/stage3.png}
+\end{center}
+\end{frame}
+
 
 \begin{frame}{FIXME}
 
