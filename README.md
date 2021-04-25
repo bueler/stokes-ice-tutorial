@@ -7,5 +7,5 @@ All codes are in Python and use the [Firedrake](https://www.firedrakeproject.org
 For `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to generate the meshes.  For all stages, [Paraview](https://www.paraview.org/) is used for visualizing the results.
 
 <p align="center">
-  <img src="slides/figs/stage2.jpg" alt="ice speed in a glacier" /img> </a>
+  <img src="slides/figs/stage2.png" alt="ice speed in a glacier" /img> </a>
 </p>
