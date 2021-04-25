@@ -1,3 +1,3 @@
 # stokes-ice-tutorial
 
-FIXME
+To follow this tutorial, read `slides/slides.pdf` and follow the stages.
