@@ -151,6 +151,7 @@
 \end{itemize}
 \end{frame}
 
+\section{\texttt{stage1/} \qquad linear Stokes}
 
 \begin{frame}{the linear Stokes equations}
 
@@ -184,27 +185,65 @@
 \end{frame}
 
 
-\section{\texttt{stage1/} \qquad linear Stokes}
+\begin{frame}{boundary conditions}
+
+\begin{itemize}
+\item stress-free top:
+\begin{equation*}
+\sigma \bn = \left(2 \nu_\eps(|D\bu|) D\bu - pI\right) \bn = \bzero
+\end{equation*}
+\item no slip base:
+\begin{equation*}
+\bu = \bzero
+\end{equation*}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{weak form}
+
+FIXME
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{activate the Firedrake virtual environment}
+
+\begin{itemize}
+\item before using Firedrake you always need to activate the Python \texttt{venv}
+\item I have an alias \texttt{drakeme} for this
+\end{itemize}
+
+\bigskip
+\begin{Verbatim}
+$ unset PETSC_DIR; unset PETSC_ARCH;  # may be needed
+$ source ~/firedrake/bin/activate
+\end{Verbatim}
+\end{frame}
+
 
 \begin{frame}[fragile]
 \frametitle{\texttt{stage1/} \qquad linear Stokes}
 
 \begin{itemize}
-\item \emph{purpose:} solve linear stokes on a trapezoidal glacier
+\item \emph{purpose:} solve linear Stokes on a trapezoidal glacier
 \item \emph{files:} \texttt{domain.geo}, \texttt{solve.py}
 \end{itemize}
 
 \bigskip
 \begin{Verbatim}
 $ cd stage1/
-$ ed domain.geo                       # show description
-$ gmsh -2 domain.geo                  # mesh the domain
-$ gmsh domain.msh                     # show mesh
-$ unset PETSC_DIR; unset PETSC_ARCH;  # Firedrake venv
-$ source ~/firedrake/bin/activate
+$ gmsh -2 domain.geo                  # mesh domain
+$ gmsh domain.msh                     # view mesh
 $ ./solve.py                          # solve Stokes
-$ paraview domain.pvd                 # view the solution
+$ paraview domain.pvd                 # view solution
 \end{Verbatim}
+%$
+
+\vspace{10mm}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{figs/stage1.png}
+\end{center}
 \end{frame}
 
 
@@ -220,20 +259,31 @@ $ paraview domain.pvd                 # view the solution
 \end{itemize}
 \end{frame}
 
-\begin{frame}{boundary conditions}
+
+\begin{frame}[fragile]
+\frametitle{\texttt{stage2/} \qquad Glen-Stokes}
 
 \begin{itemize}
-\item stress-free top:
-\begin{equation*}
-\sigma \bn = \left(2 \nu_\eps(|D\bu|) D\bu - pI\right) \bn = \bzero
-\end{equation*}
-\item no slip base:
-\begin{equation*}
-\bu = \bzero
-\end{equation*}
+\item \emph{purpose:} solve Glen-Stokes on a flat-bed glacier
+\item \emph{files:} \texttt{domain.py}, \texttt{solve.py}
 \end{itemize}
-\end{frame}
 
+\bigskip
+\begin{Verbatim}
+$ cd stage2/
+$ ./domain.py                         # generate geometry
+$ gmsh -2 domain.geo                  # mesh domain
+$ gmsh domain.msh                     # view mesh
+$ ./solve.py                          # solve Stokes
+$ paraview domain.pvd                 # view solution
+\end{Verbatim}
+%$
+
+\vspace{10mm}
+\begin{center}
+FIXME %\includegraphics[width=0.9\textwidth]{figs/stage1.png}
+\end{center}
+\end{frame}
 
 \begin{frame}{FIXME}
 
