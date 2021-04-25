@@ -15,8 +15,9 @@ def D(w):               # strain-rate tensor
 
 g = 9.81                # m s-2
 rho = 910.0             # kg m-3
-fbody = Constant((0.0, - rho * g))
 nu = 1.0e+8             # Pa s
+
+fbody = Constant((0.0, - rho * g))
 F = nu * inner(D(u), D(v)) * dx \
     - p * div(v) * dx \
     - div(u) * q * dx \

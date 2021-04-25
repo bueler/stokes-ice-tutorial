@@ -200,9 +200,20 @@
 \end{frame}
 
 
-\begin{frame}{weak form}
+\begin{frame}[fragile]
+\frametitle{weak form}
 
-FIXME
+\begin{itemize}
+\item FIXME
+\item in the \texttt{stage1/} solver it looks like:
+\begin{Verbatim}
+    F = nu * inner(D(u), D(v)) * dx \
+        - p * div(v) * dx \
+        - div(u) * q * dx \
+        - inner(fbody, v) * dx
+\end{Verbatim}
+\end{itemize}
+
 \end{frame}
 
 
@@ -227,7 +238,8 @@ $ source ~/firedrake/bin/activate
 
 \begin{itemize}
 \item \emph{purpose:} solve linear Stokes on a trapezoidal glacier
-\item \emph{files:} \texttt{domain.geo}, \texttt{solve.py}
+\item \emph{source files:} \texttt{domain.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these!}
+\item \emph{generated files:} \texttt{domain.msh}, \texttt{domain\_0.vtu}, \texttt{domain.pvd}
 \end{itemize}
 
 \bigskip
@@ -265,25 +277,27 @@ $ paraview domain.pvd                 # view solution
 
 \begin{itemize}
 \item \emph{purpose:} solve Glen-Stokes on a flat-bed glacier
-\item \emph{files:} \texttt{domain.py}, \texttt{solve.py}
+\item \emph{source files:} \texttt{domain.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these!}
+\item \emph{generated files:} \texttt{dome.geo}, \texttt{dome.msh}, \texttt{dome\_0.vtu}, \texttt{dome.pvd}
 \end{itemize}
 
 \bigskip
 \begin{Verbatim}
 $ cd stage2/
-$ ./domain.py                         # generate geometry
-$ gmsh -2 domain.geo                  # mesh domain
-$ gmsh domain.msh                     # view mesh
-$ ./solve.py                          # solve Stokes
-$ paraview domain.pvd                 # view solution
+$ ./domain.py                   # generate geometry
+$ gmsh -2 dome.geo              # mesh domain
+$ gmsh dome.msh                 # view mesh
+$ ./solve.py -s_snes_monitor -s_snes_converged_reason
+$ paraview dome.pvd             # view solution
 \end{Verbatim}
-%$
 
 \vspace{10mm}
 \begin{center}
-FIXME %\includegraphics[width=0.9\textwidth]{figs/stage1.png}
+\includegraphics[width=0.9\textwidth]{figs/stage2.png}
 \end{center}
 \end{frame}
+
+\section{\texttt{stage3/} \qquad extruded meshes}
 
 \begin{frame}{FIXME}
 
@@ -292,8 +306,6 @@ FIXME %\includegraphics[width=0.9\textwidth]{figs/stage1.png}
 \end{itemize}
 \end{frame}
 
-
-\section{\texttt{stage3/} \qquad extruded meshes}
 
 
 \section{\texttt{stage4/} \qquad faster and finer}
