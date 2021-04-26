@@ -2,10 +2,11 @@
 
 from firedrake import *
 
-print('reading dome.pvd ...')
+printpar = PETSc.Sys.Print        # print once even in parallel
+printpar('reading dome.pvd ...')
 mesh = Mesh('dome.msh')
-print('    (mesh with %d elements and %d vertices)' \
-      % (mesh.num_cells(), mesh.num_vertices()))
+printpar('    (mesh with %d elements and %d vertices)' \
+         % (mesh.num_cells(), mesh.num_vertices()))
 
 V = VectorFunctionSpace(mesh, 'Lagrange', 2)
 W = FunctionSpace(mesh, 'Lagrange', 1)
@@ -35,15 +36,15 @@ F = inner(B3 * Du2**(r/2.0) * D(u), D(v)) * dx \
     - inner(fbody, v) * dx
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (42,)) ]
 
-print('solving ...')
+printpar('solving ...')
 par = {'snes_linesearch_type': 'bt',
        'mat_type': 'aij',
        'ksp_type': 'preonly',
-       'pc_type': 'lu',
+       'pc_type': 'lu',                # = MUMPS in parallel
        'pc_factor_shift_type': 'inblocks'}
 solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
 
-print('saving to dome.pvd ...')
+printpar('saving to dome.pvd ...')
 u, p = up.split()
 u.rename('velocity')
 p.rename('pressure')
