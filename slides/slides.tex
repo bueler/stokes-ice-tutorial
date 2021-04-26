@@ -79,7 +79,7 @@
 
 \title{Stokes problems using Firedrake}
 
-\subtitle{A tutorial for glaciologists}
+\subtitle{A glacier and ice sheet tutorial}
 
 \author{Ed Bueler}
 
@@ -124,7 +124,7 @@
 \begin{align*}
 - \nabla \cdot \tau + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
 \nabla \cdot \bu &= 0 &&\text{\emph{incompressibility}} \\
-\tau &= B_n |D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{flow law}}
+\tau &= B_n |D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{Glen flow law}}
 \end{align*}
 \end{column}
 
@@ -132,7 +132,7 @@
 
 \vspace{5mm}
 %https://www.bl.uk/voices-of-science/interviewees/john-glen#
-\hfill \includegraphics[width=0.8\textwidth]{figs/people/jglen.png}
+\hfill \includegraphics[width=0.6\textwidth]{figs/people/jglen.png}
 \end{column}
 \end{columns}
 
@@ -143,11 +143,11 @@
 \begin{equation*}
 \nu_\eps(|D\bu|) = \frac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}
 \end{equation*}
-\item combine as system for $\bu,p$:
-\begin{align}
-- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \label{stokes} \\
-\Div \bu &= 0 \label{incompressible}
-\end{align}
+\item eliminate $\tau$ to give system for $\bu,p$:
+\begin{align*}
+- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \\
+\Div \bu &= 0
+\end{align*}
 \end{itemize}
 \end{frame}
 
@@ -169,8 +169,8 @@
 - \nu_0 \nabla^2 \bu + \nabla p &= \rhoi \mathbf{g}  \\
 -\Div \bu \qquad \,\,\,\, &= 0
 \end{align*}
-\item it has block structure
-  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix}$$
+\item it has symmetric block structure
+  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
 \end{itemize}
 \end{column}
 
@@ -200,6 +200,14 @@
 \end{frame}
 
 
+\begin{frame}{finite elements}
+
+\begin{itemize}
+\item FIXME
+\end{itemize}
+\end{frame}
+
+
 \begin{frame}[fragile]
 \frametitle{weak form}
 
@@ -207,18 +215,17 @@
 \item FIXME
 \item in the \texttt{stage1/} solver it looks like:
 \begin{Verbatim}
-    F = nu * inner(D(u), D(v)) * dx \
+    F = nu0 * inner(D(u), D(v)) * dx \
         - p * div(v) * dx \
         - div(u) * q * dx \
         - inner(fbody, v) * dx
 \end{Verbatim}
 \end{itemize}
-
 \end{frame}
 
 
 \begin{frame}[fragile]
-\frametitle{activate the Firedrake virtual environment}
+\frametitle{activate the virtual environment}
 
 \begin{itemize}
 \item before using Firedrake you always need to activate the Python \texttt{venv}
@@ -324,10 +331,51 @@ $ paraview dome.pvd
 \end{frame}
 
 
-\begin{frame}{FIXME}
+\begin{frame}[fragile]
+\frametitle{convergence?}
+
+% ./solve.py -s_snes_rtol 1.0e-5 -s_snes_converged_reason -mx MX -mz MZ
+\begin{center}
+\begin{tabular}{c|rrr}
+mesh           &   $\Delta x$ (m) & av.~speed & max.~speed \\ \hline
+$20\times 2$   &             1000 &      1813 &       3512 \\
+$40\times 4$   &              500 &      1787 &       3293 \\
+$80\times 8$   &              250 &      1769 &       3223 \\
+$160\times 16$ &              125 &      1762 &       3199 \\
+$320\times 32$ &             62.5 &      1759 &       3191
+\end{tabular}
+\end{center}
 
 \begin{itemize}
-\item FIXME
+\item \texttt{stage3/} code \texttt{solve.py} is set-up for adjustable resolution:
+\begin{Verbatim}
+$ ./solve.py -mx 20 -mz 2
+\end{Verbatim}
+%$
+\item results are at least reasonable and consistent
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{performance?}
+
+% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_converged_reason -mx MX -mz MZ
+% N = MX MY (4*2 + 1)  is approximately correct for Q2xQ1
+% SNES iterations: 44, 10, 13, 11, 13
+\begin{center}
+\begin{tabular}{c|rr|rr}
+mesh           &   $N$ & ratio & run time (s) & ratio \\ \hline
+$20\times 2$   &   360 &       &          2.0 &       \\
+$40\times 4$   &  1440 &     4 &          2.1 &   1.1 \\
+$80\times 8$   &  5760 &     4 &          4.8 &   2.2 \\
+$160\times 16$ & 23040 &     4 &         29.6 &   6.2 \\
+$320\times 32$ & 92160 &     4 &        495.0 &  16.7 \\
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+\item \texttt{stage3/} performance is not scaling well
+\item if number of degrees of freedom $N$ goes up by 4 then time should only go up by 4 also?
 \end{itemize}
 \end{frame}
 

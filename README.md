@@ -7,15 +7,7 @@ All codes are in Python and use the [Firedrake](https://www.firedrakeproject.org
 For `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to generate the meshes.  For all stages, [Paraview](https://www.paraview.org/) is used for visualizing the results.
 
 <p align="center">
-<img src="https://latex.codecogs.com/svg.latex?-\nabla\cdot\left(2 \nu_\epsilon(|D\mathbf{u}|)\,D\mathbf{u}\right)+\nabla p= \rho_i \mathbf{g}" title="stress balance" />
-</p>
-
-<p align="center">
-<img src="https://latex.codecogs.com/svg.latex?\nabla\cdot\mathbf{u}=0" title="incompressiblity" />
-</p>
-
-<p align="center">
-<img src="https://latex.codecogs.com/svg.latex?\nu_\epsilon(|D\mathbf{u}|) = \frac{1}{2} B_n \left(|D\mathbf{u}|^2 + \epsilon\, D_0^2\right)^{((1/n) - 1)/2}" title="regularized effective viscosity" />
+<img src="stokesequations.png" title="the Stokes equations for ice flow" />
 </p>
 
 <p align="center">

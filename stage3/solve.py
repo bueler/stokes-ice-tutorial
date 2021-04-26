@@ -36,14 +36,6 @@ def profile(mx, R, H):
                             + n * Yin**q1 - n * Xin**q1 )**p1
     return x, s
 
-def extend(mesh, f):
-    '''On an extruded mesh extend a function f(x,z), already defined on the
-    base mesh, to the mesh using the 'R' constant-in-the-vertical space.'''
-    Q1R = FunctionSpace(mesh, 'P', 1, vfamily='R', vdegree=0)
-    fextend = Function(Q1R)
-    fextend.dat.data[:] = f.dat.data_ro[:]
-    return fextend
-
 print('generating %d x %d mesh by extrusion ...' % (args.mx, args.mz))
 R = 10000.0
 H = 1000.0
@@ -51,16 +43,21 @@ H = 1000.0
 base_mesh = IntervalMesh(args.mx, length_or_left=0.0, right=2.0*R)
 mesh = ExtrudedMesh(base_mesh, layers=args.mz, layer_height=1.0/args.mz)
 x, z = SpatialCoordinate(mesh)
-# correct the height to equal the profile
+# compute the profile height
 xbase = base_mesh.coordinates.dat.data_ro
 P1base = FunctionSpace(base_mesh,'P',1)
-zz = Function(P1base)
-_, zz.dat.data[:] = profile(args.mx, R, H)
+sbase = Function(P1base)
+_, sbase.dat.data[:] = profile(args.mx, R, H)
+# extend sbase, defined on the base mesh, to the extruded mesh using the
+#   'R' constant-in-the-vertical space
+Q1R = FunctionSpace(mesh, 'P', 1, vfamily='R', vdegree=0)
+s = Function(Q1R)
+s.dat.data[:] = sbase.dat.data_ro[:]
 Vcoord = mesh.coordinates.function_space()
-XZ = Function(Vcoord).interpolate(as_vector([x, extend(mesh, zz) * z]))
+XZ = Function(Vcoord).interpolate(as_vector([x, s * z]))
 mesh.coordinates.assign(XZ)
-# now proceed as in stage2/ ...
 
+# now proceed basically as in stage2/
 V = VectorFunctionSpace(mesh, 'Lagrange', 2)
 W = FunctionSpace(mesh, 'Lagrange', 1)
 Z = V * W
@@ -93,8 +90,12 @@ F = inner(B3 * Du2**(r/2.0) * D(u), D(v)) * dx \
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), 'bottom'),
         DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1,2)) ]
 
-par = {'snes_linesearch_type': 'bt',
-       'ksp_type': 'gmres',
+Direct = {'mat_type': 'aij',
+          'ksp_type': 'preonly',
+          'pc_type': 'lu',
+          'pc_factor_shift_type': 'inblocks'}
+
+SchurDirect = {'ksp_type': 'gmres',
        'pc_type': 'fieldsplit',
        'pc_fieldsplit_type': 'schur',
        'pc_fieldsplit_schur_factorization_type': 'full',
@@ -106,7 +107,20 @@ par = {'snes_linesearch_type': 'bt',
        'fieldsplit_1_pc_type': 'none'}
 
 print('solving ...')
+par = Direct
+par['snes_linesearch_type'] = 'bt'
 solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
+
+# show average and maximum velocity
+P1 = FunctionSpace(mesh, 'CG', 1)
+one = Constant(1.0, domain=mesh)
+area = assemble(dot(one,one) * dx)
+umagav = assemble(sqrt(dot(u, u)) * dx) / area
+umag = interpolate(sqrt(dot(u, u)), P1)
+with umag.dat.vec_ro as vumag:
+    umagmax = vumag.max()[1]
+print('ice speed (m a-1): av = %.3f, max = %.3f' \
+      % (umagav * secpera, umagmax * secpera))
 
 print('saving to dome.pvd ...')
 u, p = up.split()
