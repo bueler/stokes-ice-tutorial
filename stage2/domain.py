@@ -3,7 +3,7 @@
 import numpy as np
 
 def profile(mx, R, H):
-    '''Exact solution with half-length (radius) R and maximum height H, on
+    '''Exact SIA solution with half-length (radius) R and maximum height H, on
     interval [0,L] = [0,2R], centered at x=R.  See van der Veen (2013)
     equation (5.50).'''
     n = 3.0                       # glen exponent

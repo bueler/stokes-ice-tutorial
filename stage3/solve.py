@@ -22,7 +22,7 @@ if args.solvehelp:
     sys.exit(0)
 
 def profile(mx, R, H):
-    '''Exact solution with half-length (radius) R and maximum height H, on
+    '''Exact SIA solution with half-length (radius) R and maximum height H, on
     interval [0,L] = [0,2R], centered at x=R.  See van der Veen (2013)
     equation (5.50).'''
     n = 3.0                       # glen exponent
@@ -76,7 +76,6 @@ rho = 910.0             # kg m-3
 n = 3.0
 A3 = 3.1689e-24         # Pa-3 s-1;  EISMINT I value of ice softness
 B3 = A3**(-1.0/3.0)     # Pa s(1/3);  ice hardness
-eps = 0.0001
 Dtyp = 1.0 / secpera    # s-1
 
 fbody = Constant((0.0, - rho * g))
