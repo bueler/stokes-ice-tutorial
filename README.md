@@ -6,6 +6,8 @@ All codes are in Python and use the [Firedrake](https://www.firedrakeproject.org
 
 For `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to generate the meshes.  For all stages, [Paraview](https://www.paraview.org/) is used for visualizing the results.
 
+<br>
+
 <p align="center">
 <img src="stokesequations.png" title="the Stokes equations for ice flow" />
 </p>
