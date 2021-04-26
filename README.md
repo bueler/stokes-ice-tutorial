@@ -9,7 +9,7 @@ For `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to generate
 <br>
 
 <p align="center">
-<img src="stokesequations.png" title="the Stokes equations for ice flow" />
+<img src="slides/figs/stokesequations.png" title="the Stokes equations for ice flow" />
 </p>
 
 <p align="center">

@@ -35,19 +35,12 @@ F = inner(B3 * Du2**(r/2.0) * D(u), D(v)) * dx \
     - inner(fbody, v) * dx
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (42,)) ]
 
-par = {'snes_linesearch_type': 'bt',
-       'ksp_type': 'gmres',
-       'pc_type': 'fieldsplit',
-       'pc_fieldsplit_type': 'schur',
-       'pc_fieldsplit_schur_factorization_type': 'full',
-       'pc_fieldsplit_schur_precondition': 'a11',
-       'fieldsplit_0_ksp_type': 'preonly',
-       'fieldsplit_0_pc_type': 'lu',
-       'fieldsplit_1_ksp_rtol': 1.0e-3,
-       'fieldsplit_1_ksp_type': 'gmres',
-       'fieldsplit_1_pc_type': 'none'}
-       
 print('solving ...')
+par = {'snes_linesearch_type': 'bt',
+       'mat_type': 'aij',
+       'ksp_type': 'preonly',
+       'pc_type': 'lu',
+       'pc_factor_shift_type': 'inblocks'}
 solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
 
 print('saving to dome.pvd ...')
