@@ -85,7 +85,8 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date{April 2021}
+\date[April 2021]{April 2021  \\ \phantom{foo} \\ \phantom{foo} \\
+\large \href{https://github.com/bueler/stokes-ice-tutorial}{\alert{\texttt{github.com/bueler/stokes-ice-tutorial}}} }
 
 
 \begin{document}
@@ -111,6 +112,7 @@
 
 \begin{itemize}
 \item FIXME show results on velocity and pressure
+\item \alert{there is a lot I cannot explain in an hour, so please try the codes and send questions by email!}
 \end{itemize}
 \end{frame}
 
@@ -270,7 +272,7 @@ $ paraview domain.pvd                 # view solution
 
 \begin{frame}{Newton's method}
 
-\hfill \includegraphics[width=0.25\textwidth]{figs/people/inewton.jpg}
+\hfill \includegraphics[width=0.2\textwidth]{figs/people/inewton.jpg}
 
 \vspace{-20mm}
 \begin{itemize}
@@ -334,7 +336,8 @@ $ paraview dome.pvd
 \begin{frame}[fragile]
 \frametitle{convergence?}
 
-% ./solve.py -s_snes_rtol 1.0e-5 -s_snes_converged_reason -mx MX -mz MZ
+% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_max_it 200 -s_snes_converged_reason -mx MX -mz MZ
+% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_max_it 200 -s_snes_converged_reason -mx 640 -mz 64 -eps 0.01
 \begin{center}
 \begin{tabular}{c|rrr}
 mesh           &   $\Delta x$ (m) & av.~speed & max.~speed \\ \hline
@@ -342,40 +345,44 @@ $20\times 2$   &             1000 &      1813 &       3512 \\
 $40\times 4$   &              500 &      1787 &       3293 \\
 $80\times 8$   &              250 &      1769 &       3223 \\
 $160\times 16$ &              125 &      1762 &       3199 \\
-$320\times 32$ &             62.5 &      1759 &       3191
+$320\times 32$ &             62.5 &      1759 &       3191 \\
+$640\times 64$ &            31.25 &      1758 &       3190
 \end{tabular}
 \end{center}
 
 \begin{itemize}
-\item \texttt{stage3/} code \texttt{solve.py} is set-up for adjustable resolution:
+\item \texttt{stage3/} code \texttt{solve.py} is set-up for adjustable resolution, e.g.:
 \begin{Verbatim}
 $ ./solve.py -mx 20 -mz 2
 \end{Verbatim}
 %$
-\item results are at least reasonable and consistent
+\item results are reasonable and consistent
+\item unfortunately the $640\times 64$ run needed $\eps=10^{-2}$ to get ``unstuck'' from the $\bu=0,p=0$ initial iterate
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}{performance?}
 
-% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_converged_reason -mx MX -mz MZ
-% N = MX MY (4*2 + 1)  is approximately correct for Q2xQ1
-% SNES iterations: 44, 10, 13, 11, 13
+% same runs as above
+% N = MX MZ (4*2 + 1)  is approximately correct for Q2xQ1
+% SNES iterations: 92, 11, 13, 11, 15, 16
 \begin{center}
 \begin{tabular}{c|rr|rr}
-mesh           &   $N$ & ratio & run time (s) & ratio \\ \hline
-$20\times 2$   &   360 &       &          2.0 &       \\
-$40\times 4$   &  1440 &     4 &          2.1 &   1.1 \\
-$80\times 8$   &  5760 &     4 &          4.8 &   2.2 \\
-$160\times 16$ & 23040 &     4 &         29.6 &   6.2 \\
-$320\times 32$ & 92160 &     4 &        495.0 &  16.7 \\
+mesh           &   $N$ & ratio & run time (s)  & ratio \\ \hline
+$20\times 2$   &    360 &       &          2.0 &       \\
+$40\times 4$   &   1440 &     4 &          1.9 &   1.0 \\
+$80\times 8$   &   5760 &     4 &          2.5 &   1.3 \\
+$160\times 16$ &  23040 &     4 &          5.7 &   2.3 \\
+$320\times 32$ &  92160 &     4 &         31.9 &   5.6 \\
+$640\times 64$ & 368640 &     4 &        255.9 &   8.0
 \end{tabular}
 \end{center}
 
 \begin{itemize}
-\item \texttt{stage3/} performance is not scaling well
-\item if number of degrees of freedom $N$ goes up by 4 then time should only go up by 4 also?
+\item \texttt{stage3/} \texttt{solve.py} performance shown above
+\item \emph{ideally}, if number of degrees of freedom $N$ increases by 4 then time should increase by 4
+\item \alert{we need faster solvers and better initial iterates for high resolution and 3D solutions}
 \end{itemize}
 \end{frame}
 
@@ -385,7 +392,7 @@ $320\times 32$ & 92160 &     4 &        495.0 &  16.7 \\
 
 \begin{frame}{iterative linear methods}
 
-\hfill \includegraphics[width=0.25\textwidth]{figs/people/akrylov.jpg}
+\hfill \includegraphics[width=0.2\textwidth]{figs/people/akrylov.jpg}
 
 \vspace{-20mm}
 \begin{itemize}
@@ -394,6 +401,10 @@ $320\times 32$ & 92160 &     4 &        495.0 &  16.7 \\
 \end{frame}
 
 \begin{frame}{multigrid}
+
+\hfill \includegraphics[width=0.25\textwidth]{figs/people/abrandt.jpg}
+
+\vspace{-20mm}
 
 \begin{itemize}
 \item FIXME
