@@ -6,9 +6,9 @@ The Glen-Stokes equations describe the ice in a [glacier](https://en.wikipedia.o
 <img src="slides/figs/stokesequations.png" width="400" title="the Stokes equations for ice flow" />
 </p>
 
-To do this tutorial, read `slides/slides.pdf` and follow the stages.
+### stages
 
-Each stage is self-contained, with increasing sophistication.  In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separated, but later stages combine these actions into a single program.
+To do this tutorial, read `slides/slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separated, but later stages combine these actions into a single program.
 
 ### prerequisites 
 
