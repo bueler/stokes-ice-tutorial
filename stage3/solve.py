@@ -8,6 +8,8 @@ from firedrake import *
 parser = argparse.ArgumentParser(description=
 '''Solve the Glen-Stokes momentum equations for a 2D ice sheet using an
 extruded mesh.''', add_help=False)
+parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,
+    help='regularization used in viscosity')
 parser.add_argument('-mx', type=int, metavar='MX', default=50,
     help='number of subintervals')
 parser.add_argument('-mz', type=int, metavar='MZ', default=8,
@@ -78,7 +80,7 @@ eps = 0.0001
 Dtyp = 1.0 / secpera    # s-1
 
 fbody = Constant((0.0, - rho * g))
-Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp)**2.0
+Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp)**2.0
 r = 1.0 / n - 1.0
 F = inner(B3 * Du2**(r/2.0) * D(u), D(v)) * dx \
     - p * div(v) * dx \
