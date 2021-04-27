@@ -19,6 +19,7 @@
 % Or whatever. Note that the encoding and the font should match. If T1
 % does not look nice, try deleting the line with the fontenc.
 
+\usepackage{amssymb,pifont}
 \usepackage{empheq}
 \usepackage{xspace}
 \usepackage{verbatim,fancyvrb}
@@ -74,6 +75,11 @@
 
 \newcommand{\blocktwo}[4]{\left[\begin{array}{c|c} #1 & #2 \\ \hline #3 & #4 \end{array}\right]}
 
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+
+\newcommand{\rhoi}{\rho_{\text{i}}}
+
 \newcommand{\ds}{\displaystyle}
 
 
@@ -105,20 +111,49 @@
   \tableofcontents[hideallsubsections]
 \end{frame}
 
+\begin{frame}{exclamation points}
 
-\section{the problem}
+\begin{itemize}
+\item \alert{I cannot explain everything in an hour!}
+
+\item \alert{ask questions!}
+
+\item \alert{please try the codes!}
+
+\item \alert{feel free to send future questions by email!}
+\end{itemize}
+\end{frame}
+
+\section{the problem and the equations}
 
 \begin{frame}{the glacier dynamics problem}
 
 \begin{itemize}
-\item FIXME show results on velocity and pressure
-\item \alert{there is a lot I cannot explain in an hour, so please try the codes and send questions by email!}
+\item conservation principles apply to ice sheets; each one is a PDE
+    \begin{itemize}
+    \item[$\circ$] mass \hfill \cmark\qquad today
+    \item[$\circ$] momentum \hfill \cmark\qquad today
+    \item[$\circ$] energy \hfill \xmark\,\, \emph{not today}
+    \end{itemize}
+\item Stokes model combines momentum conservation with incompressibility
+    \begin{itemize}
+    \item[$\circ$] incompressibility is one aspect of mass conservation
+    \end{itemize}
+\item \alert{Stokes model determines velocity and pressure from given geometry}
+
+\bigskip
+{\scriptsize velocity} \hfill \includegraphics[width=0.85\textwidth]{figs/speed.png}
+
+\bigskip
+{\scriptsize pressure} \hfill \includegraphics[width=0.85\textwidth]{figs/pressure.png}
+
+\bigskip
+    \begin{itemize}
+    \item[$\circ$] no attempt \emph{today} to model geometry changes using surface balance
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
-\section{the equations}
-
-\newcommand{\rhoi}{\rho_{\text{i}}}
 \begin{frame}{Glen-Stokes equations}
 
 \begin{columns}
@@ -147,13 +182,35 @@
 \end{equation*}
 \item eliminate $\tau$ to give system for $\bu,p$:
 \begin{align*}
-- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \\
-\Div \bu &= 0
+- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} && \text{\emph{momentum conservation}} \\
+\Div \bu &= 0 && \text{\emph{(bulk) mass conservation}}
 \end{align*}
 \end{itemize}
 \end{frame}
 
-\section{\texttt{stage1/} \qquad linear Stokes}
+
+\begin{frame}{boundary conditions as simple as possible}
+
+\begin{itemize}
+\item stress-free top:
+\begin{equation*}
+\sigma \bn = \left(2 \nu_\eps(|D\bu|) D\bu - pI\right) \bn = \bzero
+\end{equation*}
+
+\bigskip
+\includegraphics[width=0.9\textwidth]{figs/speed.png}
+
+\bigskip
+\item no slip base:
+\begin{equation*}
+\bu = \bzero
+\end{equation*}
+    \begin{itemize}
+    \item[$\circ$] no attempt \emph{today} to model sliding
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
 
 \begin{frame}{the linear Stokes equations}
 
@@ -187,25 +244,28 @@
 \end{frame}
 
 
-\begin{frame}{boundary conditions}
+\begin{frame}{finite elements \dots with no details}
 
 \begin{itemize}
-\item stress-free top:
-\begin{equation*}
-\sigma \bn = \left(2 \nu_\eps(|D\bu|) D\bu - pI\right) \bn = \bzero
-\end{equation*}
-\item no slip base:
-\begin{equation*}
-\bu = \bzero
-\end{equation*}
-\end{itemize}
-\end{frame}
+\item exact solution of the Stokes model is impossible for most geometries
+    \begin{itemize}
+    \item[$\circ$] slab-on-a-slope is an exception
+    \end{itemize}
+\item so we solve numerically using the finite element (FE) method
+    \begin{itemize}
+    \item[$\circ$] as implemented in Firedrake
+    \item[$\circ$] \alert{\dots the whole point is that we \emph{don't} need to know details}
+    \end{itemize}
+\item in summary, the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize then turn the \alert{weak form} of the equations into a finite system by using test functions built from the mesh, {\tiny and then solve those equations somehow, and then there is a lot of fine print lorem ipsum dolor sit amet consectetur adipiscing elit etiam ex neque rhoncus a nunc tristique dignissim euismod magna fusce pharetra tempor sapien vitae scelerisque duis in quam rhoncus suscipit leo quis pellentesque diam suspendisse mollis nisi et eros ornare tincidunt maecenas sed pellentesque ex id mattis libero morbi erat orci fermentum eu dui ac \dots}}}}
 
+\medskip
+\includegraphics[width=0.2\textwidth]{figs/hat.png} \hfill
 
-\begin{frame}{finite elements}
+\vspace{-9mm}
+\hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
 
-\begin{itemize}
-\item FIXME
+\bigskip
+\item we need to know about the weak form!
 \end{itemize}
 \end{frame}
 
@@ -214,31 +274,79 @@
 \frametitle{weak form}
 
 \begin{itemize}
-\item FIXME
-\item in the \texttt{stage1/} solver it looks like:
-\begin{Verbatim}
-    F = nu0 * inner(D(u), D(v)) * dx \
-        - p * div(v) * dx \
-        - div(u) * q * dx \
-        - inner(fbody, v) * dx
+\item start from the original equations, also called the \emph{strong form}:
+\begin{align}
+- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \\
+\Div \bu &= 0
+\end{align}
+\item multiply (1) by test velocity $\bv$ and (2) by test pressure $q$, integrate by parts, and combine into one nonlinear residual function:
+    $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
+\item in Firedrake language (= \emph{Unified Form Language}) it looks like:
+\begin{Verbatim}[fontsize=\small]
+f = Constant((0.0, 0.0, - rho * g))
+F = ( inner(nueps(D(u)), D(v)) \
+      - p * div(v) - q * div(u) - inner(f, v) ) * dx
 \end{Verbatim}
+\item the actual weak form ``equation'' is the statement
+   $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all } \bv \text{ and } q$$
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}[fragile]
+\frametitle{mixed finite elements for fluid problems}
+
+\begin{itemize}
+\item the other detail we need to know about in practice:
+
+\bigskip
+\begin{center}
+\alert{choose separate function spaces for the velocity and the pressure}
+\end{center}
+
+\bigskip
+\begin{center}
+and
+\end{center}
+
+\bigskip
+\begin{center}
+\alert{choose spaces that the experts say are ``stable''!}
+\end{center}
+
+\bigskip
+\item Firedrake makes this elegant:
+\begin{Verbatim}[fontsize=\small]
+V = VectorFunctionSpace(mesh, 'Lagrange', 2)
+W = FunctionSpace(mesh, 'Lagrange', 1)
+Z = V * W
+up = Function(Z)
+u, p = split(up)
+v, q = TestFunctions(Z)
+\end{Verbatim}
+\end{itemize}
+\end{frame}
+
+
+\section{\texttt{stage1/} \qquad linear Stokes}
+
+\begin{frame}[fragile]
 \frametitle{activate the virtual environment}
 
 \begin{itemize}
-\item before using Firedrake you always need to activate the Python \texttt{venv}
-\item I have an alias \texttt{drakeme} for this
-\end{itemize}
+\item now I'm actually going to run some code!
+\item but \dots
+\item before using Firedrake you always need to activate the Python \texttt{venv}:
 
 \bigskip
 \begin{Verbatim}
 $ unset PETSC_DIR; unset PETSC_ARCH;  # may be needed
 $ source ~/firedrake/bin/activate
 \end{Verbatim}
+
+\bigskip
+\item I use an alias \texttt{drakeme} for this
+\end{itemize}
 \end{frame}
 
 
@@ -247,6 +355,13 @@ $ source ~/firedrake/bin/activate
 
 \begin{itemize}
 \item \emph{purpose:} solve linear Stokes on a trapezoidal glacier
+
+    \begin{itemize}
+    \item[$\circ$] simplified weak form
+    \end{itemize}
+{\small
+    $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_0\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
+}
 \item \emph{source files:} \texttt{domain.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these!}
 \item \emph{generated files:} \texttt{domain.msh}, \texttt{domain\_0.vtu}, \texttt{domain.pvd}
 \end{itemize}
@@ -254,14 +369,14 @@ $ source ~/firedrake/bin/activate
 \bigskip
 \begin{Verbatim}
 $ cd stage1/
-$ gmsh -2 domain.geo                  # mesh domain
-$ gmsh domain.msh                     # view mesh
-$ ./solve.py                          # solve Stokes
-$ paraview domain.pvd                 # view solution
+$ gmsh -2 domain.geo             # mesh the domain
+$ gmsh domain.msh                # view the mesh
+$ ./solve.py                     # solve linear Stokes
+$ paraview domain.pvd            # view the solution
 \end{Verbatim}
 %$
 
-\vspace{10mm}
+\vspace{5mm}
 \begin{center}
 \includegraphics[width=0.9\textwidth]{figs/stage1.png}
 \end{center}
@@ -412,13 +527,36 @@ $640\times 64$ & 368640 &     4 &        255.9 &   8.0
 \end{frame}
 
 
+\begin{frame}[fragile]
+\frametitle{\texttt{stage4/} \qquad faster and finer}
+
+\begin{itemize}
+\item \emph{purpose:} try PETSc solvers which scale with increasing $N$
+\item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
+\item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
+\end{itemize}
+
+\bigskip
+\begin{Verbatim}
+$ cd stage4/
+$ FIXME
+\end{Verbatim}
+%$
+
+\bigskip
+\begin{center}
+FIXME %\includegraphics[width=0.5\textwidth]{figs/stage4.png}
+\end{center}
+\end{frame}
+
+
 \section{\texttt{stage5/} \qquad 3D glaciers}
 
 \begin{frame}[fragile]
 \frametitle{\texttt{stage5/} \qquad 3D glaciers}
 
 \begin{itemize}
-\item \emph{purpose:} extend our method to 3D and demo parallel runs
+\item \emph{purpose:} extend our method to 3D, and demo parallel runs
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
 \item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
 \end{itemize}
@@ -459,7 +597,7 @@ $ paraview dome.pvd
     \item Jupyter notebooks page: \href{https://www.firedrakeproject.org/notebooks.html}{\texttt{.../notebooks.html}}
     \end{itemize}
 \item PETSc website: \href{https://www.mcs.anl.gov/petsc/}{\texttt{www.mcs.anl.gov/petsc}}
-\item for glacier Stokes eqns, see Ch.~1 by Hewitt:
+\item for Glen-Stokes eqns, see Ch.~1 by Hewitt:
 
 
 {\scriptsize Fowler \& Ng, ed., \emph{Glaciers and Ice Sheets in the Climate System: The Karthaus Summer School Lecture Notes}, Springer 2021}
