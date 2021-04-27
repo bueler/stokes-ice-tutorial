@@ -412,7 +412,31 @@ $640\times 64$ & 368640 &     4 &        255.9 &   8.0
 \end{frame}
 
 
-\section{\texttt{stage5/} \qquad 3D}
+\section{\texttt{stage5/} \qquad 3D glaciers}
+
+\begin{frame}[fragile]
+\frametitle{\texttt{stage5/} \qquad 3D glaciers}
+
+\begin{itemize}
+\item \emph{purpose:} extend our method to 3D and demo parallel runs
+\item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
+\item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
+\end{itemize}
+
+\bigskip
+\begin{Verbatim}
+$ cd stage5/
+$ mpiexec -n 4 ./solve.py -s_snes_converged_reason
+$ paraview dome.pvd
+\end{Verbatim}
+%$
+
+\bigskip
+\begin{center}
+\includegraphics[width=0.5\textwidth]{figs/stage5.png}
+\end{center}
+\end{frame}
+
 
 \begin{frame}{learn more}
 
