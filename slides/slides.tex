@@ -343,7 +343,7 @@ v, q = TestFunctions(Z)
 \section{\texttt{stage1/} \qquad linear Stokes}
 
 \begin{frame}[fragile]
-\frametitle{Firedrake}
+\frametitle{running Firedrake programs}
 
 \begin{itemize}
 \item now I'm actually going to run some Python Firedrake code!
@@ -364,11 +364,21 @@ $ source ~/firedrake/bin/activate
     \begin{itemize}
     \item[$\circ$] I use an alias \texttt{drakeme} for this
     \end{itemize}
+
+\bigskip
 \item other tools I will need:
     \begin{itemize}
     \item[$\circ$] Gmsh \quad \href{https://gmsh.info/}{\texttt{gmsh.info}}
     \item[$\circ$] Paraview \quad \href{https://www.paraview.org/}{\texttt{paraview.org}}
     \end{itemize}
+
+\bigskip
+\item also grab my tutorial (codes and slides):
+\small
+\begin{center}
+\texttt{git clone https://github.com/bueler/stokes-ice-tutorial.git}
+\end{center}
+
 \end{itemize}
 \end{frame}
 
@@ -554,7 +564,7 @@ $640\times 64$ & 368640 &     4 &        255.9 &   8.0
 
 \begin{itemize}
 \item \texttt{stage3/} performance shown above
-\item \emph{ideally}, if number of degrees of freedom $N$ increases by 4 then time should increase by 4
+\item \emph{ideally}, when number of degrees of freedom $N$ increases by 4, run time increases by 4
 \item conclusion from these 2 slides: we need
 
 \begin{center}
@@ -599,8 +609,11 @@ if we want high resolution and 3D solutions
 \begin{itemize}
 \item solution of linear Stokes faces a zero diagonal block:
   $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
-\item same applies to each Newton step in Glen-Stokes
-\item this is addressed with a bit of algebra \dots we \alert{precondition} each GMRES step using a \alert{Schur complement} approximate solver
+    \begin{itemize}
+    \item[$\circ$] each Glen-Stokes Newton step also has this structure
+    \end{itemize}
+\item this is addressed with a bit of algebra \dots
+\item we \alert{precondition} each GMRES step using a \alert{Schur complement} approximate solver
     \begin{itemize}
     \item[$\circ$] PETSc handles this
     \end{itemize}
@@ -649,7 +662,7 @@ if we want high resolution and 3D solutions
 \frametitle{\texttt{stage4/} \qquad faster and finer}
 
 \begin{itemize}
-\item \emph{purpose:} GMRES$+$multigrid solvers which scale with increasing $N$
+\item \emph{purpose:} GMRES$+$Schur$+$multigrid solvers which scale as $O(N)$
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
 \item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
 \end{itemize}
