@@ -3,6 +3,7 @@
 from firedrake import *
 
 mesh = Mesh('domain.msh')
+
 V = VectorFunctionSpace(mesh, 'Lagrange', 2)
 W = FunctionSpace(mesh, 'Lagrange', 1)
 Z = V * W
@@ -16,19 +17,13 @@ def D(w):               # strain-rate tensor
 g = 9.81                # m s-2
 rho = 910.0             # kg m-3
 nu0 = 1.0e+12           # Pa s
-
 fbody = Constant((0.0, - rho * g))
-F = nu0 * inner(D(u), D(v)) * dx \
-    - p * div(v) * dx \
-    - div(u) * q * dx \
-    - inner(fbody, v) * dx
+F = ( nu0 * inner(D(u), D(v)) \
+      - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (42,)) ]
 
-par = {'snes_type': 'ksponly',
-       'mat_type': 'aij',
-       'ksp_type': 'preonly',
-       'pc_type': 'lu',
-       'pc_factor_shift_type': 'inblocks'}
+par = {'snes_type': 'ksponly', 'ksp_type': 'preonly',
+       'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks'}
 solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
 
 u, p = up.split()

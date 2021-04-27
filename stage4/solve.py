@@ -98,8 +98,7 @@ F = inner(B3 * Du2**(r/2.0) * D(u), D(v)) * dx \
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), 'bottom'),
         DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1,2)) ]
 
-Direct = {'mat_type': 'aij',
-    'ksp_type': 'preonly',
+Direct = {'ksp_type': 'preonly',
     'pc_type': 'lu',
     'pc_factor_shift_type': 'inblocks'}
 

@@ -123,8 +123,8 @@ umagav = assemble(sqrt(dot(u, u)) * dx) / area
 umag = interpolate(sqrt(dot(u, u)), P1)
 with umag.dat.vec_ro as vumag:
     umagmax = vumag.max()[1]
-printpar('ice speed (m a-1): av = %.3f, max = %.3f' \
-      % (umagav * secpera, umagmax * secpera))
+printpar('  ice speed (m a-1): av = %.3f, max = %.3f' \
+         % (umagav * secpera, umagmax * secpera))
 
 printpar('saving to dome.pvd ...')
 u, p = up.split()

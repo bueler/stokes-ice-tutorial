@@ -81,10 +81,8 @@ Dtyp = 1.0 / secpera    # s-1
 fbody = Constant((0.0, - rho * g))
 Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp)**2.0
 r = 1.0 / n - 1.0
-F = inner(B3 * Du2**(r/2.0) * D(u), D(v)) * dx \
-    - p * div(v) * dx \
-    - div(u) * q * dx \
-    - inner(fbody, v) * dx
+F = ( inner(B3 * Du2**(r/2.0) * D(u), D(v)) \
+      - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 
 # different boundary conditions relative to stage2/:
 #   base label is 'bottom', and we add noslip condition on degenerate ends
@@ -92,14 +90,11 @@ bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), 'bottom'),
         DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1,2)) ]
 
 printpar('solving ...')
-par = {'snes_linesearch_type': 'bt',
-       'mat_type': 'aij',
-       'ksp_type': 'preonly',
-       'pc_type': 'lu',
-       'pc_factor_shift_type': 'inblocks'}
+par = {'snes_linesearch_type': 'bt', 'ksp_type': 'preonly',
+       'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks'}
 solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
 
-# show average and maximum velocity
+# print average and maximum velocity
 P1 = FunctionSpace(mesh, 'CG', 1)
 one = Constant(1.0, domain=mesh)
 area = assemble(dot(one,one) * dx)
@@ -107,8 +102,8 @@ umagav = assemble(sqrt(dot(u, u)) * dx) / area
 umag = interpolate(sqrt(dot(u, u)), P1)
 with umag.dat.vec_ro as vumag:
     umagmax = vumag.max()[1]
-printpar('ice speed (m a-1): av = %.3f, max = %.3f' \
-      % (umagav * secpera, umagmax * secpera))
+printpar('  ice speed (m a-1): av = %.3f, max = %.3f' \
+         % (umagav * secpera, umagmax * secpera))
 
 printpar('saving to dome.pvd ...')
 u, p = up.split()
