@@ -135,11 +135,12 @@
     \item[$\circ$] momentum \hfill \cmark\qquad today
     \item[$\circ$] energy \hfill \xmark\,\, \emph{not today}
     \end{itemize}
-\item Stokes model combines momentum conservation with incompressibility
+\item Stokes model $=$ momentum conservation $+$ incompressibility
     \begin{itemize}
     \item[$\circ$] incompressibility is one aspect of mass conservation
+    \item[$\circ$] no attempt \emph{today} to model geometry changes using surface balance, the other aspect
     \end{itemize}
-\item \alert{Stokes model determines velocity and pressure from given geometry}
+\item \alert{the Stokes model determines velocity and pressure from given geometry}
 
 \bigskip
 {\scriptsize velocity} \hfill \includegraphics[width=0.85\textwidth]{figs/speed.png}
@@ -148,11 +149,9 @@
 {\scriptsize pressure} \hfill \includegraphics[width=0.85\textwidth]{figs/pressure.png}
 
 \bigskip
-    \begin{itemize}
-    \item[$\circ$] no attempt \emph{today} to model geometry changes using surface balance
-    \end{itemize}
 \end{itemize}
 \end{frame}
+
 
 \begin{frame}{Glen-Stokes equations}
 
@@ -170,6 +169,8 @@
 \vspace{5mm}
 %https://www.bl.uk/voices-of-science/interviewees/john-glen#
 \hfill \includegraphics[width=0.6\textwidth]{figs/people/jglen.png}
+
+\hfill {\tiny John Glen}
 \end{column}
 \end{columns}
 
@@ -236,7 +237,9 @@
 \begin{column}{0.4\textwidth}
 \hfill \includegraphics[width=0.4\textwidth]{figs/people/gstokes.jpg}
 
-\vspace{10mm}
+\hfill {\tiny George Stokes}
+
+\vspace{7mm}
 \hfill \includegraphics[width=0.8\textwidth]{figs/Kstokes.pdf}
 \end{column}
 
@@ -253,8 +256,7 @@
     \end{itemize}
 \item so we solve numerically using the finite element (FE) method
     \begin{itemize}
-    \item[$\circ$] as implemented in Firedrake
-    \item[$\circ$] \alert{\dots the whole point is that we \emph{don't} need to know details}
+    \item[$\circ$] \alert{the whole point of Firedrake is that we \emph{don't} need to know the details of FE}
     \end{itemize}
 \item in summary, the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize then turn the \alert{weak form} of the equations into a finite system by using test functions built from the mesh, {\tiny and then solve those equations somehow, and then there is a lot of fine print lorem ipsum dolor sit amet consectetur adipiscing elit etiam ex neque rhoncus a nunc tristique dignissim euismod magna fusce pharetra tempor sapien vitae scelerisque duis in quam rhoncus suscipit leo quis pellentesque diam suspendisse mollis nisi et eros ornare tincidunt maecenas sed pellentesque ex id mattis libero morbi erat orci fermentum eu dui ac \dots}}}}
 
@@ -265,7 +267,7 @@
 \hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
 
 \bigskip
-\item we need to know about the weak form!
+\item we need to write a \alert{weak form}!
 \end{itemize}
 \end{frame}
 
@@ -275,18 +277,26 @@
 
 \begin{itemize}
 \item start from the original equations, also called the \emph{strong form}:
+\small
 \begin{align}
 - \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \\
 \Div \bu &= 0
 \end{align}
+\normalsize
 \item multiply (1) by test velocity $\bv$ and (2) by test pressure $q$, integrate by parts, and combine into one nonlinear residual function:
     $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
-\item in Firedrake language (= \emph{Unified Form Language}) it looks like:
+\item in Firedrake's language (= \emph{Unified Form Language}) it looks like:
+
+\medskip
 \begin{Verbatim}[fontsize=\small]
-f = Constant((0.0, 0.0, - rho * g))
-F = ( inner(nueps(D(u)), D(v)) \
-      - p * div(v) - q * div(u) - inner(f, v) ) * dx
+fbody = Constant((0.0, 0.0, - rho * g))
+Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp)**2.0
+nu = 0.5 * Bn * Du2**((1.0 / n - 1.0)/2.0)
+F = ( inner(2.0 * nu * D(u), D(v)) \
+      - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 \end{Verbatim}
+
+\medskip
 \item the actual weak form ``equation'' is the statement
    $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all } \bv \text{ and } q$$
 \end{itemize}
@@ -316,6 +326,8 @@ and
 
 \bigskip
 \item Firedrake makes this elegant:
+
+\medskip
 \begin{Verbatim}[fontsize=\small]
 V = VectorFunctionSpace(mesh, 'Lagrange', 2)
 W = FunctionSpace(mesh, 'Lagrange', 1)
@@ -331,12 +343,16 @@ v, q = TestFunctions(Z)
 \section{\texttt{stage1/} \qquad linear Stokes}
 
 \begin{frame}[fragile]
-\frametitle{activate the virtual environment}
+\frametitle{Firedrake}
 
 \begin{itemize}
-\item now I'm actually going to run some code!
-\item but \dots
-\item before using Firedrake you always need to activate the Python \texttt{venv}:
+\item now I'm actually going to run some Python Firedrake code!
+\item install Firedrake following these directions:
+
+\begin{center}
+\href{https://www.firedrakeproject.org/download.html}{\texttt{firedrakeproject.org/download.html}}
+\end{center}
+\item activate the Python virtual environment every time you use Firedrake:
 
 \bigskip
 \begin{Verbatim}
@@ -345,7 +361,14 @@ $ source ~/firedrake/bin/activate
 \end{Verbatim}
 
 \bigskip
-\item I use an alias \texttt{drakeme} for this
+    \begin{itemize}
+    \item[$\circ$] I use an alias \texttt{drakeme} for this
+    \end{itemize}
+\item other tools I will need:
+    \begin{itemize}
+    \item[$\circ$] Gmsh \quad \href{https://gmsh.info/}{\texttt{gmsh.info}}
+    \item[$\circ$] Paraview \quad \href{https://www.paraview.org/}{\texttt{paraview.org}}
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -387,12 +410,41 @@ $ paraview domain.pvd            # view the solution
 
 \begin{frame}{Newton's method}
 
-\hfill \includegraphics[width=0.2\textwidth]{figs/people/inewton.jpg}
-
-\vspace{-20mm}
+\begin{columns}
+\begin{column}{0.8\textwidth}
 \begin{itemize}
-\item FIXME
+\item linear Stokes \small (\texttt{stage1/}) \normalsize needs only a single linear system:
+  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
+    \begin{itemize}
+    \item[$\circ$] Firedrake asks PETSc's KSP component to solve this
+    \end{itemize}
+\item but for Glen-Stokes the weak form is nonlinear in $\bu$:
+\small
+$$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
+\normalsize
+\item Firedrake automatically applies Newton's method
+    \begin{itemize}
+    \item[$\circ$] because we write \texttt{solve(F == 0,}\dots
+    \end{itemize}
+\item all you need to know about Newton's iteration:
+    \begin{itemize}
+    \item[$\circ$] it is repeated linearization around the current iterate
+    \item[$\circ$] Firedrake uses UFL symbolic differentiation for linearization
+    \item[$\circ$] Firedrake asks PETSc's SNES to do the Newton iteration
+        \begin{itemize}
+        \item SNES options will monitor and control the Newton iteration
+        \end{itemize}
+    \end{itemize}
 \end{itemize}
+\end{column}
+\begin{column}{0.2\textwidth}
+\vspace{25mm}
+
+\hfill \includegraphics[width=0.8\textwidth]{figs/people/inewton.jpg}
+
+\hfill {\tiny Isaac Newton}
+\end{column}
+\end{columns}
 \end{frame}
 
 
@@ -451,28 +503,34 @@ $ paraview dome.pvd
 \begin{frame}[fragile]
 \frametitle{convergence?}
 
-% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_max_it 200 -s_snes_converged_reason -mx MX -mz MZ
-% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_max_it 200 -s_snes_converged_reason -mx 640 -mz 64 -eps 0.01
-\begin{center}
-\begin{tabular}{c|rrr}
-mesh           &   $\Delta x$ (m) & av.~speed & max.~speed \\ \hline
-$20\times 2$   &             1000 &      1813 &       3512 \\
-$40\times 4$   &              500 &      1787 &       3293 \\
-$80\times 8$   &              250 &      1769 &       3223 \\
-$160\times 16$ &              125 &      1762 &       3199 \\
-$320\times 32$ &             62.5 &      1759 &       3191 \\
-$640\times 64$ &            31.25 &      1758 &       3190
-\end{tabular}
-\end{center}
-
 \begin{itemize}
-\item \texttt{stage3/} code \texttt{solve.py} is set-up for adjustable resolution, e.g.:
+\item \texttt{stage3/} code \texttt{solve.py} allows adjustable resolution:
 \begin{Verbatim}
 $ ./solve.py -mx 20 -mz 2
 \end{Verbatim}
 %$
-\item results are reasonable and consistent
-\item unfortunately the $640\times 64$ run needed $\eps=10^{-2}$ to get ``unstuck'' from the $\bu=0,p=0$ initial iterate
+\item velocity results are reasonable and consistent:
+
+\medskip
+% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_max_it 200 -s_snes_converged_reason -mx MX -mz MZ
+% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_max_it 200 -s_snes_converged_reason -mx 640 -mz 64 -eps 0.01
+\begin{center}
+\small
+\begin{tabular}{c|rrr}
+mesh           &   $\Delta x\times \Delta z$ (m) & av.~$|\bu|$ (m/a) & max.~$|\bu|$ (m/a) \\ \hline
+$20\times 2$   &  $1000 \times 500$ &        1813 &         3512 \\
+$40\times 4$   &   $500 \times 250$ &        1787 &         3293 \\
+$80\times 8$   &   $250 \times 125$ &        1769 &         3223 \\
+$160\times 16$ &    $125 \times 63$ &        1762 &         3199 \\
+$320\times 32$ &     $63 \times 31$ &        1759 &         3191 \\
+$640\times 64$ &     $31 \times 16$ &        1758 &         3190
+\end{tabular}
+\normalsize
+\end{center}
+
+    \begin{itemize}
+    \item[$\circ$] \emph{unfortunately}, the finest resolution needed $\eps=10^{-2}$ to get ``unstuck'' from the $\bu,p=\mathbf{0},0$ initial iterate
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -495,9 +553,15 @@ $640\times 64$ & 368640 &     4 &        255.9 &   8.0
 \end{center}
 
 \begin{itemize}
-\item \texttt{stage3/} \texttt{solve.py} performance shown above
+\item \texttt{stage3/} performance shown above
 \item \emph{ideally}, if number of degrees of freedom $N$ increases by 4 then time should increase by 4
-\item \alert{we need faster solvers and better initial iterates for high resolution and 3D solutions}
+\item conclusion from these 2 slides: we need
+
+\begin{center}
+\alert{faster solvers} and \alert{better initial iterates}
+\end{center}
+
+if we want high resolution and 3D solutions
 \end{itemize}
 \end{frame}
 
@@ -507,23 +571,77 @@ $640\times 64$ & 368640 &     4 &        255.9 &   8.0
 
 \begin{frame}{iterative linear methods}
 
-\hfill \includegraphics[width=0.2\textwidth]{figs/people/akrylov.jpg}
-
-\vspace{-20mm}
+\begin{columns}
+\begin{column}{0.75\textwidth}
 \begin{itemize}
-\item FIXME
+\item so far we have solved each linear system using LU decomposition (Gaussian elimination)
+\item faster linear solvers are iterative ``Krylov methods''
+    \begin{itemize}
+    \item[$\circ$] we'll use GMRES
+    \item[$\circ$] PETSc handles this
+    \end{itemize}
+\item I'm omitting all further details
 \end{itemize}
+\end{column}
+\begin{column}{0.25\textwidth}
+\hfill \includegraphics[width=0.8\textwidth]{figs/people/akrylov.jpg}
+
+\hfill {\tiny Aleksey Krylov}
+\end{column}
+\end{columns}
 \end{frame}
+
+
+\begin{frame}{Schur complements}
+
+\begin{columns}
+\begin{column}{0.75\textwidth}
+\begin{itemize}
+\item solution of linear Stokes faces a zero diagonal block:
+  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
+\item same applies to each Newton step in Glen-Stokes
+\item this is addressed with a bit of algebra \dots we \alert{precondition} each GMRES step using a \alert{Schur complement} approximate solver
+    \begin{itemize}
+    \item[$\circ$] PETSc handles this
+    \end{itemize}
+\item I'm omitting all further details
+\end{itemize}
+\end{column}
+\begin{column}{0.2\textwidth}
+\vspace{25mm}
+
+\hfill \includegraphics[width=0.8\textwidth]{figs/people/ischur.jpg}
+
+\hfill {\tiny Issai Schur}
+\end{column}
+\end{columns}
+\end{frame}
+
 
 \begin{frame}{multigrid}
 
-\hfill \includegraphics[width=0.25\textwidth]{figs/people/abrandt.jpg}
-
-\vspace{-20mm}
-
+\begin{columns}
+\begin{column}{0.75\textwidth}
 \begin{itemize}
-\item FIXME
+\item Krylov methods are not intrinsically fast
+\item a \alert{mesh hierarchy} can supply two accelerations:
+    \begin{itemize}
+    \item[$\circ$] at each GMRES iteration the hierarchy provides rapid removal of all frequencies in the remaining error
+    \item[$\circ$] the hierarchy allows us to build-up a great initial iterate for Newton's method on the finest mesh
+    \end{itemize}
+\item these are \alert{multigrid} techniques
+    \begin{itemize}
+    \item[$\circ$] nonlinear full-cycle geometric multigrid
+    \end{itemize}
+\item I'm omitting all further details
 \end{itemize}
+\end{column}
+\begin{column}{0.25\textwidth}
+\hfill \includegraphics[width=0.9\textwidth]{figs/people/abrandt.jpg}
+
+\hfill {\tiny Achi Brandt}
+\end{column}
+\end{columns}
 \end{frame}
 
 
@@ -531,7 +649,7 @@ $640\times 64$ & 368640 &     4 &        255.9 &   8.0
 \frametitle{\texttt{stage4/} \qquad faster and finer}
 
 \begin{itemize}
-\item \emph{purpose:} try PETSc solvers which scale with increasing $N$
+\item \emph{purpose:} GMRES$+$multigrid solvers which scale with increasing $N$
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
 \item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
 \end{itemize}
@@ -558,7 +676,7 @@ FIXME %\includegraphics[width=0.5\textwidth]{figs/stage4.png}
 \begin{itemize}
 \item \emph{purpose:} extend our method to 3D, and demo parallel runs
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
-\item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
+\item \emph{generated files:} \texttt{dome\_0\_}$k$\texttt{.vtu}, \texttt{dome\_0.pvtu}, \texttt{dome.pvd}
 \end{itemize}
 
 \bigskip
