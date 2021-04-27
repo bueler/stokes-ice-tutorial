@@ -10,8 +10,8 @@ import argparse
 from firedrake import *
 
 parser = argparse.ArgumentParser(description=
-'''Solve the Glen-Stokes momentum equations for a 3D ice sheet using an
-extruded mesh and a multigrid solver.''', add_help=False)
+'''stage5/  Solve the Glen-Stokes momentum equations for a 3D ice sheet using
+an extruded mesh and a Schur-multigrid solver.''', add_help=False)
 parser.add_argument('-baserefine', type=int, metavar='X', default=2,
     help='how many refinement levels in generating base mesh, a disk')
 parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,

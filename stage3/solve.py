@@ -6,7 +6,7 @@ import numpy as np
 from firedrake import *
 
 parser = argparse.ArgumentParser(description=
-'''Solve the Glen-Stokes momentum equations for a 2D ice sheet using an
+'''stage3/  Solve the Glen-Stokes momentum equations for a 2D ice sheet using an
 extruded mesh.''', add_help=False)
 parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,
     help='regularization used in viscosity')
