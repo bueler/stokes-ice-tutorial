@@ -92,16 +92,13 @@ rho = 910.0             # kg m-3
 n = 3.0
 A3 = 3.1689e-24         # Pa-3 s-1;  EISMINT I value of ice softness
 B3 = A3**(-1.0/3.0)     # Pa s(1/3);  ice hardness
-eps = 0.0001
 Dtyp = 1.0 / secpera    # s-1
 
 fbody = Constant((0.0, 0.0, - rho * g))  # 3D version
-Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp)**2.0
-r = 1.0 / n - 1.0
-F = inner(B3 * Du2**(r/2.0) * D(u), D(v)) * dx \
-    - p * div(v) * dx \
-    - div(u) * q * dx \
-    - inner(fbody, v) * dx
+Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp)**2.0
+nu = 0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0)
+F = ( inner(2.0 * nu * D(u), D(v)) \
+      - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 
 # 3D version
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0, 0.0)), 'bottom'),
