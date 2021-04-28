@@ -8,9 +8,14 @@ from firedrake import *
 # recover stage3/:
 #     ./solve.py -refine 0 -marginheight 0.0 -direct
 
-# KEY HINT ABOUT PERFORMANCE:  all of these 4-layer runs in stage3/, with modest snes_rtol,
-# are super cheap, and give at most 13 iterations and time 9 seconds on finest
-#     for MX in 20 40 80 160 320 640 1280 2560; do tmpg -n 1 ./solve.py -s_snes_converged_reason -s_snes_rtol 1.0e-3 -mx $MX -mz 4; done
+# KEY HINT ABOUT PERFORMANCE:  all of these 2-layer, eps=10^-2 runs in stage3/,
+# with modest snes_rtol, are super cheap, and give at most 11 iterations and
+# time 17 seconds on finest, and O(N) times
+#     for MX in 500 1000 2000 4000 8000 16000; do tmpg -n 1 ./solve.py -s_snes_converged_reason -mx $MX -mz 2 -s_snes_rtol 1.0e-3 -s_snes_max_it 200 -eps 1.0e-2; done
+
+# SO HERE IS A WAY FORWARD:
+#    * use SemiCoarsenedExtrudedHierarchy()
+#    * grid sequence with eps=1.0e-2,1.0e-3,1.0e-4,1.0e-4,...
 
 # good settings:
 #     ./solve.py -mx 20 -mz 2 -s_snes_converged_reason -s_ksp_converged_reason -s_snes_ksp_ew -s_snes_rtol 1.0e-2 -refine K
