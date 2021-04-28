@@ -131,6 +131,8 @@ for j in jrange:
 
     printpar('solving on level %d (%d x %d mesh) ...' \
              % (j, args.mx, args.mz * (args.refinefactor)**j))
+    n_u, n_p = V.dim(), W.dim()
+    printpar('  sizes: n_u = %d, n_p = %d' % (n_u,n_p))
     solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
     if upcoarse is None:
         upcoarse = up.copy()
