@@ -412,6 +412,8 @@ $ paraview domain.pvd            # view the solution
 \vspace{5mm}
 \begin{center}
 \includegraphics[width=0.9\textwidth]{figs/stage1.png}
+
+{\tiny speed $|\bu|$}
 \end{center}
 \end{frame}
 
@@ -480,6 +482,8 @@ $ paraview dome.pvd             # view solution
 \vspace{10mm}
 \begin{center}
 \includegraphics[width=0.9\textwidth]{figs/stage2.png}
+
+{\tiny speed $|\bu|$}
 \end{center}
 \end{frame}
 
@@ -506,6 +510,8 @@ $ paraview dome.pvd
 \vspace{10mm}
 \begin{center}
 \includegraphics[width=0.9\textwidth]{figs/stage3.png}
+
+{\tiny speed $|\bu|$}
 \end{center}
 \end{frame}
 
@@ -541,128 +547,25 @@ $640\times 64$ &     $31 \times 16$ &        1758 &         3190
     \begin{itemize}
     \item[$\circ$] \emph{unfortunately}, the finest resolution needed $\eps=10^{-2}$ to get ``unstuck'' from the $\bu,p=\mathbf{0},0$ initial iterate
     \end{itemize}
+\item we need \alert{better initial iterates} for high-resolution runs
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}{performance?}
-
-% same runs as above
-% N = MX MZ (4*2 + 1)  is approximately correct for Q2xQ1
-% SNES iterations: 92, 11, 13, 11, 15, 16
-\begin{center}
-\begin{tabular}{c|rr|rr}
-mesh           &   $N$ & ratio & run time (s)  & ratio \\ \hline
-$20\times 2$   &    360 &       &          2.0 &       \\
-$40\times 4$   &   1440 &     4 &          1.9 &   1.0 \\
-$80\times 8$   &   5760 &     4 &          2.5 &   1.3 \\
-$160\times 16$ &  23040 &     4 &          5.7 &   2.3 \\
-$320\times 32$ &  92160 &     4 &         31.9 &   5.6 \\
-$640\times 64$ & 368640 &     4 &        255.9 &   8.0
-\end{tabular}
-\end{center}
-
-\begin{itemize}
-\item \texttt{stage3/} performance shown above
-\item \emph{ideally}, when number of degrees of freedom $N$ increases by 4, run time increases by 4
-\item conclusion from these 2 slides: we need
-
-\begin{center}
-\alert{faster solvers} and \alert{better initial iterates}
-\end{center}
-
-if we want high resolution and 3D solutions
-\end{itemize}
-\end{frame}
-
-
-
-\section{\texttt{stage4/} \qquad faster and finer}
-
-\begin{frame}{iterative linear methods}
-
-\begin{columns}
-\begin{column}{0.75\textwidth}
-\begin{itemize}
-\item so far we have solved each linear system using LU decomposition (Gaussian elimination)
-\item faster linear solvers are iterative ``Krylov methods''
-    \begin{itemize}
-    \item[$\circ$] we'll use GMRES
-    \item[$\circ$] PETSc handles this
-    \end{itemize}
-\item I'm omitting all further details
-\end{itemize}
-\end{column}
-\begin{column}{0.25\textwidth}
-\hfill \includegraphics[width=0.8\textwidth]{figs/people/akrylov.jpg}
-
-\hfill {\tiny Aleksey Krylov}
-\end{column}
-\end{columns}
-\end{frame}
-
-
-\begin{frame}{Schur complements}
-
-\begin{columns}
-\begin{column}{0.75\textwidth}
-\begin{itemize}
-\item solution of linear Stokes faces a zero diagonal block:
-  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
-    \begin{itemize}
-    \item[$\circ$] each Glen-Stokes Newton step also has this structure
-    \end{itemize}
-\item this is addressed with a bit of algebra \dots
-\item we \alert{precondition} each GMRES step using a \alert{Schur complement} approximate solver
-    \begin{itemize}
-    \item[$\circ$] PETSc handles this
-    \end{itemize}
-\item I'm omitting all further details
-\end{itemize}
-\end{column}
-\begin{column}{0.2\textwidth}
-\vspace{25mm}
-
-\hfill \includegraphics[width=0.8\textwidth]{figs/people/ischur.jpg}
-
-\hfill {\tiny Issai Schur}
-\end{column}
-\end{columns}
-\end{frame}
-
-
-\begin{frame}{multigrid}
-
-\begin{columns}
-\begin{column}{0.75\textwidth}
-\begin{itemize}
-\item Krylov methods are not intrinsically fast
-\item a \alert{mesh hierarchy} can supply two accelerations:
-    \begin{itemize}
-    \item[$\circ$] at each GMRES iteration the hierarchy provides rapid removal of all frequencies in the remaining error
-    \item[$\circ$] the hierarchy allows us to build-up a great initial iterate for Newton's method on the finest mesh
-    \end{itemize}
-\item these are \alert{multigrid} techniques
-    \begin{itemize}
-    \item[$\circ$] nonlinear full-cycle geometric multigrid
-    \end{itemize}
-\item I'm omitting all further details
-\end{itemize}
-\end{column}
-\begin{column}{0.25\textwidth}
-\hfill \includegraphics[width=0.9\textwidth]{figs/people/abrandt.jpg}
-
-\hfill {\tiny Achi Brandt}
-\end{column}
-\end{columns}
-\end{frame}
-
+\section{\texttt{stage4/} \qquad bells and whistles}
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage4/} \qquad faster and finer}
+\frametitle{\texttt{stage4/} \qquad bells and whistles}
 
 \begin{itemize}
-\item \emph{purpose:} GMRES$+$Schur$+$multigrid solvers which scale as $O(N)$
+\item \emph{purpose:} additional useful and robust features
+    \begin{itemize}
+    \item[$\circ$] rescale the equations  \hfill \emph{for better conditioning}
+    \item[$\circ$] vertical grid sequencing  \hfill \emph{for better initial iterates}
+    \item[$\circ$] $100\eps$ on coarse meshes in sequencing  \hfill \emph{for better initial iterates}
+    \item[$\circ$] generate stress tensor $\tau$  \hfill \emph{as diagnostic}
+    \item[$\circ$] generate effective viscosity $\nu_\eps$  \hfill \emph{as diagnostic}
+    \end{itemize}
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
 \item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
 \end{itemize}
@@ -670,24 +573,29 @@ if we want high resolution and 3D solutions
 \bigskip
 \begin{Verbatim}
 $ cd stage4/
-$ FIXME
+$ ./solve.py
+$ ./solve.py -mx 320 -mz 2 -refine 2 \
+    -s_snes_atol 1.0e-2 -s_snes_monitor
+$ paraview dome.pvd
 \end{Verbatim}
 %$
 
 \bigskip
 \begin{center}
-FIXME %\includegraphics[width=0.5\textwidth]{figs/stage4.png}
+\includegraphics[width=0.9\textwidth]{figs/stage4.png}
+
+{\tiny deviatoric stress magnitude $\|\tau\|$}
 \end{center}
 \end{frame}
 
 
-\section{\texttt{stage5/} \qquad 3D glaciers}
+\section{\texttt{stage5/} \qquad 3D glaciers in parallel}
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage5/} \qquad 3D glaciers}
+\frametitle{\texttt{stage5/} \qquad 3D glaciers in parallel}
 
 \begin{itemize}
-\item \emph{purpose:} extend our method to 3D, and demo parallel runs
+\item \emph{purpose:} 3D ice sheet in parallel on bumpy bed
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
 \item \emph{generated files:} \texttt{dome\_0\_}$k$\texttt{.vtu}, \texttt{dome\_0.pvtu}, \texttt{dome.pvd}
 \end{itemize}
@@ -695,14 +603,18 @@ FIXME %\includegraphics[width=0.5\textwidth]{figs/stage4.png}
 \bigskip
 \begin{Verbatim}
 $ cd stage5/
-$ mpiexec -n 4 ./solve.py -s_snes_converged_reason
+$ mpiexec -n P ./solve.py -refine 0 \
+    -s_snes_atol 1.0e-2 -s_snes_monitor
+$ paraview dome.pvd
+$ mpiexec -n P ./solve.py -bumpy -baserefine 5 \
+    -refine 2 -s_snes_atol 1.0e-2 -s_snes_monitor
 $ paraview dome.pvd
 \end{Verbatim}
 %$
 
 \bigskip
 \begin{center}
-\includegraphics[width=0.5\textwidth]{figs/stage5.png}
+\includegraphics[width=0.4\textwidth]{figs/stage5.png}
 \end{center}
 \end{frame}
 
