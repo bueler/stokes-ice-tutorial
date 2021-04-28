@@ -8,7 +8,8 @@ The Glen-Stokes equations describe the ice in a [glacier](https://en.wikipedia.o
 
 ### stages
 
-To do this tutorial, read `slides/slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separated, but later stages combine these actions into a single program.
+To do this tutorial, read `slides/slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separated, but later stages combine these actions into a single program.  `stage3/` shows extruded meshes,
+`stage4/` shows better convergence and diagnostics, and `stage5/` is a 3D ice sheet.  All stages allow parallel runs.
 
 ### prerequisites 
 
