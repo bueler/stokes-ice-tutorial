@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description=
 '''stage4/  Solve the Glen-Stokes momentum equations for a 2D ice sheet using
 an extruded mesh and a Schur-multigrid solver.''', add_help=False)
 parser.add_argument('-direct', action='store_true', default=False,
-    help='use direct LU solver for each Newton step (revert to stage3/)')
+    help='use direct LU solver for each Newton step')
 parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,
     help='regularization used in viscosity')
 parser.add_argument('-marginheight', type=float, metavar='X', default=1.0,
@@ -35,6 +35,8 @@ parser.add_argument('-mz', type=int, metavar='MZ', default=8,
     help='number of subintervals in coarse mesh')
 parser.add_argument('-refine', type=int, metavar='J', default=2,
     help='number of multigrid refinements when generating hierarchy')
+parser.add_argument('-single', action='store_true', default=False,
+    help='solve only on the finest level, without grid sequencing')
 parser.add_argument('-solvehelp', action='store_true', default=False,
     help='print help for solve.py options and stop')
 args, unknown = parser.parse_known_args()
@@ -60,20 +62,20 @@ def profile(x, R, H):
     return s
 
 printpar = PETSc.Sys.Print        # print once even in parallel
-fmx = args.mx * 2**args.refine
 fmz = args.mz * 2**args.refine
 printpar('generating %d-level mesh hierarchy ...' % (args.refine + 1))
 R = 10000.0
 H = 1000.0
-basecoarse = IntervalMesh(args.mx, length_or_left=0.0, right=2.0*R)
-basehierarchy = MeshHierarchy(basecoarse, args.refine)
-hierarchy = ExtrudedMeshHierarchy(basehierarchy, 1.0, base_layer=args.mz,
-                                  refinement_ratio=2)
+base = IntervalMesh(args.mx, length_or_left=0.0, right=2.0*R)
+xbase = base.coordinates.dat.data_ro
+P1base = FunctionSpace(base,'P',1)
+sbase = Function(P1base)
+sbase.dat.data[:] = profile(xbase, R, H)
+
+hierarchy = SemiCoarsenedExtrudedHierarchy( \
+                base, 1.0, base_layer=args.mz,
+                refinement_ratio=2, nref=args.refine)
 for j in range(args.refine + 1):
-    xbase = basehierarchy[j].coordinates.dat.data_ro
-    P1base = FunctionSpace(basehierarchy[j],'P',1)
-    sbase = Function(P1base)
-    sbase.dat.data[:] = profile(xbase, R, H)
     Q1R = FunctionSpace(hierarchy[j], 'P', 1, vfamily='R', vdegree=0)
     s = Function(Q1R)
     s.dat.data[:] = sbase.dat.data_ro[:]
@@ -91,16 +93,24 @@ else:
         'ksp_type': 'fgmres',
         'pc_type': 'fieldsplit',
         'pc_fieldsplit_type': 'schur',
-        'pc_fieldsplit_schur_factorization_type': 'upper',
-        'pc_fieldsplit_schur_precondition': 'a11',
+        'pc_fieldsplit_schur_fact_type': 'lower',
+        'pc_fieldsplit_schur_precondition': 'selfp',
         'fieldsplit_0_ksp_type': 'preonly',
         #'fieldsplit_0_pc_type': 'lu',
         'fieldsplit_0_pc_type': 'mg',
+        #'fieldsplit_0_mg_levels_ksp_type': 'gmres',
+        #'fieldsplit_0_mg_levels_ksp_max_it': 2,
         'fieldsplit_0_mg_levels_ksp_type': 'richardson',
-        'fieldsplit_0_mg_levels_pc_type': 'sor',
-        'fieldsplit_1_ksp_rtol': 1.0e-3,
+        'fieldsplit_0_mg_levels_pc_type': 'bjacobi',
+        'fieldsplit_0_mg_levels_sub_pc_type': 'ilu',
+        #'fieldsplit_0_mg_levels_pc_type': 'lu',
+        'fieldsplit_0_mg_coarse_ksp_type': 'preonly',
+        'fieldsplit_0_mg_coarse_pc_type': 'lu',
+        #'fieldsplit_1_ksp_rtol': 1.0e-3,
+        #'fieldsplit_1_ksp_max_it': 5,
         'fieldsplit_1_ksp_type': 'gmres',
-        'fieldsplit_1_pc_type': 'none'}
+        #'fieldsplit_1_ksp_type': 'preonly',
+        'fieldsplit_1_pc_type': 'jacobi'}
 
         # 'pc_fieldsplit_schur_factorization_type': 'lower',
         # 'pc_fieldsplit_schur_precondition': 'selfp',  # BAD FOR ACCURACY?
@@ -125,23 +135,28 @@ Dtyp = 1.0 / secpera    # s-1
 
 # solve the problem for each level in the hierarchy
 upcoarse = None
-for j in range(args.refine + 1):
+levels = args.refine + 1
+jrange = [levels - 1,] if args.single else range(levels)
+for j in jrange:
     mesh = hierarchy[j]
     V = VectorFunctionSpace(mesh, 'Lagrange', 2)
     W = FunctionSpace(mesh, 'Lagrange', 1)
     Z = V * W
     up = Function(Z)
-    u, p = split(up)
+    su, p = split(up)
     v, q = TestFunctions(Z)
 
     def D(w):               # strain-rate tensor
         return 0.5 * (grad(w) + grad(w).T)
 
     fbody = Constant((0.0, - rho * g))
-    Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp)**2.0
+    lam = 1.0e7
+    # FIXME adjust eps on coarse meshes
+    Du2 = 0.5 * inner(D(su/lam), D(su/lam)) + (args.eps * Dtyp)**2.0
     nu = 0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0)
-    F = ( inner(2.0 * nu * D(u), D(v)) \
-          - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
+    F = ( lam**(-2) * inner(2.0 * nu * D(su), D(v)) \
+          - lam**(-1) * p * div(v) - lam**(-1) * q * div(su) \
+          - lam**(-1) * inner(fbody, v) ) * dx
 
     # different boundary conditions relative to stage2/:
     #   base label is 'bottom', and we add noslip condition on degenerate ends
@@ -149,7 +164,7 @@ for j in range(args.refine + 1):
             DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1,2)) ]
 
     printpar('solving on level %d (%d x %d mesh) ...' \
-             % (j, args.mx * 2**j, args.mz * 2**j))
+             % (j, args.mx, args.mz * 2**j))
     if upcoarse is not None:
         prolong(upcoarse, up)
     solve(F == 0, up, bcs=bcs, options_prefix='s',
@@ -158,6 +173,8 @@ for j in range(args.refine + 1):
         upcoarse = up.copy()
 
     # print average and maximum velocity
+    su, _ = up.split()
+    u = su / lam
     P1 = FunctionSpace(mesh, 'CG', 1)
     one = Constant(1.0, domain=mesh)
     area = assemble(dot(one,one) * dx)
@@ -168,8 +185,19 @@ for j in range(args.refine + 1):
     printpar('  ice speed (m a-1): av = %.3f, max = %.3f' \
              % (umagav * secpera, umagmax * secpera))
 
+# generate regularized effective viscosity from the solution:
+#   nu = (1/2) B_n X^((1/n)-1)
+# where X = sqrt(|Du|^2 + eps^2 Dtyp^2)
+def effectiveviscosity(mesh, u):
+    P1 = FunctionSpace(mesh, 'Lagrange', 1)
+    Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp)**2.0
+    nu = interpolate(0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0), P1)
+    nu.rename('effective viscosity')
+    return nu
+
 printpar('saving to dome.pvd ...')
-u, p = up.split()
-u.rename('velocity')
+su, p = up.split()
+su.rename('velocity')
+su.dat.data[:] /= lam
 p.rename('pressure')
-File('dome.pvd').write(u, p)
+File('dome.pvd').write(su, p, effectiveviscosity(hierarchy[-1],su))
