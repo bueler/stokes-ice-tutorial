@@ -6,35 +6,29 @@ import numpy as np
 from firedrake import *
 
 # recover stage3/:
-#     ./solve.py -refine 0 -marginheight 0.0 -direct
+#     ./solve.py -refine 0 -marginheight 0.0
 
-# KEY HINT ABOUT PERFORMANCE:  all of these 2-layer, eps=10^-2 runs in stage3/,
-# with modest snes_rtol, are super cheap, and give at most 11 iterations and
-# time 17 seconds on finest, and O(N) times
-#     for MX in 500 1000 2000 4000 8000 16000; do tmpg -n 1 ./solve.py -s_snes_converged_reason -mx $MX -mz 2 -s_snes_rtol 1.0e-3 -s_snes_max_it 200 -eps 1.0e-2; done
-
-# SO HERE IS A WAY FORWARD:
-#    * use SemiCoarsenedExtrudedHierarchy()
-#    * grid sequence with eps=1.0e-2,1.0e-3,1.0e-4,1.0e-4,...
-
-# good settings:
-#     ./solve.py -mx 20 -mz 2 -s_snes_converged_reason -s_ksp_converged_reason -s_snes_ksp_ew -s_snes_rtol 1.0e-2 -refine K
+# performance demo (1 min run time on my thelio)
+#     tmpg -n 12 ./solve.py -s_snes_converged_reason -mx 4000 -refine 2 -s_snes_monitor -s_snes_atol 1.0e-2
 
 parser = argparse.ArgumentParser(description=
 '''stage4/  Solve the Glen-Stokes momentum equations for a 2D ice sheet using
-an extruded mesh and a Schur-multigrid solver.''', add_help=False)
-parser.add_argument('-direct', action='store_true', default=False,
-    help='use direct LU solver for each Newton step')
+an extruded mesh, rescaled equations, vertical grid sequencing, and physical
+diagnostics.''', add_help=False)
 parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,
     help='regularization used in viscosity')
 parser.add_argument('-marginheight', type=float, metavar='X', default=1.0,
     help='height of degeneration point at margin (default 1 m)')
 parser.add_argument('-mx', type=int, metavar='MX', default=50,
     help='number of subintervals in coarse mesh')
-parser.add_argument('-mz', type=int, metavar='MZ', default=8,
+parser.add_argument('-mz', type=int, metavar='MZ', default=2,
     help='number of subintervals in coarse mesh')
-parser.add_argument('-refine', type=int, metavar='J', default=2,
-    help='number of multigrid refinements when generating hierarchy')
+parser.add_argument('-o', metavar='FILE.pvd', type=str, default='dome.pvd',
+    help='output filename')
+parser.add_argument('-refine', type=int, metavar='J', default=1,
+    help='number of refinements when generating mesh hierarchy')
+parser.add_argument('-refinefactor', type=int, metavar='X', default=4,
+    help='refinement factor when generating mesh hierarchy')
 parser.add_argument('-single', action='store_true', default=False,
     help='solve only on the finest level, without grid sequencing')
 parser.add_argument('-solvehelp', action='store_true', default=False,
@@ -61,8 +55,24 @@ def profile(x, R, H):
     s[s < 1.0] = args.marginheight   # needed so that prolong() can find nodes
     return s
 
+# level-independent information
+secpera = 31556926.0    # seconds per year
+g = 9.81                # m s-2
+rho = 910.0             # kg m-3
+n = 3.0
+A3 = 3.1689e-24         # Pa-3 s-1;  EISMINT I value of ice softness
+B3 = A3**(-1.0/3.0)     # Pa s(1/3);  ice hardness
+Dtyp = 1.0 / secpera    # s-1
+sc = 1.0e-7             # velocity scale constant for symmetric equation scaling
+fbody = Constant((0.0, - rho * g))
+par = {'snes_linesearch_type': 'bt', 'ksp_type': 'preonly',
+       'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks'}
+
+def D(w):               # strain-rate tensor
+    return 0.5 * (grad(w) + grad(w).T)
+
 printpar = PETSc.Sys.Print        # print once even in parallel
-fmz = args.mz * 2**args.refine
+fmz = args.mz * (args.refinefactor)**args.refine
 printpar('generating %d-level mesh hierarchy ...' % (args.refine + 1))
 R = 10000.0
 H = 1000.0
@@ -74,7 +84,7 @@ sbase.dat.data[:] = profile(xbase, R, H)
 
 hierarchy = SemiCoarsenedExtrudedHierarchy( \
                 base, 1.0, base_layer=args.mz,
-                refinement_ratio=2, nref=args.refine)
+                refinement_ratio=args.refinefactor, nref=args.refine)
 for j in range(args.refine + 1):
     Q1R = FunctionSpace(hierarchy[j], 'P', 1, vfamily='R', vdegree=0)
     s = Function(Q1R)
@@ -83,55 +93,6 @@ for j in range(args.refine + 1):
     x, z = SpatialCoordinate(hierarchy[j])
     XZ = Function(Vcoord).interpolate(as_vector([x, s * z]))
     hierarchy[j].coordinates.assign(XZ)
-
-parcoarse = {'snes_linesearch_type': 'bt', 'ksp_type': 'preonly',
-             'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks'}
-if args.direct:
-    par = parcoarse
-else:
-    par = {'snes_linesearch_type': 'bt',
-        'ksp_type': 'fgmres',
-        'pc_type': 'fieldsplit',
-        'pc_fieldsplit_type': 'schur',
-        'pc_fieldsplit_schur_fact_type': 'lower',
-        'pc_fieldsplit_schur_precondition': 'selfp',
-        'fieldsplit_0_ksp_type': 'preonly',
-        #'fieldsplit_0_pc_type': 'lu',
-        'fieldsplit_0_pc_type': 'mg',
-        #'fieldsplit_0_mg_levels_ksp_type': 'gmres',
-        #'fieldsplit_0_mg_levels_ksp_max_it': 2,
-        'fieldsplit_0_mg_levels_ksp_type': 'richardson',
-        'fieldsplit_0_mg_levels_pc_type': 'bjacobi',
-        'fieldsplit_0_mg_levels_sub_pc_type': 'ilu',
-        #'fieldsplit_0_mg_levels_pc_type': 'lu',
-        'fieldsplit_0_mg_coarse_ksp_type': 'preonly',
-        'fieldsplit_0_mg_coarse_pc_type': 'lu',
-        #'fieldsplit_1_ksp_rtol': 1.0e-3,
-        #'fieldsplit_1_ksp_max_it': 5,
-        'fieldsplit_1_ksp_type': 'gmres',
-        #'fieldsplit_1_ksp_type': 'preonly',
-        'fieldsplit_1_pc_type': 'jacobi'}
-
-        # 'pc_fieldsplit_schur_factorization_type': 'lower',
-        # 'pc_fieldsplit_schur_precondition': 'selfp',  # BAD FOR ACCURACY?
-        # 'fieldsplit_0_ksp_type': 'preonly',
-        # 'fieldsplit_0_pc_type': 'mg',
-        # 'fieldsplit_0_mg_levels_ksp_type': 'richardson',
-        # 'fieldsplit_0_mg_levels_pc_type': 'asm',
-        # 'fieldsplit_0_mg_levels_sub_pc_type': 'ilu',           # sor?
-        # #'fieldsplit_1_ksp_rtol': 1.0e-2, # see iterations with -s_fieldsplit_1_ksp_converged_reason
-        # 'fieldsplit_1_ksp_max_it': 3,
-        # 'fieldsplit_1_ksp_type': 'gmres',
-        # 'fieldsplit_1_pc_type': 'jacobi',
-        # 'fieldsplit_1_pc_jacobi_type': 'diagonal'}
-
-secpera = 31556926.0    # seconds per year
-g = 9.81                # m s-2
-rho = 910.0             # kg m-3
-n = 3.0
-A3 = 3.1689e-24         # Pa-3 s-1;  EISMINT I value of ice softness
-B3 = A3**(-1.0/3.0)     # Pa s(1/3);  ice hardness
-Dtyp = 1.0 / secpera    # s-1
 
 # solve the problem for each level in the hierarchy
 upcoarse = None
@@ -143,38 +104,40 @@ for j in jrange:
     W = FunctionSpace(mesh, 'Lagrange', 1)
     Z = V * W
     up = Function(Z)
-    su, p = split(up)
+    scu, p = split(up)             # scaled velocity, unscaled pressure
     v, q = TestFunctions(Z)
 
-    def D(w):               # strain-rate tensor
-        return 0.5 * (grad(w) + grad(w).T)
+    # use a more generous eps except when we get to the finest level
+    if args.single or j == levels - 1:
+        eps = args.eps
+    else:
+        eps = 100.0 * args.eps
 
-    fbody = Constant((0.0, - rho * g))
-    lam = 1.0e7
-    # FIXME adjust eps on coarse meshes
-    Du2 = 0.5 * inner(D(su/lam), D(su/lam)) + (args.eps * Dtyp)**2.0
+    # symmetrically rescale the equations for better conditioning
+    Du2 = 0.5 * inner(D(scu * sc), D(scu * sc)) + (eps * Dtyp)**2.0
     nu = 0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0)
-    F = ( lam**(-2) * inner(2.0 * nu * D(su), D(v)) \
-          - lam**(-1) * p * div(v) - lam**(-1) * q * div(su) \
-          - lam**(-1) * inner(fbody, v) ) * dx
+    F = ( sc*sc * inner(2.0 * nu * D(scu), D(v)) \
+          - sc * p * div(v) - sc * q * div(scu) \
+          - sc * inner(fbody, v) ) * dx
 
     # different boundary conditions relative to stage2/:
     #   base label is 'bottom', and we add noslip condition on degenerate ends
     bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), 'bottom'),
             DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1,2)) ]
 
-    printpar('solving on level %d (%d x %d mesh) ...' \
-             % (j, args.mx, args.mz * 2**j))
+    # get initial condition by coarsening previous level
     if upcoarse is not None:
         prolong(upcoarse, up)
-    solve(F == 0, up, bcs=bcs, options_prefix='s',
-          solver_parameters=parcoarse if j == 0 else par)
+
+    printpar('solving on level %d (%d x %d mesh) ...' \
+             % (j, args.mx, args.mz * (args.refinefactor)**j))
+    solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
     if upcoarse is None:
         upcoarse = up.copy()
 
     # print average and maximum velocity
-    su, _ = up.split()
-    u = su / lam
+    scu, _ = up.split()
+    u = scu * sc
     P1 = FunctionSpace(mesh, 'CG', 1)
     one = Constant(1.0, domain=mesh)
     area = assemble(dot(one,one) * dx)
@@ -185,19 +148,26 @@ for j in jrange:
     printpar('  ice speed (m a-1): av = %.3f, max = %.3f' \
              % (umagav * secpera, umagmax * secpera))
 
-# generate regularized effective viscosity from the solution:
-#   nu = (1/2) B_n X^((1/n)-1)
-# where X = sqrt(|Du|^2 + eps^2 Dtyp^2)
-def effectiveviscosity(mesh, u):
-    P1 = FunctionSpace(mesh, 'Lagrange', 1)
+# generate tensor-valued deviatoric stress tau, and effective viscosity nu,
+#   from the velocity solution
+def stresses(mesh, u):
     Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp)**2.0
-    nu = interpolate(0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0), P1)
+    Q1 = FunctionSpace(mesh,'Q',1)
+    TQ1 = TensorFunctionSpace(mesh, 'Q', 1)
+    nu = Function(Q1).interpolate(0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0))
     nu.rename('effective viscosity')
-    return nu
+    tau = Function(TQ1).interpolate(2.0 * nu * D(u))
+    tau.rename('tau')
+    return tau, nu
 
-printpar('saving to dome.pvd ...')
-su, p = up.split()
-su.rename('velocity')
-su.dat.data[:] /= lam
+printpar('saving u,p,tau,nu,rank to %s ...' % args.o)
+u, p = up.split()
+u.dat.data[:] *= sc
+u.rename('velocity')
 p.rename('pressure')
-File('dome.pvd').write(su, p, effectiveviscosity(hierarchy[-1],su))
+tau, nu = stresses(hierarchy[-1], u)
+# integer-valued element-wise process rank
+rank = Function(FunctionSpace(mesh,'DG',0))
+rank.dat.data[:] = mesh.comm.rank
+rank.rename('rank')
+File(args.o).write(scu, p, tau, nu, rank)
