@@ -6,7 +6,7 @@ import numpy as np
 from firedrake import *
 
 # recover stage3/:
-#     ./solve.py -refine 0 -marginheight 0.0
+#     ./solve.py -refine 0 -mz 8 -marginheight 0.0
 
 # performance demo (1 min run time on my thelio)
 #     tmpg -n 12 ./solve.py -s_snes_converged_reason -mx 4000 -refine 2 -s_snes_monitor -s_snes_atol 1.0e-2
@@ -16,19 +16,19 @@ parser = argparse.ArgumentParser(description=
 an extruded mesh, rescaled equations, vertical grid sequencing, and physical
 diagnostics.''', add_help=False)
 parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,
-    help='regularization used in viscosity')
+    help='regularization used in viscosity (default=10^{-4})')
 parser.add_argument('-marginheight', type=float, metavar='X', default=1.0,
-    help='height of degeneration point at margin (default 1 m)')
+    help='height of degeneration point at margin (default=1 m)')
 parser.add_argument('-mx', type=int, metavar='MX', default=50,
-    help='number of subintervals in coarse mesh')
+    help='subintervals in coarse mesh (default=50)')
 parser.add_argument('-mz', type=int, metavar='MZ', default=2,
-    help='number of subintervals in coarse mesh')
+    help='vertical layers in coarse mesh (default=2)')
 parser.add_argument('-o', metavar='FILE.pvd', type=str, default='dome.pvd',
-    help='output filename')
-parser.add_argument('-refine', type=int, metavar='J', default=1,
-    help='number of refinements when generating mesh hierarchy')
+    help='output filename (default=dome.pvd)')
+parser.add_argument('-refine', type=int, metavar='X', default=1,
+    help='refinements when generating mesh hierarchy (default=1)')
 parser.add_argument('-refinefactor', type=int, metavar='X', default=4,
-    help='refinement factor when generating mesh hierarchy')
+    help='refinement factor when generating mesh hierarchy (default=4)')
 parser.add_argument('-single', action='store_true', default=False,
     help='solve only on the finest level, without grid sequencing')
 parser.add_argument('-solvehelp', action='store_true', default=False,
@@ -67,23 +67,22 @@ sc = 1.0e-7             # velocity scale constant for symmetric equation scaling
 fbody = Constant((0.0, - rho * g))
 par = {'snes_linesearch_type': 'bt', 'ksp_type': 'preonly',
        'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks'}
+printpar = PETSc.Sys.Print        # print once even in parallel
 
 def D(w):               # strain-rate tensor
     return 0.5 * (grad(w) + grad(w).T)
 
-printpar = PETSc.Sys.Print        # print once even in parallel
-fmz = args.mz * (args.refinefactor)**args.refine
 printpar('generating %d-level mesh hierarchy ...' % (args.refine + 1))
 R = 10000.0
 H = 1000.0
-base = IntervalMesh(args.mx, length_or_left=0.0, right=2.0*R)
-xbase = base.coordinates.dat.data_ro
-P1base = FunctionSpace(base,'P',1)
+basemesh = IntervalMesh(args.mx, length_or_left=0.0, right=2.0*R)
+xbase = basemesh.coordinates.dat.data_ro
+P1base = FunctionSpace(basemesh,'P',1)
 sbase = Function(P1base)
 sbase.dat.data[:] = profile(xbase, R, H)
 
 hierarchy = SemiCoarsenedExtrudedHierarchy( \
-                base, 1.0, base_layer=args.mz,
+                basemesh, 1.0, base_layer=args.mz,
                 refinement_ratio=args.refinefactor, nref=args.refine)
 for j in range(args.refine + 1):
     Q1R = FunctionSpace(hierarchy[j], 'P', 1, vfamily='R', vdegree=0)

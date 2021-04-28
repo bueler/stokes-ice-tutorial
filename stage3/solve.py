@@ -13,7 +13,7 @@ parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,
 parser.add_argument('-mx', type=int, metavar='MX', default=50,
     help='number of subintervals')
 parser.add_argument('-mz', type=int, metavar='MZ', default=8,
-    help='number of subintervals')
+    help='number of vertical layers')
 parser.add_argument('-solvehelp', action='store_true', default=False,
     help='print help for solve.py options and stop')
 args, unknown = parser.parse_known_args()
