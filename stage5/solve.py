@@ -74,8 +74,9 @@ printpar('generating disk mesh in base (map-plane) ...')
 basemesh = UnitDiskMesh(refinement_level=args.baserefine)
 basemesh.coordinates.dat.data[:] *= R * (1.0 - 1.0e-10) # avoid degeneracy
 belements, bnodes = basemesh.num_cells(), basemesh.num_vertices()
-printpar('    (2D base mesh is disk with %d triangle elements and %d nodes%s)' \
-         % (belements, bnodes, ' on rank 0' if basemesh.comm.size > 1 else ''))
+printpar('    (%s2D base mesh is disk with %d triangle elements and %d nodes)' \
+         % ('on rank 0: ' if basemesh.comm.size > 1 else '',
+            belements, bnodes))
 
 printpar('generating %d-level mesh hierarchy ...' % (args.refine + 1))
 hierarchy = SemiCoarsenedExtrudedHierarchy( \
@@ -95,9 +96,9 @@ for j in range(args.refine + 1):
     XYZ = Function(Vcoord).interpolate(as_vector([x, y, s * z]))
     hierarchy[j].coordinates.assign(XYZ)
 fmz = args.mz * args.refinefactor**args.refine
-printpar('    (fine-level 3D mesh has %d prism elements and %d nodes%s)' \
-         % (belements * fmz, bnodes * (fmz + 1),
-            ' on rank 0' if basemesh.comm.size > 1 else ''))
+printpar('    (%sfine-level 3D mesh has %d prism elements and %d nodes)' \
+         % ('on rank 0: ' if basemesh.comm.size > 1 else '',
+            belements * fmz, bnodes * (fmz + 1)))
 
 # solve the problem for each level in the hierarchy
 # (essentially dimension-independent, and nearly same as stage4/)
