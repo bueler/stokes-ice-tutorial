@@ -347,7 +347,7 @@ v, q = TestFunctions(Z)
 \frametitle{running Firedrake programs}
 
 \begin{itemize}
-\item now I'm actually going to run some Python Firedrake code!
+\item now I'm actually going to run some code!
 \item install Firedrake following these directions:
 
 \begin{center}
@@ -607,9 +607,8 @@ $ cd stage5/
 $ mpiexec -n 4 ./solve.py -refine 0 \
     -s_snes_atol 1.0e-2 -s_snes_monitor
 $ paraview dome.pvd
-$ mpiexec -n 12 ./solve.py -bumpy -baserefine 5 \
-    -refine 2 -s_snes_atol 1.0e-2 -s_snes_monitor \
-    -o hires.pvd
+$ mpiexec -n 12 ./solve.py -refine 2 -baserefine 5 \
+    -s_snes_atol 1.0e-2 -s_snes_monitor -o hires.pvd
 $ paraview hires.pvd
 \end{Verbatim}
 %$

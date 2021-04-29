@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-# 1.5 minute high res
-# tmpg -n 12 ./solve.py -s_snes_converged_reason -s_snes_monitor -s_snes_atol 1.0e-1 -baserefine 4 -refine 1 -b0 0.0
-
 import sys
 import numpy as np
 import argparse
