@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
-# TODO
-#   * optional bumpy base
-
 # 1.5 minute high res
-# tmpg -n 12 ./solve.py -s_snes_converged_reason -s_snes_monitor -s_snes_atol 1.0e-1 -baserefine 4 -refine 1
+# tmpg -n 12 ./solve.py -s_snes_converged_reason -s_snes_monitor -s_snes_atol 1.0e-1 -baserefine 4 -refine 1 -b0 0.0
 
 import sys
 import numpy as np
@@ -14,6 +11,8 @@ from firedrake import *
 parser = argparse.ArgumentParser(description=
 '''stage5/  Solve the Glen-Stokes momentum equations for a 3D ice sheet using
 an extruded mesh and an optional bumpy bed.''', add_help=False)
+parser.add_argument('-b0', type=float, metavar='X', default=500.0,
+    help='scale of bed bumpiness (default=500 m)')
 parser.add_argument('-baserefine', type=int, metavar='X', default=2,
     help='refinement levels in generating disk base mesh (default=2)')
 parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,
@@ -53,6 +52,11 @@ def profile(x, y, R, H):
     s = (H / (1.0 - 1.0 / n)**p1) * lamhat**p1
     return s
 
+def bed(x, y, R, b0):
+    '''A smooth, bumpy bed of magnitude b0.'''
+    rr = (x * x + y * y) / (R * R)
+    return b0 * np.sin(4.0 * np.pi * (x + y) / R) * (1.0 - rr)
+
 # level-independent information
 secpera = 31556926.0    # seconds per year
 g = 9.81                # m s-2
@@ -70,7 +74,8 @@ printpar = PETSc.Sys.Print        # print once even in parallel
 def D(w):               # strain-rate tensor
     return 0.5 * (grad(w) + grad(w).T)
 
-printpar('generating disk mesh in base (map-plane) ...')
+printpar('generating disk mesh in base (map-plane) by %d refinements ...' \
+         % args.baserefine)
 basemesh = UnitDiskMesh(refinement_level=args.baserefine)
 basemesh.coordinates.dat.data[:] *= R * (1.0 - 1.0e-10) # avoid degeneracy
 belements, bnodes = basemesh.num_cells(), basemesh.num_vertices()
@@ -87,13 +92,17 @@ ybase = basemesh.coordinates.dat.data_ro[:,1]
 P1base = FunctionSpace(basemesh,'P',1)
 sbase = Function(P1base)
 sbase.dat.data[:] = profile(xbase, ybase, R, H)
+bbase = Function(P1base)               # initialized to zero
+bbase.dat.data[:] = bed(xbase, ybase, R, args.b0)
 for j in range(args.refine + 1):
     Q1R = FunctionSpace(hierarchy[j], 'P', 1, vfamily='R', vdegree=0)
     s = Function(Q1R)
     s.dat.data[:] = sbase.dat.data_ro[:]
+    b = Function(Q1R)
+    b.dat.data[:] = bbase.dat.data_ro[:]
     Vcoord = hierarchy[j].coordinates.function_space()
     x, y, z = SpatialCoordinate(hierarchy[j])
-    XYZ = Function(Vcoord).interpolate(as_vector([x, y, s * z]))
+    XYZ = Function(Vcoord).interpolate(as_vector([x, y, (s - b) * z + b]))
     hierarchy[j].coordinates.assign(XYZ)
 fmz = args.mz * args.refinefactor**args.refine
 printpar('    (%sfine-level 3D mesh has %d prism elements and %d nodes)' \
