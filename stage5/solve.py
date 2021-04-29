@@ -173,18 +173,20 @@ def stresses(mesh, u):
     Q1 = FunctionSpace(mesh,'Q',1)
     TQ1 = TensorFunctionSpace(mesh, 'Q', 1)
     nu = Function(Q1).interpolate(0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0))
-    nu.rename('effective viscosity')
+    nu.rename('effective viscosity (Pa s)')
     tau = Function(TQ1).interpolate(2.0 * nu * D(u))
-    tau.rename('tau')
+    tau /= 1.0e5
+    tau.rename('tau (bar)')
     return tau, nu
 
 printpar('saving u,p,tau,nu,rank to %s ...' % args.o)
 u, p = up.split()
-u.dat.data[:] *= sc
-u.rename('velocity')
-p.rename('pressure')
+u *= sc
 tau, nu = stresses(hierarchy[-1], u)
-# integer-valued element-wise process rank
+u *= secpera
+p /= 1.0e5
+u.rename('velocity (m/a)')
+p.rename('pressure (bar)')
 rank = Function(FunctionSpace(mesh,'DG',0))
 rank.dat.data[:] = mesh.comm.rank
 rank.rename('rank')

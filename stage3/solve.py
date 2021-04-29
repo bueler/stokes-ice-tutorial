@@ -107,6 +107,8 @@ printpar('  ice speed (m a-1): av = %.3f, max = %.3f' \
 
 printpar('saving to dome.pvd ...')
 u, p = up.split()
-u.rename('velocity')
-p.rename('pressure')
+u *= secpera
+p /= 1.0e5
+u.rename('velocity (m/a)')
+p.rename('pressure (bar)')
 File('dome.pvd').write(u, p)
