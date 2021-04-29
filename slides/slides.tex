@@ -126,7 +126,7 @@
 
 \section{the problem and the equations}
 
-\begin{frame}{the glacier dynamics problem}
+\begin{frame}{the glacier \underline{dynamics} problem}
 
 \begin{itemize}
 \item conservation principles apply to ice sheets; each one is a PDE
@@ -176,6 +176,7 @@
 
 \bigskip
 \begin{itemize}
+\item $\bu$ is velocity, $p$ is pressure, and $\tau$ is the deviatoric stress tensor
 \item constants: {\small $\rhoi=910 \,\text{kg}\,\text{m}^{-3}$, $g=9.81\,\text{m}\,\text{s}^{-2}$, $n=3$, $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$}
 \item viscosity regularization with $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$:
 \begin{equation*}
@@ -190,7 +191,7 @@
 \end{frame}
 
 
-\begin{frame}{boundary conditions as simple as possible}
+\begin{frame}{boundary conditions, as simple as possible}
 
 \begin{itemize}
 \item stress-free top:
@@ -321,7 +322,7 @@ and
 
 \bigskip
 \begin{center}
-\alert{choose spaces that the experts say are ``stable''!}
+\alert{choose spaces that the experts say are ``stable''}
 \end{center}
 
 \bigskip
@@ -329,8 +330,8 @@ and
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
-V = VectorFunctionSpace(mesh, 'Lagrange', 2)
-W = FunctionSpace(mesh, 'Lagrange', 1)
+V = VectorFunctionSpace(mesh, 'Lagrange', 2)   # u space
+W = FunctionSpace(mesh, 'Lagrange', 1)         # p space
 Z = V * W
 up = Function(Z)
 u, p = split(up)
@@ -520,9 +521,9 @@ $ paraview dome.pvd
 \frametitle{convergence?}
 
 \begin{itemize}
-\item \texttt{stage3/} code \texttt{solve.py} allows adjustable resolution:
+\item \texttt{stage3/} code \texttt{solve.py} allows adjustable resolution, e.g.:
 \begin{Verbatim}
-$ ./solve.py -mx 20 -mz 2
+$ ./solve.py -mx 40 -mz 4
 \end{Verbatim}
 %$
 \item velocity results are reasonable and consistent:
@@ -558,13 +559,13 @@ $640\times 64$ &     $31 \times 16$ &        1758 &         3190
 \frametitle{\texttt{stage4/} \qquad bells and whistles}
 
 \begin{itemize}
-\item \emph{purpose:} additional useful and robust features
+\item \emph{purpose:} additional robust and/or useful features
     \begin{itemize}
-    \item[$\circ$] rescale the equations  \hfill \emph{for better conditioning}
-    \item[$\circ$] vertical grid sequencing  \hfill \emph{for better initial iterates}
-    \item[$\circ$] $100\eps$ on coarse meshes in sequencing  \hfill \emph{for better initial iterates}
-    \item[$\circ$] generate stress tensor $\tau$  \hfill \emph{as diagnostic}
-    \item[$\circ$] generate effective viscosity $\nu_\eps$  \hfill \emph{as diagnostic}
+    \item[$\circ$] rescale the equations  \hfill \emph{better conditioning}
+    \item[$\circ$] vertical grid sequencing  \hfill \emph{better initial iterates}
+    \item[$\circ$] $100\eps$ on coarse meshes in sequencing  \hfill \emph{better initial iterates}
+    \item[$\circ$] generate stress tensor $\tau$ from solution  \hfill \emph{diagnostic}
+    \item[$\circ$] generate effective viscosity $\nu_\eps$ from solution  \hfill \emph{diagnostic}
     \end{itemize}
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
 \item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
@@ -603,12 +604,13 @@ $ paraview dome.pvd
 \bigskip
 \begin{Verbatim}
 $ cd stage5/
-$ mpiexec -n P ./solve.py -refine 0 \
+$ mpiexec -n 4 ./solve.py -refine 0 \
     -s_snes_atol 1.0e-2 -s_snes_monitor
 $ paraview dome.pvd
-$ mpiexec -n P ./solve.py -bumpy -baserefine 5 \
-    -refine 2 -s_snes_atol 1.0e-2 -s_snes_monitor
-$ paraview dome.pvd
+$ mpiexec -n 12 ./solve.py -bumpy -baserefine 5 \
+    -refine 2 -s_snes_atol 1.0e-2 -s_snes_monitor \
+    -o hires.pvd
+$ paraview hires.pvd
 \end{Verbatim}
 %$
 
