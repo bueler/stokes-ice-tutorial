@@ -4,7 +4,7 @@
 <img src="latex/figs/stage2.png" alt="ice speed in a glacier" />
 </p>
 
-The Glen-Stokes equations describe the ice in a [glacier](https://en.wikipedia.org/wiki/Glacier) or [ice sheet](https://en.wikipedia.org/wiki/Glacier) as a gravity-driven, viscous, shear-thinning flow.  This repository contains a practical tutorial on numerically-solving these coupled [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) using the [finite element method](https://en.wikipedia.org/wiki/Finite_element_method).  The [Python](https://www.python.org/) programs here are relatively-short and only solve idealized problems; we do not use any observational data from real glaciers.
+The Glen-Stokes equations describe the ice in a [glacier](https://en.wikipedia.org/wiki/Glacier) or [ice sheet](https://en.wikipedia.org/wiki/Glacier) as a gravity-driven, viscous, shear-thinning flow.  This repository contains a practical tutorial on numerically-solving these coupled [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) using the [finite element method](https://en.wikipedia.org/wiki/Finite_element_method).  The [Python](https://www.python.org/) programs here are relatively-short and only solve idealized problems.  (We do not use any observational data from real glaciers.)
 
 <p align="center">
 <img src="latex/figs/stokesequations.png" width="400" title="the Stokes equations for ice flow" />
@@ -13,7 +13,7 @@ The Glen-Stokes equations describe the ice in a [glacier](https://en.wikipedia.o
 ### stages
 
 To do this tutorial, read `slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separated, but later stages combine these actions into a single program.  `stage3/` shows extruded meshes,
-`stage4/` shows better convergence and diagnostics, and `stage5/` is a 3D ice sheet.  All stages allow parallel runs.
+`stage4/` shows robust numerics and better diagnostics, and `stage5/` is a 3D ice sheet with a bumpy bed.  All stages allow parallel runs.
 
 ### prerequisites
 
