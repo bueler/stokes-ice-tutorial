@@ -1,13 +1,13 @@
 # stokes-ice-tutorial
 
 <p align="center">
-<img src="slides/figs/stage2.png" alt="ice speed in a glacier" />
+<img src="latex/figs/stage2.png" alt="ice speed in a glacier" />
 </p>
 
 The Glen-Stokes equations describe the ice in a [glacier](https://en.wikipedia.org/wiki/Glacier) or [ice sheet](https://en.wikipedia.org/wiki/Glacier) as a gravity-driven, viscous, shear-thinning flow.  This repository contains a practical tutorial on numerically-solving these coupled [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) using the [finite element method](https://en.wikipedia.org/wiki/Finite_element_method).  The [Python](https://www.python.org/) programs here are relatively-short and only solve idealized problems; we do not use any observational data from real glaciers.
 
 <p align="center">
-<img src="slides/figs/stokesequations.png" width="400" title="the Stokes equations for ice flow" />
+<img src="latex/figs/stokesequations.png" width="400" title="the Stokes equations for ice flow" />
 </p>
 
 ### stages
