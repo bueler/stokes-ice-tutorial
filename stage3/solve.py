@@ -84,7 +84,7 @@ nu = 0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0)
 F = ( inner(2.0 * nu * D(u), D(v)) \
       - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 
-# different boundary conditions relative to stage2/:
+# different boundary conditions relative to stage2/, for extruded case:
 #   base label is 'bottom', and we add noslip condition on degenerate ends
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), 'bottom'),
         DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1,2)) ]
