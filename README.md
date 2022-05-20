@@ -13,7 +13,9 @@ $$\begin{align*}
 \end{align*}$$
 
 $$-\nabla \cdot \tau + \nabla p = \rho_i \mathbf{g}$$
+
 $$\nabla \cdot \mathbf{u} = 0$$
+
 $$\tau = B_n |D\mathbf{u}|^{(1/n)-1} D\mathbf{u}$$
 
 ### stages
