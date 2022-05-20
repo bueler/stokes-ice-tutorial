@@ -12,12 +12,6 @@ $$\begin{align*}
 \tau &= B_n |D\mathbf{u}|^{(1/n)-1} D\mathbf{u} & &\text{Glen flow law}
 \end{align*}$$
 
-$$-\nabla \cdot \tau + \nabla p = \rho_i \mathbf{g}$$
-
-$$\nabla \cdot \mathbf{u} = 0$$
-
-$$\tau = B_n |D\mathbf{u}|^{(1/n)-1} D\mathbf{u}$$
-
 ### stages
 
 To do this tutorial, read `slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separated, but later stages combine these actions into a single program.  `stage3/` shows extruded meshes,
