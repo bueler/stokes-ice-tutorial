@@ -6,9 +6,15 @@
 
 The Glen-Stokes equations describe the ice in a [glacier](https://en.wikipedia.org/wiki/Glacier) or [ice sheet](https://en.wikipedia.org/wiki/Glacier) as a gravity-driven, viscous, shear-thinning flow.  This repository contains a practical tutorial on numerically-solving these coupled [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) using the [finite element method](https://en.wikipedia.org/wiki/Finite_element_method).  The [Python](https://www.python.org/) programs here are relatively-short and only solve idealized problems.  (We do not use any observational data from real glaciers.)
 
-<p align="center">
-<img src="latex/figs/stokesequations.png" width="400" title="the Stokes equations for ice flow" />
-</p>
+$$\begin{align*}
+-\nabla \cdot \tau + \nabla p &= \rho_i \mathbf{g} & &\text{stress balance} \\
+\nabla \cdot \mathbf{u} &= 0 & &\text{incompressibility} \\
+\tau &= B_n |D\mathbf{u}|^{(1/n)-1} D\mathbf{u} & &\text{Glen flow law}
+\end{align*}$$
+
+$$-\nabla \cdot \tau + \nabla p = \rho_i \mathbf{g}$$
+$$\nabla \cdot \mathbf{u} = 0$$
+$$\tau = B_n |D\mathbf{u}|^{(1/n)-1} D\mathbf{u}$$
 
 ### stages
 
