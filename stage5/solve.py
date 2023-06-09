@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import argparse
 from firedrake import *
+from firedrake.petsc import PETSc
 
 parser = argparse.ArgumentParser(description=
 '''stage5/  Solve the Glen-Stokes momentum equations for a 3D ice sheet using
@@ -177,7 +178,8 @@ def stresses(mesh, u):
     return tau, nu
 
 printpar('saving u,p,tau,nu,rank to %s ...' % args.o)
-u, p = up.split()
+u = up.subfunctions[0]
+p = up.subfunctions[1]
 u *= sc
 tau, nu = stresses(hierarchy[-1], u)
 u *= secpera

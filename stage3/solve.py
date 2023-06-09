@@ -4,6 +4,7 @@ import sys
 import argparse
 import numpy as np
 from firedrake import *
+from firedrake.petsc import PETSc
 
 parser = argparse.ArgumentParser(description=
 '''stage3/  Solve the Glen-Stokes momentum equations for a 2D ice sheet using an
@@ -106,7 +107,8 @@ printpar('  ice speed (m a-1): av = %.3f, max = %.3f' \
          % (umagav * secpera, umagmax * secpera))
 
 printpar('saving to dome.pvd ...')
-u, p = up.split()
+u = up.subfunctions[0]
+p = up.subfunctions[1]
 u *= secpera
 p /= 1.0e5
 u.rename('velocity (m/a)')

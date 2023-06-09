@@ -26,7 +26,8 @@ par = {'snes_type': 'ksponly', 'ksp_type': 'preonly',
        'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks'}
 solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
 
-u, p = up.split()
+u = up.subfunctions[0]
+p = up.subfunctions[1]
 u.rename('velocity')
 p.rename('pressure')
 File('domain.pvd').write(u, p)

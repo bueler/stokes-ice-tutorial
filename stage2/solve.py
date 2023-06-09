@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from firedrake import *
+from firedrake.petsc import PETSc
 
 printpar = PETSc.Sys.Print        # print once even in parallel
 printpar('reading mesh from dome.msh ...')
@@ -51,7 +52,8 @@ printpar('  ice speed (m a-1): av = %.3f, max = %.3f' \
          % (umagav * secpera, umagmax * secpera))
 
 printpar('saving to dome.pvd ...')
-u, p = up.split()
+u = up.subfunctions[0]
+p = up.subfunctions[1]
 u *= secpera    # save in m/a
 p /= 1.0e5      # save in bar
 u.rename('velocity (m/a)')

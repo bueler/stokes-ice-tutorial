@@ -4,6 +4,7 @@ import sys
 import argparse
 import numpy as np
 from firedrake import *
+from firedrake.petsc import PETSc
 
 # recover stage3/:
 #     ./solve.py -refine 0 -mz 8 -marginheight 0.0
@@ -163,7 +164,8 @@ def stresses(mesh, u):
     return tau, nu
 
 printpar('saving u,p,tau,nu,rank to %s ...' % args.o)
-u, p = up.split()
+u = up.subfunctions[0]
+p = up.subfunctions[1]
 u *= sc
 tau, nu = stresses(hierarchy[-1], u)
 u *= secpera
