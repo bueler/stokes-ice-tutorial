@@ -65,8 +65,10 @@ B3 = A3**(-1.0/3.0)     # Pa s(1/3);  ice hardness
 Dtyp = 1.0 / secpera    # s-1
 sc = 1.0e-7             # velocity scale constant for symmetric equation scaling
 fbody = Constant((0.0, 0.0, - rho * g))
-par = {'snes_linesearch_type': 'bt', 'ksp_type': 'preonly',
-       'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks'}
+par = {'snes_linesearch_type': 'bt',
+       'ksp_type': 'preonly',
+       'pc_type': 'lu',
+       'pc_factor_shift_type': 'inblocks'}
 printpar = PETSc.Sys.Print        # print once even in parallel
 
 def D(w):               # strain-rate tensor

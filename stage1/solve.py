@@ -22,8 +22,10 @@ F = ( nu0 * inner(D(u), D(v)) \
       - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (42,)) ]
 
-par = {'snes_type': 'ksponly', 'ksp_type': 'preonly',
-       'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks'}
+par = {'snes_type': 'ksponly',
+       'ksp_type': 'preonly',
+       'pc_type': 'lu',
+       'pc_factor_shift_type': 'inblocks'}
 solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
 
 u = up.subfunctions[0]

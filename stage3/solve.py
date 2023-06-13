@@ -91,8 +91,10 @@ bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), 'bottom'),
         DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1,2)) ]
 
 printpar('solving ...')
-par = {'snes_linesearch_type': 'bt', 'ksp_type': 'preonly',
-       'pc_type': 'lu', 'pc_factor_shift_type': 'inblocks'}
+par = {'snes_linesearch_type': 'bt',
+       'ksp_type': 'preonly',
+       'pc_type': 'lu',
+       'pc_factor_shift_type': 'inblocks'}
 solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
 
 # print average and maximum velocity
