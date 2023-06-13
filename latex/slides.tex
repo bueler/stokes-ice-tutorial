@@ -1,6 +1,8 @@
-% Copyright 2021  Ed Bueler
+% Copyright 2021-2023  Ed Bueler
 
-\documentclass[10pt,hyperref,dvipsnames]{beamer}
+\documentclass[10pt,
+               hyperref={colorlinks,citecolor=DeepPink4,linkcolor=black,urlcolor=blue},
+               svgnames]{beamer}
 
 \mode<presentation>{
   \usetheme{Madrid}
@@ -91,8 +93,8 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[April 2021]{April 2021  \\ \phantom{foo} \\ \phantom{foo} \\
-\large \href{https://github.com/bueler/stokes-ice-tutorial}{\alert{\texttt{github.com/bueler/stokes-ice-tutorial}}} }
+\date[June 2023]{version June 2023  \\ \phantom{foo} \\ \phantom{foo} \\
+\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 
 \begin{document}
@@ -102,14 +104,6 @@
   \maketitle
 \end{frame}
 
-\begin{frame}
-  \frametitle{Outline}
-
-\centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\alert{\texttt{github.com/bueler/stokes-ice-tutorial}}}}
-
-\bigskip
-  \tableofcontents[hideallsubsections]
-\end{frame}
 
 \begin{frame}{exclamation points}
 
@@ -120,16 +114,33 @@
 
 \item \alert{please try the codes!}
 
-\item \alert{feel free to send future questions by email!}
+\item \alert{send future questions!}
+  \begin{itemize}
+  \item[$\circ$] by email to \href{mailto:elbueler@alaska.edu}{\texttt{elbueler@alaska.edu}}, or
+  \item[$\circ$] using \href{https://github.com/bueler/stokes-ice-tutorial/issues}{github issues}
+  \end{itemize}
 \end{itemize}
 \end{frame}
 
-\section{the problem and the equations}
 
-\begin{frame}{the glacier \underline{dynamics} problem}
+\setbeamertemplate{section in toc}[default] 
+
+\begin{frame}
+  \frametitle{Outline}
+
+\centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
+
+\bigskip
+  \tableofcontents[hideallsubsections]
+\end{frame}
+
+
+\section{stage 0 \hspace{9.3mm} the problem and the equations}
+
+\begin{frame}{the glacier \underline{dynamics} problem, without evolution of geometry}
 
 \begin{itemize}
-\item conservation principles apply to ice sheets; each one is a PDE
+\item conservation principles apply to ice sheets:
     \begin{itemize}
     \item[$\circ$] mass \hfill \cmark\qquad today
     \item[$\circ$] momentum \hfill \cmark\qquad today
@@ -138,7 +149,7 @@
 \item Stokes model $=$ momentum conservation $+$ incompressibility
     \begin{itemize}
     \item[$\circ$] incompressibility is one aspect of mass conservation
-    \item[$\circ$] no attempt \emph{today} to model geometry changes using surface balance, the other aspect
+    \item[$\circ$] no attempt \emph{today} to model geometry changes using surface balance, the other aspect of mass conservation
     \end{itemize}
 \item \alert{the Stokes model determines velocity and pressure from given geometry}
 
@@ -178,14 +189,17 @@
 \begin{itemize}
 \item $\bu$ is velocity, $p$ is pressure, and $\tau$ is the deviatoric stress tensor
 \item constants: {\small $\rhoi=910 \,\text{kg}\,\text{m}^{-3}$, $g=9.81\,\text{m}\,\text{s}^{-2}$, $n=3$, $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$}
-\item viscosity regularization with $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$:
+    \begin{itemize}
+    \item[$\circ$] isothermal, so $B_n$ is constant
+    \end{itemize}
+\item now regularize viscosity using $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$:
 \begin{equation*}
 \nu_\eps(|D\bu|) = \frac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}
 \end{equation*}
 \item eliminate $\tau$ to give system for $\bu,p$:
 \begin{align*}
-- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} && \text{\emph{momentum conservation}} \\
-\Div \bu &= 0 && \text{\emph{(bulk) mass conservation}}
+- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \\
+\Div \bu &= 0
 \end{align*}
 \end{itemize}
 \end{frame}
@@ -220,17 +234,17 @@
 
 \begin{column}{0.6\textwidth}
 \begin{itemize}
-\item if we make viscosity constant ($\nu_0$) then we get the linear Stokes system:
+\item if we make viscosity constant ($\nu_0$) then we get a linear Stokes system:
 \begin{align*}
 - \nabla \cdot \left(2 \nu_0\, D\bu\right) + \nabla p &= \rhoi \mathbf{g}  \\
 \Div \bu &= 0
 \end{align*}
-\item with reformatting:
+\item with reformatting, using $\nabla \cdot D\bu = \nabla^2 \bu$:
 \begin{align*}
 - \nu_0 \nabla^2 \bu + \nabla p &= \rhoi \mathbf{g}  \\
 -\Div \bu \qquad \,\,\,\, &= 0
 \end{align*}
-\item it has symmetric block structure
+\item which has symmetric block structure
   $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
 \end{itemize}
 \end{column}
@@ -253,13 +267,10 @@
 \begin{itemize}
 \item exact solution of the Stokes model is impossible for most geometries
     \begin{itemize}
-    \item[$\circ$] slab-on-a-slope is an exception
+    \item[$\circ$] \emph{exercise.}  slab-on-a-slope is an exception
     \end{itemize}
 \item so we solve numerically using the finite element (FE) method
-    \begin{itemize}
-    \item[$\circ$] \alert{the whole point of Firedrake is that we \emph{don't} need to know the details of FE}
-    \end{itemize}
-\item in summary, the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize then turn the \alert{weak form} of the equations into a finite system by using test functions built from the mesh, {\tiny and then solve those equations somehow, and then there is a lot of fine print lorem ipsum dolor sit amet consectetur adipiscing elit etiam ex neque rhoncus a nunc tristique dignissim euismod magna fusce pharetra tempor sapien vitae scelerisque duis in quam rhoncus suscipit leo quis pellentesque diam suspendisse mollis nisi et eros ornare tincidunt maecenas sed pellentesque ex id mattis libero morbi erat orci fermentum eu dui ac \dots}}}}
+\item in summary, the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize then more and more details which I am skipping \dots}}}
 
 \medskip
 \includegraphics[width=0.2\textwidth]{figs/hat.png} \hfill
@@ -268,7 +279,8 @@
 \hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
 
 \bigskip
-\item we need to write a \alert{weak form}!
+\item \alert{the whole point of Firedrake is to \emph{not}\, see the details of FE}
+\item one needs to know: the first step is to write a weak form
 \end{itemize}
 \end{frame}
 
@@ -290,7 +302,7 @@
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
-fbody = Constant((0.0, 0.0, - rho * g))
+fbody = rho * Constant((0.0, 0.0, - g))
 Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp)**2.0
 nu = 0.5 * Bn * Du2**((1.0 / n - 1.0)/2.0)
 F = ( inner(2.0 * nu * D(u), D(v)) \
@@ -298,7 +310,7 @@ F = ( inner(2.0 * nu * D(u), D(v)) \
 \end{Verbatim}
 
 \medskip
-\item the actual weak form ``equation'' is the statement
+\item the equation solved by the FE method is the statement
    $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all } \bv \text{ and } q$$
 \end{itemize}
 \end{frame}
@@ -308,25 +320,14 @@ F = ( inner(2.0 * nu * D(u), D(v)) \
 \frametitle{mixed finite elements for fluid problems}
 
 \begin{itemize}
-\item the other detail we need to know about in practice:
+\item the other details we need to know about:
+    \begin{itemize}
+    \item[{\color{black} 1.}] \alert{choose separate function spaces for the velocity and the pressure}
+    \item[{\color{black} 2.}] \alert{choose spaces that the experts say are ``stable''}
+    \end{itemize}
 
 \bigskip
-\begin{center}
-\alert{choose separate function spaces for the velocity and the pressure}
-\end{center}
-
-\bigskip
-\begin{center}
-and
-\end{center}
-
-\bigskip
-\begin{center}
-\alert{choose spaces that the experts say are ``stable''}
-\end{center}
-
-\bigskip
-\item Firedrake makes this elegant:
+\item Firedrake makes choosing $P_2 \times P_1$ (Taylor-Hood) elements very easy:
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
@@ -337,9 +338,24 @@ up = Function(Z)
 u, p = split(up)
 v, q = TestFunctions(Z)
 \end{Verbatim}
+
+\medskip
+    \begin{itemize}
+    \item[$\circ$] other mixed spaces are just as easy
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
+
+\AtBeginSection[]
+{
+  \begin{frame}{Outline}
+  \centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
+
+  \bigskip
+  \tableofcontents[currentsection]
+  \end{frame}
+}
 
 \section{\texttt{stage1/} \qquad linear Stokes}
 
@@ -347,7 +363,16 @@ v, q = TestFunctions(Z)
 \frametitle{running Firedrake programs}
 
 \begin{itemize}
-\item now I'm actually going to run some code!
+\item now I'm actually going to run some code
+\item grab my tutorial (codes and these slides):
+
+\medskip
+\begin{Verbatim}[fontsize=\small]
+$ git clone https://github.com/bueler/stokes-ice-tutorial.git
+\end{Verbatim}
+%$
+
+\medskip
 \item install Firedrake following these directions:
 
 \begin{center}
@@ -355,31 +380,21 @@ v, q = TestFunctions(Z)
 \end{center}
 \item activate the Python virtual environment every time you use Firedrake:
 
-\bigskip
-\begin{Verbatim}
+\medskip
+\begin{Verbatim}[fontsize=\small]
 $ unset PETSC_DIR; unset PETSC_ARCH;  # may be needed
 $ source ~/firedrake/bin/activate
 \end{Verbatim}
 
-\bigskip
+\medskip
     \begin{itemize}
     \item[$\circ$] I use an alias \texttt{drakeme} for this
     \end{itemize}
-
-\bigskip
 \item other tools I will need:
     \begin{itemize}
     \item[$\circ$] Gmsh \quad \href{https://gmsh.info/}{\texttt{gmsh.info}}
     \item[$\circ$] Paraview \quad \href{https://www.paraview.org/}{\texttt{paraview.org}}
     \end{itemize}
-
-\bigskip
-\item also grab my tutorial (codes and slides):
-\small
-\begin{center}
-\texttt{git clone https://github.com/bueler/stokes-ice-tutorial.git}
-\end{center}
-
 \end{itemize}
 \end{frame}
 
@@ -435,18 +450,13 @@ $ paraview domain.pvd            # view the solution
 \small
 $$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
 \normalsize
-\item Firedrake automatically applies Newton's method
-    \begin{itemize}
-    \item[$\circ$] because we write \texttt{solve(F == 0,}\dots
-    \end{itemize}
+\item Firedrake automatically applies Newton's method if we write the problem as \texttt{solve(F == 0,\dots)}
 \item all you need to know about Newton's iteration:
     \begin{itemize}
-    \item[$\circ$] it is repeated linearization around the current iterate
+    \item[$\circ$] it does linearization around each iterate
     \item[$\circ$] Firedrake uses UFL symbolic differentiation for linearization
     \item[$\circ$] Firedrake asks PETSc's SNES to do the Newton iteration
-        \begin{itemize}
-        \item SNES options will monitor and control the Newton iteration
-        \end{itemize}
+    \item[$\circ$] SNES options will monitor and control the Newton iteration
     \end{itemize}
 \end{itemize}
 \end{column}
@@ -473,11 +483,11 @@ $$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - 
 \bigskip
 \begin{Verbatim}
 $ cd stage2/
-$ ./domain.py                   # generate geometry
-$ gmsh -2 dome.geo              # mesh domain
-$ gmsh dome.msh                 # view mesh
+$ ./domain.py
+$ gmsh -2 dome.geo
+$ gmsh dome.msh
 $ ./solve.py -s_snes_monitor -s_snes_converged_reason
-$ paraview dome.pvd             # view solution
+$ paraview dome.pvd
 \end{Verbatim}
 
 \vspace{10mm}
@@ -535,11 +545,11 @@ $ ./solve.py -mx 40 -mz 4
 \small
 \begin{tabular}{c|rrr}
 mesh           &   $\Delta x\times \Delta z$ (m) & av.~$|\bu|$ (m/a) & max.~$|\bu|$ (m/a) \\ \hline
-$20\times 2$   &  $1000 \times 500$ &        1813 &         3512 \\
+%$20\times 2$   &  $1000 \times 500$ &        1813 &         3512 \\
 $40\times 4$   &   $500 \times 250$ &        1787 &         3293 \\
 $80\times 8$   &   $250 \times 125$ &        1769 &         3223 \\
 $160\times 16$ &    $125 \times 63$ &        1762 &         3199 \\
-$320\times 32$ &     $63 \times 31$ &        1759 &         3191 \\
+$320\times 32$ &     $63 \times 31$ &        1759 &         3192 \\
 $640\times 64$ &     $31 \times 16$ &        1758 &         3190
 \end{tabular}
 \normalsize
@@ -622,7 +632,7 @@ $ paraview hires.pvd
 
 \begin{frame}{learn more}
 
-\centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\alert{\texttt{github.com/bueler/stokes-ice-tutorial}}}}
+\centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
 
 \medskip
 \hrulefill
