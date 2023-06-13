@@ -14,9 +14,8 @@ $$\begin{align*}
 
 ### stages
 
-To do this tutorial, read `slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separated, but later stages combine these actions into a single program.  `stage3/` shows extruded meshes,
-`stage4/` shows robust numerics and better diagnostics, and `stage5/` is a 3D ice sheet with a bumpy bed.  All stages allow parallel runs.
+To do this tutorial, read `slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separated, but later stages combine these actions into a single program.  Then `stage3/` shows extruded meshes, `stage4/` shows robust numerics and better diagnostics, and `stage5/` is a 3D ice sheet with a bumpy bed.  All stages allow parallel runs.
 
 ### prerequisites
 
-These Python programs use the [Firedrake](https://www.firedrakeproject.org/) library, which calls [PETSc](https://petsc.org/) to solve the equations.  See the [Firedrake install directions](https://www.firedrakeproject.org/download.html) to install both libraries.  Note that each time you run Firedrake you will need to activate the Python venv: `source firedrake/bin/activate`.  For `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to generate the meshes.  For all stages, [Paraview](https://www.paraview.org/) is needed for visualizing the results.
+These Python programs use the [Firedrake](https://www.firedrakeproject.org/) library, which calls [PETSc](https://petsc.org/) to solve the equations.  See the [Firedrake install directions](https://www.firedrakeproject.org/download.html) to install both libraries.  Note that each time you start Firedrake you will need to activate the Python venv: `source firedrake/bin/activate`.  For `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to generate the meshes.  For all stages, [Paraview](https://www.paraview.org/) will visualize the results.
