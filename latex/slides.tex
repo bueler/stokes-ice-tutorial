@@ -614,12 +614,12 @@ $ paraview dome.pvd
 \bigskip
 \begin{Verbatim}
 $ cd stage5/
-$ mpiexec -n 4 ./solve.py -refine 0 \
+$ mpiexec -n 4 ./solve.py \
     -s_snes_atol 1.0e-2 -s_snes_monitor
 $ paraview dome.pvd
-$ mpiexec -n 12 ./solve.py -refine 2 -baserefine 5 \
-    -s_snes_atol 1.0e-2 -s_snes_monitor -o hires.pvd
-$ paraview hires.pvd
+$ mpiexec -n 4 ./solve.py -refine 2 -baserefine 3 \
+    -s_snes_atol 1.0e-2 -s_snes_monitor -o finer.pvd
+$ paraview finer.pvd
 \end{Verbatim}
 %$
 
@@ -627,6 +627,36 @@ $ paraview hires.pvd
 \begin{center}
 \includegraphics[width=0.4\textwidth]{figs/stage5.png}
 \end{center}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{solver performance limitations}
+
+\begin{itemize}
+\item the run below is as far as I can refine on my big desktop
+    \begin{itemize}
+    \item[$\circ$] 100 GB ram, plenty of cores
+    \item[$\circ$] 38 minutes run time
+    \end{itemize}
+\item \alert{\emph{limiting factor:} the direct solver for each Newton step linear system uses too much memory when generating the LU factors}
+    \begin{itemize}
+    \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D, and they are slow
+    \item[$\circ$] {\scriptsize E.~Bueler (2022). \emph{Performance analysis of high-resolution ice-sheet simulations}, J.~Glaciol., \href{https://doi.org/10.1017/jog.2022.113}{10.1017/jog.2022.113}}
+    \end{itemize}
+\item for higher resolution we need a scalable solver, such as a solver using Schur-complement preconditioning and multigrid on the $\bu$-$\bu$ block
+    \begin{itemize}
+    \item[$\circ$] {\scriptsize T.~Isaac, G.~Stadler, \& O.~Ghattas (2015). \emph{Solution of nonlinear Stokes equations discretized by high-order finite elements on nonconforming and anisotropic meshes, with application to ice sheet dynamics}, SIAM J.~Sci.~Comput.~37 (6), B804--B833, \href{https://doi.org/10.1137/140974407}{10.1137/140974407}}
+    \end{itemize}
+\item another talk would be needed to discuss and demonstrate a better solver
+\end{itemize}
+
+\bigskip
+\begin{Verbatim}
+$ mpiexec -n 12 ./solve.py -refine 2 -baserefine 4 \
+    -s_snes_atol 1.0e-2 -s_snes_monitor -o hires.pvd
+$ paraview hires.pvd
+\end{Verbatim}
 \end{frame}
 
 
