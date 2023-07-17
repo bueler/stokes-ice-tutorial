@@ -23,9 +23,9 @@ if args.solvehelp:
     sys.exit(0)
 
 def profile(x, R, H):
-    '''Exact SIA solution with half-length (radius) R and maximum height H, on
-    interval [0,L] = [0,2R], centered at x=R.  See van der Veen (2013)
-    equation (5.50).'''
+    '''Exact SIA solution for surface elevation, with half-length (radius) R
+    and maximum height H, on interval [0,L] = [0,2R], centered at x=R.
+    See van der Veen (2013) equation (5.50).'''
     n = 3.0                       # glen exponent
     p1 = n / (2.0 * n + 2.0)      # = 3/8
     q1 = 1.0 + 1.0 / n            # = 4/3

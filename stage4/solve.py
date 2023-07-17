@@ -10,12 +10,12 @@ from firedrake.petsc import PETSc
 #     ./solve.py -refine 0 -mz 8 -marginheight 0.0
 
 # performance demo (1 min run time on my thelio)
-#     tmpg -n 12 ./solve.py -s_snes_converged_reason -mx 4000 -refine 2 -s_snes_monitor -s_snes_atol 1.0e-2
+#     mpiexec -n 12 ./solve.py -s_snes_converged_reason -mx 4000 -refine 2 -s_snes_monitor -s_snes_atol 1.0e-2
 
 parser = argparse.ArgumentParser(description=
 '''stage4/  Solve the Glen-Stokes momentum equations for a 2D ice sheet using
-an extruded mesh, rescaled equations, vertical grid sequencing, and physical
-diagnostics.''', add_help=False)
+an extruded mesh, rescaled equations, vertical grid sequencing, and
+diagnostic computation of viscosity and stresses.''', add_help=False)
 parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,
     help='regularization used in viscosity (default=10^{-4})')
 parser.add_argument('-marginheight', type=float, metavar='X', default=1.0,
@@ -27,11 +27,9 @@ parser.add_argument('-mz', type=int, metavar='MZ', default=2,
 parser.add_argument('-o', metavar='FILE.pvd', type=str, default='dome.pvd',
     help='output filename (default=dome.pvd)')
 parser.add_argument('-refine', type=int, metavar='X', default=1,
-    help='refinements when generating mesh hierarchy (default=1)')
+    help='vertical refinements when generating mesh hierarchy (default=1)')
 parser.add_argument('-refinefactor', type=int, metavar='X', default=4,
-    help='refinement factor when generating mesh hierarchy (default=4)')
-parser.add_argument('-single', action='store_true', default=False,
-    help='solve only on the finest level, without grid sequencing')
+    help='vertical refinement factor when generating mesh hierarchy (default=4)')
 parser.add_argument('-solvehelp', action='store_true', default=False,
     help='print help for solve.py options and stop')
 args, unknown = parser.parse_known_args()
@@ -40,9 +38,9 @@ if args.solvehelp:
     sys.exit(0)
 
 def profile(x, R, H):
-    '''Exact SIA solution with half-length (radius) R and maximum height H, on
-    interval [0,L] = [0,2R], centered at x=R.  See van der Veen (2013)
-    equation (5.50).'''
+    '''Exact SIA solution for surface elevation, with half-length (radius) R
+    and maximum height H, on interval [0,L] = [0,2R], centered at x=R.
+    See van der Veen (2013) equation (5.50).'''
     n = 3.0                       # glen exponent
     p1 = n / (2.0 * n + 2.0)      # = 3/8
     q1 = 1.0 + 1.0 / n            # = 4/3
@@ -53,7 +51,7 @@ def profile(x, R, H):
     s = np.zeros(np.shape(x))
     s[abs(X) < 1.0] = Z * ( (n + 1.0) * Xin - 1.0 \
                             + n * Yin**q1 - n * Xin**q1 )**p1
-    s[s < 1.0] = args.marginheight   # needed so that prolong() can find nodes
+    s[s < 1.0] = args.marginheight # needed so that prolong() can find nodes
     return s
 
 # level-independent information
@@ -99,7 +97,7 @@ for j in range(args.refine + 1):
 # solve the problem for each level in the hierarchy
 upcoarse = None
 levels = args.refine + 1
-jrange = [levels - 1,] if args.single else range(levels)
+jrange = range(levels)
 for j in jrange:
     mesh = hierarchy[j]
     V = VectorFunctionSpace(mesh, 'Lagrange', 2)
@@ -110,7 +108,7 @@ for j in jrange:
     v, q = TestFunctions(Z)
 
     # use a more generous eps except when we get to the finest level
-    if args.single or j == levels - 1:
+    if j == levels - 1:
         eps = args.eps
     else:
         eps = 100.0 * args.eps
