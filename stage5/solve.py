@@ -134,7 +134,7 @@ for j in jrange:
     nu = 0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0)
     F = ( sc*sc * inner(2.0 * nu * D(scu), D(v)) \
           - sc * p * div(v) - sc * q * div(scu) \
-          - sc * inner(fbody, v) ) * dx
+          - sc * inner(fbody, v) ) * dx(degree=3)
 
     # different boundary conditions relative to stage2/:
     #   base label is 'bottom', and we add noslip condition on degenerate ends

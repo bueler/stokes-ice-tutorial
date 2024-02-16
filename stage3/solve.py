@@ -83,7 +83,7 @@ fbody = Constant((0.0, - rho * g))
 Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp)**2.0
 nu = 0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0)
 F = ( inner(2.0 * nu * D(u), D(v)) \
-      - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
+      - p * div(v) - q * div(u) - inner(fbody, v) ) * dx(degree=3)
 
 # different boundary conditions relative to stage2/, for extruded case:
 #   base label is 'bottom', and we add noslip condition on degenerate ends
