@@ -39,7 +39,8 @@ printpar('solving ...')
 par = {'snes_linesearch_type': 'bt',
        'ksp_type': 'preonly',
        'pc_type': 'lu',
-       'pc_factor_shift_type': 'inblocks'}
+       'pc_factor_shift_type': 'inblocks',
+       'pc_factor_mat_solver_type': 'mumps'}
 solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
 
 # print average and maximum velocity
