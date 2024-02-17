@@ -6,7 +6,7 @@ import numpy as np
 from firedrake import *
 from firedrake.petsc import PETSc
 
-# recover stage3/:
+# to recover stage3/:
 #     ./solve.py -refine 0 -mz 8 -marginheight 0.0
 
 # performance demo (1 min run time on my thelio)
@@ -138,14 +138,17 @@ for j in jrange:
     if upcoarse is None:
         upcoarse = up.copy()
 
+    # integrate 1 to get area of domain
+    R = FunctionSpace(mesh, 'R', 0)
+    one = Function(R).assign(1.0)
+    area = assemble(dot(one,one) * dx)
+
     # print average and maximum velocity
-    scu, _ = up.split()
+    scu = up.subfunctions[0]
     u = scu * sc
     P1 = FunctionSpace(mesh, 'CG', 1)
-    one = Constant(1.0, domain=mesh)
-    area = assemble(dot(one,one) * dx)
     umagav = assemble(sqrt(dot(u, u)) * dx) / area
-    umag = interpolate(sqrt(dot(u, u)), P1)
+    umag = Function(P1).interpolate(sqrt(dot(u, u)))
     with umag.dat.vec_ro as vumag:
         umagmax = vumag.max()[1]
     printpar('  ice speed (m a-1): av = %.3f, max = %.3f' \
