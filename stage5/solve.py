@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 
-import sys
-import numpy as np
 import argparse
-from firedrake import *
-from firedrake.petsc import PETSc
-
+import sys
 parser = argparse.ArgumentParser(description=
 '''stage5/  Solve the Glen-Stokes momentum equations for a 3D ice sheet using
 an extruded mesh and an optional bumpy bed.''', add_help=False)
@@ -29,10 +25,16 @@ parser.add_argument('-single', action='store_true', default=False,
     help='solve only on the finest level, without grid sequencing')
 parser.add_argument('-solvehelp', action='store_true', default=False,
     help='print help for solve.py options and stop')
-args, unknown = parser.parse_known_args()
+args, passthroughoptions = parser.parse_known_args()
 if args.solvehelp:
     parser.print_help()
     sys.exit(0)
+
+import petsc4py
+petsc4py.init(passthroughoptions)
+import numpy as np
+from firedrake import *
+from firedrake.petsc import PETSc
 
 R = 10000.0
 H = 1000.0
@@ -65,7 +67,9 @@ B3 = A3**(-1.0/3.0)     # Pa s(1/3);  ice hardness
 Dtyp = 1.0 / secpera    # s-1
 sc = 1.0e-7             # velocity scale constant for symmetric equation scaling
 fbody = Constant((0.0, 0.0, - rho * g))
-par = {'snes_linesearch_type': 'bt',
+par = {'snes_converged_reason': None,
+       'snes_monitor': None,
+       'snes_linesearch_type': 'bt',
        'ksp_type': 'preonly',
        'pc_type': 'lu',
        'pc_factor_shift_type': 'inblocks',

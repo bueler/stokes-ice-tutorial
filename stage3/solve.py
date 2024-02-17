@@ -2,10 +2,6 @@
 
 import sys
 import argparse
-import numpy as np
-from firedrake import *
-from firedrake.petsc import PETSc
-
 parser = argparse.ArgumentParser(description=
 '''stage3/  Solve the Glen-Stokes momentum equations for a 2D ice sheet using an
 extruded mesh.''', add_help=False)
@@ -17,10 +13,16 @@ parser.add_argument('-mz', type=int, metavar='MZ', default=8,
     help='number of vertical layers')
 parser.add_argument('-solvehelp', action='store_true', default=False,
     help='print help for solve.py options and stop')
-args, unknown = parser.parse_known_args()
+args, passthroughoptions = parser.parse_known_args()
 if args.solvehelp:
     parser.print_help()
     sys.exit(0)
+
+import petsc4py
+petsc4py.init(passthroughoptions)
+import numpy as np
+from firedrake import *
+from firedrake.petsc import PETSc
 
 def profile(x, R, H):
     '''Exact SIA solution for surface elevation, with half-length (radius) R
@@ -91,7 +93,9 @@ bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), 'bottom'),
         DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1,2)) ]
 
 printpar('solving ...')
-par = {'snes_linesearch_type': 'bt',
+par = {'snes_converged_reason': None,
+       'snes_monitor': None,
+       'snes_linesearch_type': 'bt',
        'ksp_type': 'preonly',
        'pc_type': 'lu',
        'pc_factor_shift_type': 'inblocks',

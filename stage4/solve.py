@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 
-import sys
-import argparse
-import numpy as np
-from firedrake import *
-from firedrake.petsc import PETSc
-
 # to recover stage3/:
-#     ./solve.py -refine 0 -mz 8 -marginheight 0.0
+#     python3 solve.py -refine 0 -mx 40 -mz 4 -marginheight 0.0
 
 # performance demo (1 min run time on my thelio)
-#     mpiexec -n 12 ./solve.py -s_snes_converged_reason -mx 4000 -refine 2 -s_snes_monitor -s_snes_atol 1.0e-2
+#     mpiexec -n 12 python3 solve.py -mx 4000 -refine 2 -s_snes_monitor -s_snes_atol 1.0e-2
 
+import argparse
+import sys
 parser = argparse.ArgumentParser(description=
 '''stage4/  Solve the Glen-Stokes momentum equations for a 2D ice sheet using
 an extruded mesh, rescaled equations, vertical grid sequencing, and
@@ -32,10 +28,16 @@ parser.add_argument('-refinefactor', type=int, metavar='X', default=4,
     help='vertical refinement factor when generating mesh hierarchy (default=4)')
 parser.add_argument('-solvehelp', action='store_true', default=False,
     help='print help for solve.py options and stop')
-args, unknown = parser.parse_known_args()
+args, passthroughoptions = parser.parse_known_args()
 if args.solvehelp:
     parser.print_help()
     sys.exit(0)
+
+import petsc4py
+petsc4py.init(passthroughoptions)
+import numpy as np
+from firedrake import *
+from firedrake.petsc import PETSc
 
 def profile(x, R, H):
     '''Exact SIA solution for surface elevation, with half-length (radius) R
@@ -64,7 +66,9 @@ B3 = A3**(-1.0/3.0)     # Pa s(1/3);  ice hardness
 Dtyp = 1.0 / secpera    # s-1
 sc = 1.0e-7             # velocity scale constant for symmetric equation scaling
 fbody = Constant((0.0, - rho * g))
-par = {'snes_linesearch_type': 'bt',
+par = {'snes_converged_reason': None,
+       #'snes_monitor': None,
+       'snes_linesearch_type': 'bt',
        'ksp_type': 'preonly',
        'pc_type': 'lu',
        'pc_factor_shift_type': 'inblocks',
