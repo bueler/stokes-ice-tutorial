@@ -1,4 +1,4 @@
-% Copyright 2021-2023  Ed Bueler
+% Copyright 2021-2024  Ed Bueler
 
 \documentclass[10pt,
                hyperref={colorlinks,citecolor=DeepPink4,linkcolor=black,urlcolor=blue},
@@ -93,7 +93,7 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[June 2023]{version June 2023  \\ \phantom{foo} \\ \phantom{foo} \\
+\date[Feb 2024]{version February 2024  \\ \phantom{foo} \\ \phantom{foo} \\
 \large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 
@@ -414,7 +414,7 @@ $ source ~/firedrake/bin/activate
     $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_0\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
 }
 \item \emph{source files:} \texttt{domain.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these!}
-\item \emph{generated files:} \texttt{domain.msh}, \texttt{domain\_0.vtu}, \texttt{domain.pvd}
+\item \emph{generated files:} \texttt{domain.msh}, \texttt{domain.pvd}
 \end{itemize}
 
 \bigskip
@@ -422,7 +422,7 @@ $ source ~/firedrake/bin/activate
 $ cd stage1/
 $ gmsh -2 domain.geo             # mesh the domain
 $ gmsh domain.msh                # view the mesh
-$ ./solve.py                     # solve linear Stokes
+$ python3 solve.py               # solve linear Stokes
 $ paraview domain.pvd            # view the solution
 \end{Verbatim}
 %$
@@ -479,22 +479,22 @@ $$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - 
 \begin{itemize}
 \item \emph{purpose:} solve Glen-Stokes on a flat-bed glacier
 \item \emph{source files:} \texttt{domain.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these!}
-\item \emph{generated files:} \texttt{dome.geo}, \texttt{dome.msh}, \texttt{dome\_0.vtu}, \texttt{dome.pvd}
+\item \emph{generated files:} \texttt{dome.geo}, \texttt{dome.msh}, \texttt{dome.pvd}
 \end{itemize}
 
 \bigskip
 \begin{Verbatim}
 $ cd stage2/
-$ ./domain.py
+$ python3 domain.py
 $ gmsh -2 dome.geo
 $ gmsh dome.msh
-$ ./solve.py -s_snes_monitor -s_snes_converged_reason
+$ python3 solve.py
 $ paraview dome.pvd
 \end{Verbatim}
 
-\vspace{10mm}
+\vspace{6mm}
 \begin{center}
-\includegraphics[width=0.9\textwidth]{figs/stage2.png}
+\includegraphics[width=0.95\textwidth]{figs/stage2.png}
 
 {\tiny speed $|\bu|$}
 \end{center}
@@ -509,13 +509,13 @@ $ paraview dome.pvd
 \begin{itemize}
 \item \emph{purpose:} solve same problem using an extruded quadrilateral mesh
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
-\item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
+\item \emph{generated files:} \texttt{dome.pvd}
 \end{itemize}
 
 \bigskip
 \begin{Verbatim}
 $ cd stage3/
-$ ./solve.py -s_snes_monitor -s_snes_converged_reason
+$ python3 solve.py
 $ paraview dome.pvd
 \end{Verbatim}
 %$
@@ -541,26 +541,22 @@ $ ./solve.py -mx 40 -mz 4
 \item velocity results are reasonable and consistent:
 
 \medskip
-% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_max_it 200 -s_snes_converged_reason -mx MX -mz MZ
-% timer ./solve.py -s_snes_rtol 1.0e-5 -s_snes_max_it 200 -s_snes_converged_reason -mx 640 -mz 64 -eps 0.01
+% timer python3 solve.py -mx MX -mz MZ
 \begin{center}
 \small
 \begin{tabular}{c|rrr}
 mesh           &   $\Delta x\times \Delta z$ (m) & av.~$|\bu|$ (m/a) & max.~$|\bu|$ (m/a) \\ \hline
-%$20\times 2$   &  $1000 \times 500$ &        1813 &         3512 \\
-$40\times 4$   &   $500 \times 250$ &        1787 &         3293 \\
-$80\times 8$   &   $250 \times 125$ &        1769 &         3223 \\
-$160\times 16$ &    $125 \times 63$ &        1762 &         3199 \\
-$320\times 32$ &     $63 \times 31$ &        1759 &         3192 \\
-$640\times 64$ &     $31 \times 16$ &        1758 &         3190
+$40\times 4$   &   $500 \times 250$ &        1788 &         3272 \\
+$80\times 8$   &   $250 \times 125$ &        1769 &         3215 \\
+$160\times 16$ &    $125 \times 63$ &        1762 &         3197 \\
+$320\times 32$ &     $63 \times 31$ &        1759 &         3191 \\
+$640\times 64$ &     $31 \times 16$ &        1758 &         3189
 \end{tabular}
 \normalsize
 \end{center}
 
-    \begin{itemize}
-    \item[$\circ$] \emph{unfortunately}, the finest resolution needed $\eps=10^{-2}$ to get ``unstuck'' from the $\bu,p=\mathbf{0},0$ initial iterate
-    \end{itemize}
-\item we need \alert{better initial iterates} for high-resolution runs
+\item quantities of interest are seemingly converging
+\item however: we do not know the exact solution and we cannot check for actual numerical convergence
 \end{itemize}
 \end{frame}
 
@@ -580,15 +576,14 @@ $640\times 64$ &     $31 \times 16$ &        1758 &         3190
     \item[$\circ$] generate effective viscosity $\nu_\eps$ from solution  \hfill \emph{diagnostic}
     \end{itemize}
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
-\item \emph{generated files:} \texttt{dome\_0.vtu}, \texttt{dome.pvd}
+\item \emph{generated files:} \texttt{dome.pvd}
 \end{itemize}
 
 \bigskip
 \begin{Verbatim}
 $ cd stage4/
-$ ./solve.py
-$ ./solve.py -mx 320 -mz 2 -refine 2 \
-    -s_snes_atol 1.0e-2 -s_snes_monitor
+$ python3 solve.py
+$ python3 solve.py -mx 320 -mz 2 -refine 2
 $ paraview dome.pvd
 \end{Verbatim}
 %$
@@ -610,17 +605,16 @@ $ paraview dome.pvd
 \begin{itemize}
 \item \emph{purpose:} 3D ice sheet in parallel on bumpy bed
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
-\item \emph{generated files:} \texttt{dome\_0\_}$k$\texttt{.vtu}, \texttt{dome\_0.pvtu}, \texttt{dome.pvd}
+\item \emph{generated files:} \texttt{dome.pvd}
 \end{itemize}
 
 \bigskip
 \begin{Verbatim}
 $ cd stage5/
-$ mpiexec -n 4 ./solve.py \
-    -s_snes_atol 1.0e-2 -s_snes_monitor
-$ paraview dome.pvd
-$ mpiexec -n 4 ./solve.py -refine 2 -baserefine 3 \
-    -s_snes_atol 1.0e-2 -s_snes_monitor -o finer.pvd
+$ mpiexec -n 4 python3 solve.py
+$ paraview dome.pvd              # see "rank" field
+$ mpiexec -n 4 python3 solve.py -o finer.pvd \
+    -refine 2 -baserefine 3
 $ paraview finer.pvd
 \end{Verbatim}
 %$
@@ -636,7 +630,7 @@ $ paraview finer.pvd
 \frametitle{solver performance limitations}
 
 \begin{itemize}
-\item the run below is as far as I can refine on my big desktop
+\item the run at bottom is about as far as I can refine on my big desktop
     \begin{itemize}
     \item[$\circ$] 100 GB ram, plenty of cores
     \item[$\circ$] 38 minutes run time
@@ -644,21 +638,21 @@ $ paraview finer.pvd
 \item \alert{\emph{limiting factor:} the direct solver for each Newton step linear system uses too much memory when generating the LU factors}
     \begin{itemize}
     \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D, and they are slow
-    \item[$\circ$] {\scriptsize E.~Bueler (2022). \emph{Performance analysis of high-resolution ice-sheet simulations}, J.~Glaciol., \href{https://doi.org/10.1017/jog.2022.113}{10.1017/jog.2022.113}}
+    \item[$\circ$] {\scriptsize E.~Bueler (2023). \emph{Performance analysis of high-resolution ice-sheet simulations}, J.~Glaciol.~69~(276), 930--935\, \href{https://doi.org/10.1017/jog.2022.113}{10.1017/jog.2022.113}}
     \end{itemize}
-\item for higher resolution we need a scalable solver, such as a solver using Schur-complement preconditioning and multigrid on the $\bu$-$\bu$ block
+\item for higher resolution we need a scalable solver: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
     \begin{itemize}
     \item[$\circ$] {\scriptsize T.~Isaac, G.~Stadler, \& O.~Ghattas (2015). \emph{Solution of nonlinear Stokes equations discretized by high-order finite elements on nonconforming and anisotropic meshes, with application to ice sheet dynamics}, SIAM J.~Sci.~Comput.~37 (6), B804--B833, \href{https://doi.org/10.1137/140974407}{10.1137/140974407}}
     \end{itemize}
-\item another talk would be needed to discuss and demonstrate a better solver
+\item scalable solvers = another talk!
 \end{itemize}
 
 \bigskip
 \begin{Verbatim}
-$ mpiexec -n 12 ./solve.py -refine 2 -baserefine 4 \
-    -s_snes_atol 1.0e-2 -s_snes_monitor -o hires.pvd
-$ paraview hires.pvd
+$ mpiexec -n 12 python3 solve.py -o finest.pvd \
+    -refine 2 -baserefine 4 -s_snes_atol 1.0e-2
 \end{Verbatim}
+%$
 \end{frame}
 
 
