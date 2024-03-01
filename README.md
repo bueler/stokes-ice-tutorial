@@ -28,9 +28,8 @@ Also, for `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to ge
 
 To do this tutorial, read `slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separated.  Later stages combine these actions into a single program by using extruded meshes, starting in `stage3/`.  Then `stage4/` shows more robust numerics and better diagnostics, and `stage5/` shows a 3D ice sheet with a bumpy bed.  All stages use direct solvers, which limits ultimate performance, but they all allow parallel runs.
 
-## other playgrounds
+## another playground
 
-I have written two other open-source Stokes solvers for glaciology, with different and less-introductory, emphasis.  Both of these also use the same basic Firedrake/PETSc/Gmsh/Paraview stack:
+I have written another open-source Stokes solver for glaciology, with a different and less-introductory, emphasis, but using the same Firedrake/PETSc/Gmsh/Paraview stack:
 
   * [the `stokes/` directory in my McCarthy lectures notes](https://github.com/bueler/mccarthy/tree/master/stokes)
-  * [my under-development analysis of the surface kinematical operator](https://github.com/bueler/ske-as-model)
