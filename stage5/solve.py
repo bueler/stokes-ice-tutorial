@@ -148,7 +148,7 @@ for j in jrange:
 
     # get initial condition by coarsening previous level
     if upcoarse is not None:
-        prolong(upcoarse, up)
+        up.interpolate(upcoarse)  # cross-mesh interpolation
 
     printpar('solving on level %d with %d vertical layers ...' \
              % (j, args.mz * args.refinefactor**j))
@@ -199,4 +199,4 @@ p.rename('pressure (bar)')
 rank = Function(FunctionSpace(mesh,'DG',0))
 rank.dat.data[:] = mesh.comm.rank
 rank.rename('rank')
-File(args.o).write(scu, p, tau, nu, rank)
+VTKFile(args.o).write(scu, p, tau, nu, rank)

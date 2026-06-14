@@ -32,4 +32,4 @@ u = up.subfunctions[0]
 p = up.subfunctions[1]
 u.rename('velocity')
 p.rename('pressure')
-File('domain.pvd').write(u, p)
+VTKFile('domain.pvd').write(u, p)

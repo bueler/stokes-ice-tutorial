@@ -1,4 +1,4 @@
-% Copyright 2021-2024  Ed Bueler
+% Copyright 2021-2026  Ed Bueler
 
 \documentclass[10pt,
                hyperref={colorlinks,citecolor=DeepPink4,linkcolor=black,urlcolor=blue},
@@ -93,7 +93,7 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[Feb 2024]{version February 2024  \\ \phantom{foo} \\ \phantom{foo} \\
+\date[Feb 2024]{version June 2026  \\ \phantom{foo} \\ \phantom{foo} \\
 \large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 
@@ -102,6 +102,11 @@
 
 \begin{frame}
   \maketitle
+
+\vspace{-35mm}
+\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
+
+\vspace{25mm}
 \end{frame}
 
 
@@ -130,7 +135,10 @@
 
 \centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
 
-\bigskip
+\vspace{5mm}
+\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
+
+\vspace{-15mm}
   \tableofcontents[hideallsubsections]
 \end{frame}
 
@@ -142,9 +150,9 @@
 \begin{itemize}
 \item conservation principles apply to ice sheets:
     \begin{itemize}
-    \item[$\circ$] mass \hfill \cmark\qquad today
-    \item[$\circ$] momentum \hfill \cmark\qquad today
-    \item[$\circ$] energy \hfill \xmark\,\, \emph{not today}
+    \item[$\circ$] mass \hfill \cmark
+    \item[$\circ$] momentum \hfill \cmark
+    \item[$\circ$] energy \hfill \xmark
     \end{itemize}
 \item Stokes model $=$ momentum conservation $+$ incompressibility
     \begin{itemize}
@@ -171,7 +179,7 @@
 \begin{align*}
 - \nabla \cdot \tau + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
 \nabla \cdot \bu &= 0 &&\text{\emph{incompressibility}} \\
-\tau &= B_n |D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{Glen flow law}}
+\tau &= B_n |D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{Glen-Nye flow law}}
 \end{align*}
 \end{column}
 

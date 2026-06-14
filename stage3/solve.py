@@ -123,4 +123,4 @@ u *= secpera
 p /= 1.0e5
 u.rename('velocity (m/a)')
 p.rename('pressure (bar)')
-File('dome.pvd').write(u, p)
+VTKFile('dome.pvd').write(u, p)

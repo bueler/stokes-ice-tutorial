@@ -20,7 +20,7 @@ The [Python](https://www.python.org/) programs here are relatively-short and onl
 
 We use the [Firedrake](https://www.firedrakeproject.org/) library, which calls [PETSc](https://petsc.org/) to solve the equations.  See the [Firedrake install directions](https://www.firedrakeproject.org/download.html) to install both libraries.  Note that each time you start Firedrake you will need to activate the Python virtual environment:
 
-    source firedrake/bin/activate
+    source venv-firedrake/bin/activate
 
 Also, for `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to generate the meshes, and for all stages I recommend [Paraview](https://www.paraview.org/) to visualize the results.
 
@@ -32,4 +32,4 @@ To do this tutorial, read `slides.pdf` and follow the stages.  Each stage is sel
 
 I have written another open-source Stokes solver for glaciology, with a different and less-introductory, emphasis, but using the same Firedrake/PETSc/Gmsh/Paraview stack:
 
-  * [the `stokes/` directory in my McCarthy lectures notes](https://github.com/bueler/mccarthy/tree/master/stokes)
+  * [the `stokes/` directory in my McCarthy lectures notes](https://github.com/bueler/mccarthy/tree/master/py/stokes)

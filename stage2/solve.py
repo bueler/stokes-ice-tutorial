@@ -66,4 +66,4 @@ u *= secpera    # save in m/a
 p /= 1.0e5      # save in bar
 u.rename('velocity (m/a)')
 p.rename('pressure (bar)')
-File('dome.pvd').write(u, p)
+VTKFile('dome.pvd').write(u, p)
