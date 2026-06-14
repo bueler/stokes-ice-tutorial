@@ -93,7 +93,7 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[Feb 2024]{version June 2026  \\ \phantom{foo} \\ \phantom{foo} \\
+\date[June 2026]{version June 2026  \\ \phantom{foo} \\ \phantom{foo} \\
 \large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 
@@ -232,7 +232,7 @@ is the strain-rate tensor
 \bu = \bzero
 \end{equation*}
     \begin{itemize}
-    \item[$\circ$] no attempt \emph{today} to model sliding
+    \item[$\circ$] no attempt in these slides to model sliding
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -265,7 +265,18 @@ is the strain-rate tensor
 \hfill {\tiny George Stokes}
 
 \vspace{7mm}
-\hfill \includegraphics[width=0.8\textwidth]{figs/Kstokes.pdf}
+\hfill
+\begin{tikzpicture}
+  \node[anchor=south west, inner sep=0] (img) at (0,0)
+    {\includegraphics[width=0.8\textwidth]{figs/Kstokes.pdf}};
+  \begin{scope}[x={(img.south east)},y={(img.north west)}]
+    % block boundary: pressure DOFs are roughly last 18% of DOFs
+    \node[red, font=\Large\bfseries] at (0.38,0.62) {$A$};
+    \node[red, font=\Large\bfseries] at (0.91,0.62) {$B^T$};
+    \node[red, font=\Large\bfseries] at (0.38,0.09) {$B$};
+    \node[red, font=\Large\bfseries] at (0.91,0.09) {$0$};
+  \end{scope}
+\end{tikzpicture}
 \end{column}
 
 \end{columns}
@@ -277,7 +288,7 @@ is the strain-rate tensor
 \begin{itemize}
 \item exact solution of the Stokes model is impossible for most geometries
     \begin{itemize}
-    \item[$\circ$] \emph{exercise.}  slab-on-a-slope is an exception
+    \item[$\circ$] \emph{exercise.}  solve slab-on-a-slope, which is an exception
     \end{itemize}
 \item so we solve numerically using the finite element (FE) method
 \item in summary, the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize then more and more details which I am skipping \dots}}}
@@ -289,8 +300,8 @@ is the strain-rate tensor
 \hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
 
 \bigskip
-\item \alert{the whole point of Firedrake is to \emph{not}\, see the details of FE}
-\item one needs to know: the first step is to write a weak form
+\item the whole point of Firedrake is \alert{suppress the details of FE}
+\item one needs to know the first step:\, write a weak form
 \end{itemize}
 \end{frame}
 
@@ -320,7 +331,7 @@ F = ( inner(2.0 * nu * D(u), D(v)) \
 \end{Verbatim}
 
 \medskip
-\item the equation solved by the FE method is the statement
+\item the problem statement solved by the FE method:
    $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all } \bv \text{ and } q$$
 \end{itemize}
 \end{frame}
@@ -393,7 +404,7 @@ $ git clone https://github.com/bueler/stokes-ice-tutorial.git
 \medskip
 \begin{Verbatim}[fontsize=\small]
 $ unset PETSC_DIR; unset PETSC_ARCH;  # may be needed
-$ source ~/firedrake/bin/activate
+$ source ~/venv-firedrake/bin/activate
 \end{Verbatim}
 
 \medskip
@@ -454,7 +465,7 @@ $ paraview domain.pvd            # view the solution
 \item linear Stokes \small (\texttt{stage1/}) \normalsize needs only a single linear system:
   $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
     \begin{itemize}
-    \item[$\circ$] Firedrake asks PETSc's KSP component to solve this
+    \item[$\circ$] default solver: Firedrake $\to$ PETSc KSP $\to$ MUMPS
     \end{itemize}
 \item but for Glen-Stokes the weak form is nonlinear in $\bu$:
 \small
@@ -495,10 +506,10 @@ $$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - 
 $ cd stage2/
 $ python3 domain.py
 $ gmsh -2 dome.geo
-$ gmsh dome.msh
 $ python3 solve.py
 $ paraview dome.pvd
 \end{Verbatim}
+%$
 
 \vspace{6mm}
 \begin{center}
@@ -516,6 +527,9 @@ $ paraview dome.pvd
 
 \begin{itemize}
 \item \emph{purpose:} solve same problem using an extruded quadrilateral mesh
+    \begin{itemize}
+    \item[$\circ$] simplifies the toolchain; Gmsh no longer needed
+    \end{itemize}
 \item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
 \item \emph{generated files:} \texttt{dome.pvd}
 \end{itemize}
@@ -588,10 +602,10 @@ $640\times 64$ &     $31 \times 16$ &        1758 &         3189
 \end{itemize}
 
 \bigskip
-\begin{Verbatim}
+\begin{Verbatim}[fontsize=\small]
 $ cd stage4/
-$ python3 solve.py
-$ python3 solve.py -mx 320 -mz 2 -refine 2
+$ python3 solve.py                          # default resolution
+$ python3 solve.py -mx 320 -mz 2 -refine 2  # high resolution
 $ paraview dome.pvd
 \end{Verbatim}
 %$
@@ -620,17 +634,14 @@ $ paraview dome.pvd
 \begin{Verbatim}
 $ cd stage5/
 $ mpiexec -n 4 python3 solve.py
-$ paraview dome.pvd              # see "rank" field
+$ paraview dome.pvd              # "rank" field below
 $ mpiexec -n 4 python3 solve.py -o finer.pvd \
     -refine 2 -baserefine 3
 $ paraview finer.pvd
 \end{Verbatim}
 %$
 
-\bigskip
-\begin{center}
-\includegraphics[width=0.4\textwidth]{figs/stage5.png}
-\end{center}
+\hfill \includegraphics[width=0.4\textwidth]{figs/stage5.png} \hspace{10mm}
 \end{frame}
 
 
@@ -638,11 +649,19 @@ $ paraview finer.pvd
 \frametitle{solver performance limitations}
 
 \begin{itemize}
-\item the run at bottom is about as far as I can refine on my big desktop
+\item this run is about as far as I can refine on my machine:
+
+\begin{Verbatim}[fontsize=\small]
+$ mpiexec -n 12 python3 solve.py -o finest.pvd \
+    -refine 2 -baserefine 4 -s_snes_atol 1.0e-2
+\end{Verbatim}
+%$
+
     \begin{itemize}
-    \item[$\circ$] 100 GB ram, plenty of cores
-    \item[$\circ$] 38 minutes run time
+    \item[$\circ$] 100 GB ram, plenty of cores, 38 minutes run time
     \end{itemize}
+
+\bigskip
 \item \alert{\emph{limiting factor:} the direct solver for each Newton step linear system uses too much memory when generating the LU factors}
     \begin{itemize}
     \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D, and they are slow
@@ -651,26 +670,18 @@ $ paraview finer.pvd
 \item for higher resolution we need a scalable solver: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
     \begin{itemize}
     \item[$\circ$] {\scriptsize T.~Isaac, G.~Stadler, \& O.~Ghattas (2015). \emph{Solution of nonlinear Stokes equations discretized by high-order finite elements on nonconforming and anisotropic meshes, with application to ice sheet dynamics}, SIAM J.~Sci.~Comput.~37 (6), B804--B833, \href{https://doi.org/10.1137/140974407}{10.1137/140974407}}
+    \item[$\circ$] but scalable solvers is a different talk
     \end{itemize}
-\item scalable solvers = another talk!
 \end{itemize}
-
-\bigskip
-\begin{Verbatim}
-$ mpiexec -n 12 python3 solve.py -o finest.pvd \
-    -refine 2 -baserefine 4 -s_snes_atol 1.0e-2
-\end{Verbatim}
-%$
 \end{frame}
 
 
 \begin{frame}{learn more}
 
-\centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
+\qquad \large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}
 
-\medskip
-\hrulefill
-
+\vspace{-5mm}
+\hfill \includegraphics[width=0.1\textwidth]{figs/qr.png}
 
 \begin{columns}
 \begin{column}{0.6\textwidth}
@@ -678,12 +689,6 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 
 \begin{itemize}
 \item Firedrake: \href{https://www.firedrakeproject.org/}{\texttt{firedrakeproject.org}}
-
-    \begin{itemize}
-    \scriptsize
-    \item tutorials \& manual: \href{https://www.firedrakeproject.org/documentation.html}{\texttt{.../documentation.html}}
-    \item Jupyter notebooks page: \href{https://www.firedrakeproject.org/notebooks.html}{\texttt{.../notebooks.html}}
-    \end{itemize}
 \item PETSc: \href{https://petsc.org}{\texttt{petsc.org}}
 \item for Glen-Stokes eqns, see Ch.~1 by Hewitt:
 
