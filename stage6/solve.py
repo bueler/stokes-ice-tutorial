@@ -191,14 +191,38 @@ bcs = [
     DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1, 2)),
 ]
 
+
+# this is from https://github.com/bueler/stokes-extrude
+def trace_scalar_to_p1(basemesh, mesh, f, surface="top", nointerpolate=False):
+    """On an extruded mesh, compute the trace of any scalar function f
+    along the surface='top' or surface='bottom' boundary at the P1 nodes.
+    Set nointerpolate=True if f is already P1.  Returns a P1 function on
+    basemesh."""
+    assert surface in ["top", "bottom"]
+    P1 = FunctionSpace(mesh, "CG", 1)
+    if nointerpolate:
+        fP1 = f
+    else:
+        fP1 = Function(P1).interpolate(f)
+    bc = DirichletBC(P1, 0.0, surface)
+    P1basemesh = FunctionSpace(basemesh, "CG", 1)
+    fbm = Function(P1basemesh)
+    fbm.dat.data_with_halos[:] = fP1.dat.data_with_halos[bc.nodes]
+    return fbm
+
+
 # weak form for surface kinematical equation
 snew = Function(P1base).interpolate(s)
 omega = TestFunction(P1base)
 a = Function(P1base).interpolate((1.0 / secpera))  # FIXME
 dsdt = (snew - s) / (args.dt * secpera)
 # FIXME: surface trace of velocity; implicit edge stabilization
-Fske = (dsdt - a) * w * dx
-bcske = [ DirichletBC(P1base, Constant(0.0), (1, 2)), ]
+# usurf = Function(P1base)
+wsurf = Function(P1base)
+Fske = (dsdt - wsurf - a) * omega * dx
+bcske = [
+    DirichletBC(P1base, Constant(0.0), (1, 2)),
+]  # s=0 at lateral boundaries
 
 # time stepping loop
 printpar(
@@ -235,6 +259,8 @@ for k in range(args.N):
     )
 
     # solve SKE for one semi-implicit Euler time-step
+    # usurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[0]))
+    wsurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[1]))
     solve(Fske == 0, snew, bcs=bcske, options_prefix="ske", solver_parameters=par)
     s.dat.data[:] = snew.dat.data_ro[:]
     setmeshgeometry(mesh, s, xzorig=xzflat)
