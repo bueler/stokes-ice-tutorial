@@ -214,15 +214,15 @@ def trace_scalar_to_p1(basemesh, mesh, f, surface="top", nointerpolate=False):
 # weak form for surface kinematical equation
 snew = Function(P1base).interpolate(s)
 omega = TestFunction(P1base)
-a = Function(P1base).interpolate((1.0 / secpera))  # FIXME
-dsdt = (snew - s) / (args.dt * secpera)
-# FIXME: surface trace of velocity; implicit edge stabilization
-# usurf = Function(P1base)
+a = Function(P1base).interpolate((0.0 / secpera))  # FIXME
+usurf = Function(P1base)
 wsurf = Function(P1base)
-Fske = (dsdt - wsurf - a) * omega * dx
+dsdt = (snew - s) / (args.dt * secpera)
+Fske = (dsdt + usurf * s.dx(0) - wsurf - a) * omega * dx
+# FIXME: implicit edge stabilization
 bcske = [
-    DirichletBC(P1base, Constant(0.0), (1, 2)),
-]  # s=0 at lateral boundaries
+    DirichletBC(P1base, Constant(args.marginheight), (1, 2)),
+]
 
 # time stepping loop
 printpar(
