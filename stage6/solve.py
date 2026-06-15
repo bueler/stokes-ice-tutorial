@@ -113,7 +113,6 @@ n = 3.0
 A3 = 3.1689e-24  # Pa-3 s-1;  EISMINT I value of ice softness
 B3 = A3 ** (-1.0 / 3.0)  # Pa s(1/3);  ice hardness
 Dtyp = 1.0 / secpera  # s-1
-sc = 1.0e-7  # velocity scale constant for symmetric equation scaling
 fbody = Constant((0.0, -rho * g))
 par = {
     "snes_converged_reason": None,
@@ -149,6 +148,7 @@ hierarchy = SemiCoarsenedExtrudedHierarchy(
     nref=args.refine,
 )
 
+
 def setmeshgeometry(mesh, s, xzorig=None):
     Q1R = FunctionSpace(mesh, "P", 1, vfamily="R", vdegree=0)
     sR = Function(Q1R)
@@ -163,6 +163,7 @@ def setmeshgeometry(mesh, s, xzorig=None):
     mesh.coordinates.assign(XZ)
     return xzorig
 
+
 # set geometry on all levels; xflat,zflat will have finest level
 for j in range(args.refine + 1):
     xzflat = setmeshgeometry(hierarchy[j], s)
@@ -175,22 +176,16 @@ V = VectorFunctionSpace(mesh, "Lagrange", 2)
 W = FunctionSpace(mesh, "Lagrange", 1)
 Z = V * W
 up = Function(Z)
-scu, p = split(up)  # scaled velocity, unscaled pressure
+u, p = split(up)
 v, q = TestFunctions(Z)
-
-# symmetrically rescale the equations for better conditioning
 eps = args.eps
-Du2 = 0.5 * inner(D(scu * sc), D(scu * sc)) + (eps * Dtyp) ** 2.0
+Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp) ** 2.0
 nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
-F = (
-    sc * sc * inner(2.0 * nu * D(scu), D(v))
-    - sc * p * div(v)
-    - sc * q * div(scu)
-    - sc * inner(fbody, v)
-) * dx(degree=3)
+F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u) - inner(fbody, v)) * dx(
+    degree=3
+)
 
-# different boundary conditions relative to stage2/:
-#   base label is 'bottom', and we add noslip condition on degenerate ends
+# boundary conditions: noslip on 'bottom' and degenerate ends
 bcs = [
     DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
     DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1, 2)),
@@ -198,7 +193,7 @@ bcs = [
 
 # weak form for surface kinematical equation
 snew = Function(P1base).interpolate(s)
-w = TestFunction(P1base)
+omega = TestFunction(P1base)
 a = Function(P1base).interpolate((1.0 / secpera))  # FIXME
 dsdt = (snew - s) / (args.dt * secpera)
 # FIXME: surface trace of velocity; implicit edge stabilization
@@ -216,6 +211,7 @@ t = 0.0
 for k in range(args.N):
     # solve Stokes on current geometry
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=par)
+    u, p = up.subfunctions
 
     # integrate 1 to get area of domain
     R = FunctionSpace(mesh, "R", 0)
@@ -225,12 +221,9 @@ for k in range(args.N):
     # print geometry measure
     with s.dat.vec_ro as height:
         smax = height.max()[1]
-    printpar("  maximum surface height at t=%.3f a: %.3f"
-             % (t / secpera, smax))
+    printpar("  maximum surface height at t=%.3f a: %.3f" % (t / secpera, smax))
 
     # print average and maximum velocity
-    scu = up.subfunctions[0]
-    u = scu * sc
     P1 = FunctionSpace(mesh, "CG", 1)
     umagav = assemble(sqrt(dot(u, u)) * dx) / area
     umag = Function(P1).interpolate(sqrt(dot(u, u)))
@@ -248,6 +241,11 @@ for k in range(args.N):
 
     t += args.dt * secpera
 
+# print geometry measure at final time
+with s.dat.vec_ro as height:
+    smax = height.max()[1]
+printpar("  maximum surface height at t=%.3f a: %.3f" % (t / secpera, smax))
+
 # generate tensor-valued deviatoric stress tau, and effective viscosity nu,
 #   from the velocity solution
 def stresses(mesh, u):
@@ -263,9 +261,7 @@ def stresses(mesh, u):
 
 
 printpar("saving u,p,tau,nu,rank to %s ..." % args.o)
-u = up.subfunctions[0]
-p = up.subfunctions[1]
-u *= sc
+u, p = up.subfunctions
 tau, nu = stresses(hierarchy[-1], u)
 u *= secpera
 p /= 1.0e5
@@ -275,4 +271,4 @@ p.rename("pressure (bar)")
 rank = Function(FunctionSpace(mesh, "DG", 0))
 rank.dat.data[:] = mesh.comm.rank
 rank.rename("rank")
-VTKFile(args.o).write(scu, p, tau, nu, rank)
+VTKFile(args.o).write(u, p, tau, nu, rank)
