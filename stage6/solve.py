@@ -10,71 +10,26 @@ equations.  Does explicit (FIXME but Swedish stabilized) time-stepping from init
 dome shape.""",
     add_help=False,
 )
-parser.add_argument(
-    "-dt",
-    type=float,
-    metavar="DT",
-    default=1.0,
-    help="time step in years (default=1.0)",
-)
-parser.add_argument(
-    "-eps",
-    type=float,
-    metavar="X",
-    default=1.0e-4,
-    help="regularization used in viscosity (default=10^{-4})",
-)
-parser.add_argument(
-    "-marginheight",
-    type=float,
-    metavar="X",
-    default=1.0,
-    help="height of degeneration point at margin (default=1 m)",
-)
-parser.add_argument(
-    "-mx",
-    type=int,
-    metavar="MX",
-    default=50,
-    help="subintervals in coarse mesh (default=50)",
-)
-parser.add_argument(
-    "-mz",
-    type=int,
-    metavar="MZ",
-    default=2,
-    help="vertical layers in coarse mesh (default=2)",
-)
-parser.add_argument(
-    "-N", type=int, metavar="N", default=5, help="number of time steps (default=50)"
-)
-parser.add_argument(
-    "-o",
-    metavar="FILE.pvd",
-    type=str,
-    default="dome.pvd",
-    help="output filename (default=dome.pvd)",
-)
-parser.add_argument(
-    "-refine",
-    type=int,
-    metavar="X",
-    default=1,
-    help="vertical refinements when generating mesh hierarchy (default=1)",
-)
-parser.add_argument(
-    "-refinefactor",
-    type=int,
-    metavar="X",
-    default=4,
-    help="vertical refinement factor when generating mesh hierarchy (default=4)",
-)
-parser.add_argument(
-    "-solvehelp",
-    action="store_true",
-    default=False,
-    help="print help for solve.py options and stop",
-)
+hs = "time step in years (default=1.0)"
+parser.add_argument("-dt", type=float, metavar="DT", default=1.0, help=hs)
+hs = "regularization used in viscosity (default=10^{-4})"
+parser.add_argument("-eps", type=float, metavar="X", default=1.0e-4, help=hs)
+hs = "height of degeneration point at margin (default=1 m)"
+parser.add_argument("-marginheight", type=float, metavar="X", default=1.0, help=hs)
+hs = "subintervals in coarse mesh (default=50)"
+parser.add_argument("-mx", type=int, metavar="MX", default=50, help=hs)
+hs = "vertical layers in coarse mesh (default=2)"
+parser.add_argument("-mz", type=int, metavar="MZ", default=2, help=hs)
+hs = "number of time steps (default=50)"
+parser.add_argument("-N", type=int, metavar="N", default=5, help=hs)
+hs = "output filename (default=dome.pvd)"
+parser.add_argument("-o", metavar="FILE.pvd", default="dome.pvd", help=hs)
+hs = "vertical refinements when generating mesh hierarchy (default=1)"
+parser.add_argument("-refine", type=int, metavar="X", default=1, help=hs)
+hs = "vertical refinement factor when generating mesh hierarchy (default=4)"
+parser.add_argument("-refinefactor", type=int, metavar="X", default=4, help=hs)
+hs = "print help for solve.py options and stop"
+parser.add_argument("-solvehelp", action="store_true", default=False, help=hs)
 args, passthroughoptions = parser.parse_known_args()
 if args.solvehelp:
     parser.print_help()
