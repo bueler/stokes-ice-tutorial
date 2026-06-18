@@ -29,11 +29,16 @@ if args.solvehelp:
 import petsc4py
 
 petsc4py.init(passthroughoptions)
+
 import numpy as np
-from functools import cached_property
 from firedrake import *
-from firedrake.dmhooks import get_appctx, pop_appctx, push_appctx
 from firedrake.petsc import PETSc
+from geometry import (
+    PinchColumnPressure,
+    PinchColumnVelocity,
+    set_mesh_geometry,
+    trace_scalar_to_p1,
+)
 
 printpar = PETSc.Sys.Print  # print once even in parallel
 
@@ -59,81 +64,20 @@ def set_profile(x, s):
     pp = 1.0 + 1.0 / n
     rr = n / (2.0 * n + 1.0)
     xi = conditional(abs(x) < R0, 1.0 - abs(x / R0) ** pp, 0.0)
-    s.interpolate(H0 * xi ** rr)
+    s.interpolate(H0 * xi**rr)
+
 
 # create 1D base mesh and 2D mesh
 basemesh = IntervalMesh(args.mx, -L, L)
 xbase = SpatialCoordinate(basemesh)
 P1base = FunctionSpace(basemesh, "P", 1)
-mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0/args.mz)
-
-
-def setmeshgeometry(mesh, s, xzorig=None):
-    Q1R = FunctionSpace(mesh, "P", 1, vfamily="R", vdegree=0)
-    sR = Function(Q1R)
-    sR.dat.data[:] = s.dat.data_ro[:]
-    Vcoord = mesh.coordinates.function_space()
-    if xzorig is None:
-        xz = SpatialCoordinate(mesh)
-        xzorig = Function(Vcoord).interpolate(xz)
-    else:
-        xz = Function(Vcoord).interpolate(xzorig)
-    XZ = Function(Vcoord).interpolate(as_vector([xz[0], sR * xz[1]]))
-    mesh.coordinates.assign(XZ)
-    # push application context onto the DM attached to the coordinate function space
-    actx = {"sR": sR}
-    dm = mesh.coordinates.function_space().dm
-    _ = pop_appctx(dm)
-    push_appctx(dm, actx)
-    return xzorig
-
+mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0 / args.mz)
 
 # set initial geometry, but keep flat coordinates too
 s = Function(P1base)
 set_profile(xbase[0], s)
-mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0/args.mz)
-xzflat = setmeshgeometry(mesh, s)
-
-
-class PinchColumnPressure(DirichletBC):
-
-    def __init__(self, V, g, sub_domain, htol=1.0):
-        self.htol = htol
-        super().__init__(V, Constant(0.0), None)
-
-    @cached_property
-    def nodes(self):
-        V = self.function_space()
-        mesh = V.mesh()
-        # get application ctx from coordinates DM
-        actx = get_appctx(mesh.coordinates.function_space().dm)
-        assert actx is not None, f"got None for appctx from {mesh} coordinates DM"
-        # return P1 nodes in columns with surface elevation less than htol
-        s = Function(V).interpolate(actx["sR"])
-        return np.where(s.dat.data_ro_with_halos < self.htol)[0]
-
-
-class PinchColumnVelocity(DirichletBC):
-    """This 'pinched column' is for vector-valued velocity.  Compare PinchColumnPressure."""
-
-    def __init__(self, V, g, sub_domain, htol=1.0):
-        self.htol = htol
-        super().__init__(V, as_vector([0.0, 0.0]), None)
-
-    @cached_property
-    def nodes(self):
-        V = self.function_space()
-        mesh = V.mesh()
-        # get application ctx from coordinates DM
-        actx = get_appctx(mesh.coordinates.function_space().dm)
-        assert actx is not None, f"got None for appctx from {mesh} coordinates DM"
-        # return vector P2 nodes in columns with height (thickness) less than htol
-        # warning: assumes velocity space is P2
-        P2scalar = FunctionSpace(V.mesh(), "CG", 2)
-        s = Function(P2scalar).interpolate(actx["sR"])
-        ss = Function(V).interpolate(as_vector([s, s]))
-        return np.where(ss.dat.data_ro_with_halos < self.htol)[0]
-
+mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0 / args.mz)
+xzflat = set_mesh_geometry(mesh, s)
 
 # mixed spaces for Stokes
 V = VectorFunctionSpace(mesh, "Lagrange", 2)
@@ -143,8 +87,10 @@ up = Function(Z)
 u, p = split(up)
 v, q = TestFunctions(Z)
 
+
 def D(w):  # strain-rate tensor
     return 0.5 * (grad(w) + grad(w).T)
+
 
 # weak form for Stokes problem (on given geometry)
 eps = args.eps
@@ -163,36 +109,16 @@ bcs = [
     PinchColumnVelocity(Z.sub(0), None, None),
 ]
 
-
 # set up for weak form and solver
 par = {
     "snes_converged_reason": None,
-    #"snes_monitor": None,
+    # "snes_monitor": None,
     "snes_linesearch_type": "bt",
     "ksp_type": "preonly",
     "pc_type": "lu",
     "pc_factor_shift_type": "inblocks",
     "pc_factor_mat_solver_type": "mumps",
 }
-
-
-# this is from https://github.com/bueler/stokes-extrude
-def trace_scalar_to_p1(basemesh, mesh, f, nointerpolate=False):
-    """On an extruded mesh, compute the trace of any scalar function f
-    along the top surface boundary at the P1 nodes.
-    Set nointerpolate=True if f is already P1.  Returns a P1 function on
-    basemesh."""
-    P1 = FunctionSpace(mesh, "CG", 1)
-    if nointerpolate:
-        fP1 = f
-    else:
-        fP1 = Function(P1).interpolate(f)
-    bc = DirichletBC(P1, 0.0, "top")
-    P1basemesh = FunctionSpace(basemesh, "CG", 1)
-    fbm = Function(P1basemesh)
-    fbm.dat.data_with_halos[:] = fP1.dat.data_with_halos[bc.nodes]
-    return fbm
-
 
 # weak form for surface kinematical equation; FIXME should be VI
 snew = Function(P1base).interpolate(s)
@@ -203,7 +129,16 @@ wsurf = Function(P1base)
 dsdt = (snew - s) / (args.dt * secpera)
 Fske = (dsdt + usurf * s.dx(0) - wsurf - a) * omega * dx
 # FIXME: implicit edge stabilization
-bcske = [ DirichletBC(P1base, Constant(0.0), (1, 2)), ]
+bcske = [
+    DirichletBC(P1base, Constant(0.0), (1, 2)),
+]
+
+
+def report_shape(t, s):  # FIXME add extent
+    with s.dat.vec_ro as height:
+        smax = height.max()[1]
+    printpar("  maximum surface height at t=%.3f a: %.3f" % (t / secpera, smax))
+
 
 # time stepping loop
 printpar(
@@ -215,20 +150,14 @@ printpar("  sizes: n_u = %d, n_p = %d" % (n_u, n_p))
 t = 0.0
 for k in range(args.N):
     # solve Stokes on current geometry
+    report_shape(t, s)
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=par)
     u, p = up.subfunctions
 
-    # integrate 1 to get area of domain
+    # print average and maximum velocity
     R = FunctionSpace(mesh, "R", 0)
     one = Function(R).assign(1.0)
-    area = assemble(dot(one, one) * dx)
-
-    # print geometry measure
-    with s.dat.vec_ro as height:
-        smax = height.max()[1]
-    printpar("  maximum surface height at t=%.3f a: %.3f" % (t / secpera, smax))
-
-    # print average and maximum velocity
+    area = assemble(dot(one, one) * dx)  # integrate 1 to get area of domain
     P1 = FunctionSpace(mesh, "CG", 1)
     umagav = assemble(sqrt(dot(u, u)) * dx) / area
     umag = Function(P1).interpolate(sqrt(dot(u, u)))
@@ -244,14 +173,11 @@ for k in range(args.N):
     wsurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[1]))
     solve(Fske == 0, snew, bcs=bcske, options_prefix="ske", solver_parameters=par)
     s.dat.data[:] = np.maximum(0.0, snew.dat.data_ro[:])
-    setmeshgeometry(mesh, s, xzorig=xzflat)
 
+    # update mesh geometry and time
+    set_mesh_geometry(mesh, s, xzorig=xzflat)
     t += args.dt * secpera
 
-# print geometry measure at final time
-with s.dat.vec_ro as height:
-    smax = height.max()[1]
-printpar("  maximum surface height at t=%.3f a: %.3f" % (t / secpera, smax))
 
 # generate tensor-valued deviatoric stress tau, and effective viscosity nu,
 #   from the velocity solution
@@ -267,6 +193,7 @@ def stresses(mesh, u):
     return tau, nu
 
 
+report_shape(t, s)
 printpar("saving u,p,tau,nu,rank to %s ..." % args.o)
 u, p = up.subfunctions
 tau, nu = stresses(mesh, u)
