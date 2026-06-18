@@ -4,18 +4,13 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage6/  Solve the coupled surface kinematical equation and Glen-Stokes
-momentum equations for a 2D ice sheet using an extruded mesh and rescaled
-equations.  Does explicit (FIXME but Swedish stabilized) time-stepping from initial
-dome shape.""",
+    description="""stage6/  Solve the coupled surface kinematical equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Does explicit (FIXME but Swedish stabilized) time-stepping from initial Halfar dome shape.""",
     add_help=False,
 )
 hs = "time step in years (default=1.0)"
 parser.add_argument("-dt", type=float, metavar="DT", default=1.0, help=hs)
 hs = "regularization used in viscosity (default=10^{-4})"
 parser.add_argument("-eps", type=float, metavar="X", default=1.0e-4, help=hs)
-hs = "height of degeneration point at margin (default=1 m)"
-parser.add_argument("-marginheight", type=float, metavar="X", default=1.0, help=hs)
 hs = "subintervals in coarse mesh (default=50)"
 parser.add_argument("-mx", type=int, metavar="MX", default=50, help=hs)
 hs = "vertical layers in coarse mesh (default=2)"
@@ -24,10 +19,6 @@ hs = "number of time steps (default=50)"
 parser.add_argument("-N", type=int, metavar="N", default=5, help=hs)
 hs = "output filename (default=dome.pvd)"
 parser.add_argument("-o", metavar="FILE.pvd", default="dome.pvd", help=hs)
-hs = "vertical refinements when generating mesh hierarchy (default=1)"
-parser.add_argument("-refine", type=int, metavar="X", default=1, help=hs)
-hs = "vertical refinement factor when generating mesh hierarchy (default=4)"
-parser.add_argument("-refinefactor", type=int, metavar="X", default=4, help=hs)
 hs = "print help for solve.py options and stop"
 parser.add_argument("-solvehelp", action="store_true", default=False, help=hs)
 args, passthroughoptions = parser.parse_known_args()
@@ -39,69 +30,42 @@ import petsc4py
 
 petsc4py.init(passthroughoptions)
 import numpy as np
+from functools import cached_property
 from firedrake import *
+from firedrake.dmhooks import get_appctx, pop_appctx, push_appctx
 from firedrake.petsc import PETSc
 
+printpar = PETSc.Sys.Print  # print once even in parallel
 
-def profile(x, R, H):
-    """Exact SIA solution for surface elevation, with half-length (radius) R
-    and maximum height H, on interval [0,L] = [0,2R], centered at x=R.
-    See van der Veen (2013) equation (5.50)."""
-    n = 3.0  # glen exponent
-    p1 = n / (2.0 * n + 2.0)  # = 3/8
-    q1 = 1.0 + 1.0 / n  # = 4/3
-    Z = H / (n - 1.0) ** p1  # outer constant
-    X = (x - R) / R  # rescaled coord
-    Xin = abs(X[abs(X) < 1.0])  # rescaled distance from center
-    Yin = 1.0 - Xin
-    s = np.zeros(np.shape(x))
-    s[abs(X) < 1.0] = Z * ((n + 1.0) * Xin - 1.0 + n * Yin ** q1 - n * Xin ** q1) ** p1
-    s[s < 1.0] = args.marginheight  # needed so that prolong() can find nodes
-    return s
-
-
-# level-independent information
+# physical constants
 secpera = 31556926.0  # seconds per year
 g = 9.81  # m s-2
 rho = 910.0  # kg m-3
 n = 3.0
 A3 = 3.1689e-24  # Pa-3 s-1;  EISMINT I value of ice softness
 B3 = A3 ** (-1.0 / 3.0)  # Pa s(1/3);  ice hardness
-Dtyp = 1.0 / secpera  # s-1
-fbody = Constant((0.0, -rho * g))
-par = {
-    "snes_converged_reason": None,
-    "snes_monitor": None,
-    "snes_linesearch_type": "bt",
-    "ksp_type": "preonly",
-    "pc_type": "lu",
-    "pc_factor_shift_type": "inblocks",
-    "pc_factor_mat_solver_type": "mumps",
-}
-printpar = PETSc.Sys.Print  # print once even in parallel
+Dtyp = 1.0 / secpera  # s-1;  strain rate scale
+
+# geometry
+R0 = 10000.0
+H0 = 1000.0
+L = 15000.0  # R0 < L
 
 
-def D(w):  # strain-rate tensor
-    return 0.5 * (grad(w) + grad(w).T)
+def set_profile(x, s):
+    # set surface geometry from t = t0 Halfar time-dependent SIA geometry solution,
+    # a dome with zero SMB; reference:
+    #   * P. Halfar (1981), On the dynamics of the ice sheets, J. Geophys. Res. 86 (C11), 11065--11072
+    pp = 1.0 + 1.0 / n
+    rr = n / (2.0 * n + 1.0)
+    xi = conditional(abs(x) < R0, 1.0 - abs(x / R0) ** pp, 0.0)
+    s.interpolate(H0 * xi ** rr)
 
-
-printpar("generating %d-level mesh hierarchy ..." % (args.refine + 1))
-R = 10000.0
-H = 1000.0
-basemesh = IntervalMesh(args.mx, length_or_left=0.0, right=2.0 * R)
-xbase = basemesh.coordinates.dat.data_ro
+# create 1D base mesh and 2D mesh
+basemesh = IntervalMesh(args.mx, -L, L)
+xbase = SpatialCoordinate(basemesh)
 P1base = FunctionSpace(basemesh, "P", 1)
-
-s = Function(P1base)
-s.dat.data[:] = profile(xbase, R, H)
-
-hierarchy = SemiCoarsenedExtrudedHierarchy(
-    basemesh,
-    1.0,
-    base_layer=args.mz,
-    refinement_ratio=args.refinefactor,
-    nref=args.refine,
-)
+mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0/args.mz)
 
 
 def setmeshgeometry(mesh, s, xzorig=None):
@@ -116,73 +80,135 @@ def setmeshgeometry(mesh, s, xzorig=None):
         xz = Function(Vcoord).interpolate(xzorig)
     XZ = Function(Vcoord).interpolate(as_vector([xz[0], sR * xz[1]]))
     mesh.coordinates.assign(XZ)
+    # push application context onto the DM attached to the coordinate function space
+    actx = {"sR": sR}
+    dm = mesh.coordinates.function_space().dm
+    _ = pop_appctx(dm)
+    push_appctx(dm, actx)
     return xzorig
 
 
-# set geometry on all levels; xflat,zflat will have finest level
-for j in range(args.refine + 1):
-    xzflat = setmeshgeometry(hierarchy[j], s)
+# set initial geometry, but keep flat coordinates too
+s = Function(P1base)
+set_profile(xbase[0], s)
+mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0/args.mz)
+xzflat = setmeshgeometry(mesh, s)
 
-# use finest mesh in hierarchy
-mesh = hierarchy[-1]
 
-# weak form for Stokes problem (on given geometry)
+class PinchColumnPressure(DirichletBC):
+
+    def __init__(self, V, g, sub_domain, htol=1.0):
+        self.htol = htol
+        super().__init__(V, Constant(0.0), None)
+
+    @cached_property
+    def nodes(self):
+        V = self.function_space()
+        mesh = V.mesh()
+        # get application ctx from coordinates DM
+        actx = get_appctx(mesh.coordinates.function_space().dm)
+        assert actx is not None, f"got None for appctx from {mesh} coordinates DM"
+        # return P1 nodes in columns with surface elevation less than htol
+        s = Function(V).interpolate(actx["sR"])
+        return np.where(s.dat.data_ro_with_halos < self.htol)[0]
+
+
+class PinchColumnVelocity(DirichletBC):
+    """This 'pinched column' is for vector-valued velocity.  Compare PinchColumnPressure."""
+
+    def __init__(self, V, g, sub_domain, htol=1.0):
+        self.htol = htol
+        super().__init__(V, as_vector([0.0, 0.0]), None)
+
+    @cached_property
+    def nodes(self):
+        V = self.function_space()
+        mesh = V.mesh()
+        # get application ctx from coordinates DM
+        actx = get_appctx(mesh.coordinates.function_space().dm)
+        assert actx is not None, f"got None for appctx from {mesh} coordinates DM"
+        # return vector P2 nodes in columns with height (thickness) less than htol
+        # warning: assumes velocity space is P2
+        P2scalar = FunctionSpace(V.mesh(), "CG", 2)
+        s = Function(P2scalar).interpolate(actx["sR"])
+        ss = Function(V).interpolate(as_vector([s, s]))
+        return np.where(ss.dat.data_ro_with_halos < self.htol)[0]
+
+
+# mixed spaces for Stokes
 V = VectorFunctionSpace(mesh, "Lagrange", 2)
 W = FunctionSpace(mesh, "Lagrange", 1)
 Z = V * W
 up = Function(Z)
 u, p = split(up)
 v, q = TestFunctions(Z)
+
+def D(w):  # strain-rate tensor
+    return 0.5 * (grad(w) + grad(w).T)
+
+# weak form for Stokes problem (on given geometry)
 eps = args.eps
+fbody = Constant((0.0, -rho * g))
 Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp) ** 2.0
 nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
 F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u) - inner(fbody, v)) * dx(
     degree=3
 )
 
-# boundary conditions: noslip on 'bottom' and degenerate ends
+# boundary conditions: noslip on 'bottom' and degenerate ends, pinch zero-height columns
 bcs = [
     DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
     DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1, 2)),
+    PinchColumnPressure(Z.sub(1), None, None),
+    PinchColumnVelocity(Z.sub(0), None, None),
 ]
 
 
+# set up for weak form and solver
+par = {
+    "snes_converged_reason": None,
+    #"snes_monitor": None,
+    "snes_linesearch_type": "bt",
+    "ksp_type": "preonly",
+    "pc_type": "lu",
+    "pc_factor_shift_type": "inblocks",
+    "pc_factor_mat_solver_type": "mumps",
+}
+
+
 # this is from https://github.com/bueler/stokes-extrude
-def trace_scalar_to_p1(basemesh, mesh, f, surface="top", nointerpolate=False):
+def trace_scalar_to_p1(basemesh, mesh, f, nointerpolate=False):
     """On an extruded mesh, compute the trace of any scalar function f
-    along the surface='top' or surface='bottom' boundary at the P1 nodes.
+    along the top surface boundary at the P1 nodes.
     Set nointerpolate=True if f is already P1.  Returns a P1 function on
     basemesh."""
-    assert surface in ["top", "bottom"]
     P1 = FunctionSpace(mesh, "CG", 1)
     if nointerpolate:
         fP1 = f
     else:
         fP1 = Function(P1).interpolate(f)
-    bc = DirichletBC(P1, 0.0, surface)
+    bc = DirichletBC(P1, 0.0, "top")
     P1basemesh = FunctionSpace(basemesh, "CG", 1)
     fbm = Function(P1basemesh)
     fbm.dat.data_with_halos[:] = fP1.dat.data_with_halos[bc.nodes]
     return fbm
 
 
-# weak form for surface kinematical equation
+# weak form for surface kinematical equation; FIXME should be VI
 snew = Function(P1base).interpolate(s)
 omega = TestFunction(P1base)
-a = Function(P1base).interpolate((0.0 / secpera))  # FIXME
+a = Function(P1base).interpolate(0.0)  # Halfar solution corresponds to a=0
 usurf = Function(P1base)
 wsurf = Function(P1base)
 dsdt = (snew - s) / (args.dt * secpera)
 Fske = (dsdt + usurf * s.dx(0) - wsurf - a) * omega * dx
 # FIXME: implicit edge stabilization
-bcske = [
-    DirichletBC(P1base, Constant(args.marginheight), (1, 2)),
-]
+bcske = [ DirichletBC(P1base, Constant(0.0), (1, 2)), ]
 
 # time stepping loop
 printpar(
     "solving %d steps (dt=%.3f) on %d x %d mesh ..."
-    % (args.N, args.dt, args.mx, args.mz * (args.refinefactor) ** j)
+    % (args.N, args.dt, args.mx, args.mz)
 )
 n_u, n_p = V.dim(), W.dim()
 printpar("  sizes: n_u = %d, n_p = %d" % (n_u, n_p))
@@ -213,11 +239,11 @@ for k in range(args.N):
         % (t / secpera, umagav * secpera, umagmax * secpera)
     )
 
-    # solve SKE for one semi-implicit Euler time-step
-    # usurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[0]))
+    # solve SKE for one semi-implicit Euler time-step  FIXME
+    usurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[0]))
     wsurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[1]))
     solve(Fske == 0, snew, bcs=bcske, options_prefix="ske", solver_parameters=par)
-    s.dat.data[:] = snew.dat.data_ro[:]
+    s.dat.data[:] = np.maximum(0.0, snew.dat.data_ro[:])
     setmeshgeometry(mesh, s, xzorig=xzflat)
 
     t += args.dt * secpera
@@ -243,7 +269,7 @@ def stresses(mesh, u):
 
 printpar("saving u,p,tau,nu,rank to %s ..." % args.o)
 u, p = up.subfunctions
-tau, nu = stresses(hierarchy[-1], u)
+tau, nu = stresses(mesh, u)
 u *= secpera
 p /= 1.0e5
 u.rename("velocity (m/a)")
