@@ -105,8 +105,8 @@ bcs = [
     PinchColumnVelocity(Z.sub(0), None, None),
 ]
 
-# set up for weak form and solver
-par = {
+# parameters for Stokes solver
+stokespar = {
     "snes_converged_reason": None,
     # "snes_monitor": None,
     "snes_linesearch_type": "bt",
@@ -116,7 +116,21 @@ par = {
     "pc_factor_mat_solver_type": "mumps",
 }
 
-# weak form for surface kinematical equation; FIXME should be VI
+# parameters for SKE VI solver
+vipar = {#"snes_monitor": None,
+        "snes_converged_reason": None,
+        #"snes_rtol": 1.0e-6,
+        #"snes_atol": 1.0e-14,
+        "snes_stol": 0.0,
+        "snes_type": "vinewtonrsls",
+        "snes_vi_zero_tolerance": 1.0e-8,
+        "snes_linesearch_type": "basic",
+        "snes_max_it": 200,
+        "ksp_type": "preonly",
+        "pc_type": "lu",
+        "pc_factor_mat_solver_type": "mumps"}
+
+# weak form for surface kinematical equation
 snew = Function(P1base).interpolate(s)
 omega = TestFunction(P1base)
 a = Function(P1base).interpolate(0.0)  # Halfar solution corresponds to a=0
@@ -128,12 +142,16 @@ Fske = (dsdt + usurf * s.dx(0) - wsurf - a) * omega * dx
 bcske = [
     DirichletBC(P1base, Constant(0.0), (1, 2)),
 ]
+probske = NonlinearVariationalProblem(Fske, snew, bcske)
+solverske = NonlinearVariationalSolver(probske, solver_parameters=vipar, options_prefix="ske")
+lb = Function(P1base).interpolate(Constant(0.0))
+ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
 
 def report_shape(t, s):  # FIXME add extent
     with s.dat.vec_ro as height:
         smax = height.max()[1]
-    printpar("  maximum surface height at t=%.3f a: %.3f" % (t / secpera, smax))
+    printpar(f"  maximum surface height = {smax:.3f}")
 
 
 # time stepping loop
@@ -146,8 +164,9 @@ printpar("  sizes: n_u = %d, n_p = %d" % (n_u, n_p))
 t = 0.0
 for k in range(args.N):
     # solve Stokes on current geometry
+    printpar(f"t={t / secpera:.3f} a (k={k}):")
     report_shape(t, s)
-    solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=par)
+    solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
     u, p = up.subfunctions
 
     # print average and maximum velocity
@@ -167,12 +186,15 @@ for k in range(args.N):
     # solve SKE for one semi-implicit Euler time-step  FIXME
     usurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[0]))
     wsurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[1]))
-    solve(Fske == 0, snew, bcs=bcske, options_prefix="ske", solver_parameters=par)
-    s.dat.data[:] = np.maximum(0.0, snew.dat.data_ro[:])
+    solverske.solve(bounds=(lb, ub))
+    s.dat.data[:] = snew.dat.data_ro[:]
 
     # update mesh geometry and time
     set_mesh_geometry(mesh, s, xzorig=xzflat)
     t += args.dt * secpera
+
+printpar(f"t={t / secpera:.3f} a (done):")
+report_shape(t, s)
 
 
 # generate tensor-valued deviatoric stress tau, and effective viscosity nu,
@@ -189,7 +211,6 @@ def stresses(mesh, u):
     return tau, nu
 
 
-report_shape(t, s)
 printpar("saving u,p,tau,nu,rank to %s ..." % args.o)
 u, p = up.subfunctions
 tau, nu = stresses(mesh, u)
