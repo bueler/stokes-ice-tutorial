@@ -4,7 +4,7 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage6/  Solve the coupled surface kinematical equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Does explicit (FIXME but Swedish stabilized) time-stepping from initial Halfar dome shape.""",
+    description="""stage6/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Does first-order explicit (FIXME but Swedish stabilized) time-stepping from initial Halfar dome shape.""",
     add_help=False,
 )
 hs = "time step in years (default=1.0)"
@@ -51,15 +51,10 @@ A3 = 3.1689e-24  # Pa-3 s-1;  EISMINT I value of ice softness
 B3 = A3 ** (-1.0 / 3.0)  # Pa s(1/3);  ice hardness
 Dtyp = 1.0 / secpera  # s-1;  strain rate scale
 
-# geometry
-R0 = 10000.0
-H0 = 1000.0
-L = 15000.0  # R0 < L
 
-
-def set_profile(x, s):
-    # set surface geometry from t = t0 Halfar time-dependent SIA geometry solution,
-    # a dome with zero SMB; reference:
+def set_halfar_profile(x, s, R0=10000.0, H0=1000.0):
+    # Set surface geometry from t = t0 Halfar time-dependent SIA geometry solution,
+    # a dome with zero SMB.  The surface is zero outside of (-R0,R0).  Reference:
     #   * P. Halfar (1981), On the dynamics of the ice sheets, J. Geophys. Res. 86 (C11), 11065--11072
     pp = 1.0 + 1.0 / n
     rr = n / (2.0 * n + 1.0)
@@ -67,41 +62,42 @@ def set_profile(x, s):
     s.interpolate(H0 * xi**rr)
 
 
-# create 1D base mesh and 2D mesh
+# create 1D base mesh
+L = 15000.0
 basemesh = IntervalMesh(args.mx, -L, L)
 xbase = SpatialCoordinate(basemesh)
-P1base = FunctionSpace(basemesh, "P", 1)
-mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0 / args.mz)
+P1base = FunctionSpace(basemesh, "CG", 1)
 
-# set initial geometry, but keep flat coordinates too
+# set initial 2D mesh geometry, but keep flat coordinates too
 s = Function(P1base)
-set_profile(xbase[0], s)
+set_halfar_profile(xbase[0], s)
 mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0 / args.mz)
 xzflat = set_mesh_geometry(mesh, s)
 
 # mixed spaces for Stokes
-V = VectorFunctionSpace(mesh, "Lagrange", 2)
-W = FunctionSpace(mesh, "Lagrange", 1)
+V = VectorFunctionSpace(mesh, "CG", 2)
+W = FunctionSpace(mesh, "CG", 1)
 Z = V * W
 up = Function(Z)
 u, p = split(up)
 v, q = TestFunctions(Z)
 
 
-def D(w):  # strain-rate tensor
+# strain-rate tensor
+def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
 
 # weak form for Stokes problem (on given geometry)
-eps = args.eps
-fbody = Constant((0.0, -rho * g))
-Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp) ** 2.0
+F = - inner(Constant((0.0, -rho * g)), v) * dx  # source term
+Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
 nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
-F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u) - inner(fbody, v)) * dx(
-    degree=3
-)
+F += (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
+# FIXME symmetrized FSSA
 
-# boundary conditions: noslip on 'bottom' and degenerate ends, pinch zero-height columns
+# boundary conditions:
+#   * noslip on 'bottom' and degenerate ends
+#   * pinch zero-height columns (trivialize all u,p d.o.f.s)
 bcs = [
     DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
     DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1, 2)),
