@@ -166,10 +166,7 @@ if not args.noswede:
     Fske += gamma * jump(grad(snew), nbase) * jump(grad(omega), nbase) * dS
 
 # set up surface kinematical equation solver, a variational inequality
-bcske = [
-    DirichletBC(P1base, Constant(0.0), (1, 2)),
-]
-probske = NonlinearVariationalProblem(Fske, snew, bcske)
+probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
 solverske = NonlinearVariationalSolver(
     probske, solver_parameters=vipar, options_prefix="ske"
 )
