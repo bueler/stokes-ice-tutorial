@@ -41,7 +41,7 @@ from geometry import (
     PinchColumnPressure,
     PinchColumnVelocity,
     set_mesh_geometry,
-    trace_to_p1base,
+    trace_to_vector_p2base,
     extend_from_p1base,
 )
 
@@ -165,17 +165,18 @@ vipar = {  # "snes_monitor": None,
 # weak form for surface kinematical equation
 snew = Function(P1base)
 omega = TestFunction(P1base)
-usurf = Function(P1base)
-wsurf = Function(P1base)
+VP2base = VectorFunctionSpace(basemesh, "CG", 2, dim=2)
+uwsurf = Function(VP2base)
 # basic surface equation
 dsdt = (snew - s) / (args.dt * secpera)
-Fske = (dsdt + usurf * s.dx(0) - wsurf - a) * omega * dx
+ns = as_vector([-s.dx(0), Constant(1.0)])
+Fske = (dsdt - dot(uwsurf, ns) - a) * omega * dx
 if not args.noswede:
     # implicit edge stabilization, formula (4.3) in Tominec et al 2026
     hbase = CellDiameter(basemesh)
     nbase = FacetNormal(basemesh)
     h = (hbase("+") + hbase("-")) / 2
-    velmag = sqrt(usurf**2 + wsurf**2)
+    velmag = sqrt(dot(uwsurf, uwsurf))
     gamma = 0.5 * h**2 * velmag
     Fske += gamma * jump(grad(snew), nbase) * jump(grad(omega), nbase) * dS
 
@@ -235,10 +236,7 @@ for k in range(args.N):
     )
 
     # solve SKE for one semi-implicit Euler time-step
-    # FIXME trace_vector_to_p2 for surface velocity?
-    #       (which is what I did in glacier-fe-estimate/py/case.py)
-    usurf.interpolate(trace_to_p1base(basemesh, mesh, u[0]))
-    wsurf.interpolate(trace_to_p1base(basemesh, mesh, u[1]))
+    trace_to_vector_p2base(basemesh, mesh, u, uwsurf)
     snew.interpolate(s)  # initial condition
     solverske.solve(bounds=(lb, ub))
     s.interpolate(snew)  # update surface elevation
