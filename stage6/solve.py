@@ -3,9 +3,6 @@
 import argparse
 import sys
 
-# FIXME add -walls option and check claims of Tominec et al
-# (with option on it puts up walls before R0, and makes them traction-free)
-
 parser = argparse.ArgumentParser(
     description="""stage6/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Does first-order explicit, but Swedish stabilized, time-stepping from initial Halfar dome shape.""",
     add_help=False,
@@ -26,6 +23,8 @@ hs = "output filename (default=dome.pvd)"
 parser.add_argument("-o", metavar="FILE.pvd", default="dome.pvd", help=hs)
 hs = "print help for solve.py options and stop"
 parser.add_argument("-solvehelp", action="store_true", default=False, help=hs)
+hs = "put in no-tangential-traction walls so s>b everywhere"
+parser.add_argument("-walls", action="store_true", default=False, help=hs)
 args, passthroughoptions = parser.parse_known_args()
 if args.solvehelp:
     parser.print_help()
@@ -70,7 +69,10 @@ def set_halfar_profile(x, s, R0=10000.0, H0=1000.0):
 
 
 # create 1D base mesh
-L = 15000.0
+if args.walls:
+    L = 8000.0
+else:
+    L = 15000.0
 basemesh = IntervalMesh(args.mx, -L, L)
 xbase = SpatialCoordinate(basemesh)
 P1base = FunctionSpace(basemesh, "CG", 1)
@@ -112,15 +114,27 @@ if not args.noswede:  # formula (4.28) in Tominec et al 2026
 f_body = as_vector([0.0, -rho * g])
 F -= inner(f_body, v) * dx  # source term
 
-# boundary conditions:
-#   * noslip on 'bottom' and degenerate ends
-#   * pinch zero-height columns (trivialize all u,p d.o.f.s)
+# boundary conditions in default:
+#   * <u,w>=0 on 'bottom'
+#   * <u,w>=0 on lateral ends
+#   * pinch zero-height columns (trivialize all u,p d.o.f.s if s<stol)
+# boundary conditions for -walls:
+#   * <u,w>=0 on 'bottom'
+#   * u=0 on lateral ends (and no tangential stress)
 bcs = [
     DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
-    DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1, 2)),
-    PinchColumnPressure(Z.sub(1), None, None),
-    PinchColumnVelocity(Z.sub(0), None, None),
 ]
+if args.walls:
+    bcs += [
+        DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
+    ]
+else:
+    bcs += [
+        DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1, 2)),
+        PinchColumnPressure(Z.sub(1), None, None),
+        PinchColumnVelocity(Z.sub(0), None, None),
+    ]
+
 
 # parameters for Stokes solver
 stokespar = {
