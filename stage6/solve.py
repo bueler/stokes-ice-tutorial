@@ -3,8 +3,11 @@
 import argparse
 import sys
 
+# FIXME add -walls option and check claims of Tominec et al
+# (with option on it puts up walls before R0, and makes them traction-free)
+
 parser = argparse.ArgumentParser(
-    description="""stage6/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Does first-order explicit (FIXME but Swedish stabilized) time-stepping from initial Halfar dome shape.""",
+    description="""stage6/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Does first-order explicit, but Swedish stabilized, time-stepping from initial Halfar dome shape.""",
     add_help=False,
 )
 hs = "time step in years (default=1.0)"
@@ -17,6 +20,8 @@ hs = "vertical layers in coarse mesh (default=2)"
 parser.add_argument("-mz", type=int, metavar="MZ", default=2, help=hs)
 hs = "number of time steps (default=50)"
 parser.add_argument("-N", type=int, metavar="N", default=5, help=hs)
+hs = "turn off stabilizations"
+parser.add_argument("-noswede", action="store_true", default=False, help=hs)
 hs = "output filename (default=dome.pvd)"
 parser.add_argument("-o", metavar="FILE.pvd", default="dome.pvd", help=hs)
 hs = "print help for solve.py options and stop"
@@ -51,6 +56,7 @@ n = 3.0
 A3 = 3.1689e-24  # Pa-3 s-1;  EISMINT I value of ice softness
 B3 = A3 ** (-1.0 / 3.0)  # Pa s(1/3);  ice hardness
 Dtyp = 1.0 / secpera  # s-1;  strain rate scale
+dtsec = args.dt * secpera
 
 
 def set_halfar_profile(x, s, R0=10000.0, H0=1000.0):
@@ -94,19 +100,17 @@ def D(w):
 
 
 # weak form for Stokes problem (on given geometry)
-swede = True
 f_body = as_vector([0.0, -rho * g])
 F = - inner(f_body, v) * dx  # source term
 Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
 nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
 F += (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
-if swede:  # formula (4.28) in Tominec et al 2026
-    dts = args.dt * secpera
+if not args.noswede:  # formula (4.28) in Tominec et al 2026
     nsnorm = sqrt(sR.dx(0)**2 + 1.0)
     nvec = FacetNormal(mesh)
-    F += (rho * g * dts / 2.0) * nsnorm * inner(u, nvec) * inner(v, nvec) * ds_t
+    F += (rho * g * dtsec / 2.0) * nsnorm * inner(u, nvec) * inner(v, nvec) * ds_t
     aR = extend_p1_from_basemesh(mesh, a)
-    F += (rho * g * dts) * aR * inner(v, nvec) * ds_t
+    F += (rho * g * dtsec) * aR * inner(v, nvec) * ds_t
 
 # boundary conditions:
 #   * noslip on 'bottom' and degenerate ends
@@ -144,13 +148,23 @@ vipar = {#"snes_monitor": None,
         "pc_factor_mat_solver_type": "mumps"}
 
 # weak form for surface kinematical equation
-snew = Function(P1base).interpolate(s)
+snew = Function(P1base)
 omega = TestFunction(P1base)
 usurf = Function(P1base)
 wsurf = Function(P1base)
+# basic surface equation
 dsdt = (snew - s) / (args.dt * secpera)
 Fske = (dsdt + usurf * s.dx(0) - wsurf - a) * omega * dx
-# FIXME: implicit edge stabilization
+if not args.noswede:
+    # implicit edge stabilization, formula (4.3) in Tominec et al 2026
+    hbase = CellDiameter(basemesh)
+    nbase = FacetNormal(basemesh)
+    h = (hbase("+") + hbase("-")) / 2
+    velmag = sqrt(usurf**2 + wsurf**2)
+    gamma = 0.5 * h**2 * velmag
+    Fske += gamma * jump(grad(snew), nbase) * jump(grad(omega), nbase) * dS
+
+# set up surface kinematical equation solver, a variational inequality
 bcske = [
     DirichletBC(P1base, Constant(0.0), (1, 2)),
 ]
@@ -160,10 +174,13 @@ lb = Function(P1base).interpolate(Constant(0.0))
 ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
 
-def report_shape(t, s):  # FIXME add extent
-    with s.dat.vec_ro as height:
-        smax = height.max()[1]
-    printpar(f"  maximum surface height = {smax:.3f}")
+# FIXME report exact mass to check conservation
+def report_shape(t, s, stol=1.0):
+    ss = s.dat.data_ro
+    xx = basemesh.coordinates.dat.data_ro
+    xlt = xx[ss > stol].min()
+    xrt = xx[ss > stol].max()
+    printpar(f"  width = {xrt - xlt:.3f}, max height = {ss.max():.3f}")
 
 
 # time stepping loop
@@ -179,7 +196,7 @@ for k in range(args.N):
     report_shape(t, s)
 
     # solve Stokes on current geometry
-    sR.dat.data[:] = s.dat.data_ro[:]  # update s in R space (for FSSA)
+    sR.dat.data[:] = s.dat.data_ro[:]  # update s in R space (for stabilization)
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
 
     # print average and maximum velocity
@@ -196,15 +213,16 @@ for k in range(args.N):
         % (t / secpera, umagav * secpera, umagmax * secpera)
     )
 
-    # solve SKE for one semi-implicit Euler time-step  FIXME
+    # solve SKE for one semi-implicit Euler time-step
     usurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[0]))
     wsurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[1]))
+    snew.interpolate(s)
     solverske.solve(bounds=(lb, ub))
     s.dat.data[:] = snew.dat.data_ro[:]
 
     # update mesh geometry and time
     set_mesh_geometry(mesh, s, xzorig=xzflat)
-    t += args.dt * secpera
+    t += dtsec
 
 printpar(f"t={t / secpera:.3f} a (done):")
 report_shape(t, s)
