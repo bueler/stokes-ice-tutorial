@@ -234,11 +234,13 @@ for k in range(args.N):
     )
 
     # solve SKE for one semi-implicit Euler time-step
+    # FIXME trace_vector_to_p2 for surface velocity?
+    #       (which is what I did in glacier-fe-estimate/py/case.py)
     usurf.interpolate(trace_to_p1base(basemesh, mesh, u[0]))
     wsurf.interpolate(trace_to_p1base(basemesh, mesh, u[1]))
-    snew.interpolate(s)
+    snew.interpolate(s)  # initial condition
     solverske.solve(bounds=(lb, ub))
-    s.dat.data[:] = snew.dat.data_ro[:]
+    s.interpolate(snew)  # update surface elevation
 
     # update mesh geometry and time
     set_mesh_geometry(mesh, s, xzorig=xzflat)
