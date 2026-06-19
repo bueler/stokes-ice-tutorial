@@ -81,10 +81,8 @@ set_halfar_profile(xbase[0], s)
 mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0 / args.mz)
 xzflat = set_mesh_geometry(mesh, s)
 
-# surface mass balance function, and s in R space for FSSA
-a = Function(P1base).interpolate(0.0)  # Halfar solution corresponds to a=0
-Q1R = FunctionSpace(mesh, "CG", 1, vfamily="R", vdegree=0)
-sR = Function(Q1R)
+# surface mass balance function; a=0 in Halfar solution
+a = Function(P1base).interpolate(0.0)
 
 # mixed spaces for Stokes
 V = VectorFunctionSpace(mesh, "CG", 2)
@@ -94,23 +92,25 @@ up = Function(Z)
 u, p = split(up)
 v, q = TestFunctions(Z)
 
+
 # strain-rate tensor
 def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
 
 # weak form for Stokes problem (on given geometry)
-f_body = as_vector([0.0, -rho * g])
-F = - inner(f_body, v) * dx  # source term
 Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
 nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
-F += (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
+F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
 if not args.noswede:  # formula (4.28) in Tominec et al 2026
-    nsnorm = sqrt(sR.dx(0)**2 + 1.0)
+    sR = extend_from_p1base(mesh, s)
+    aR = extend_from_p1base(mesh, a)
+    nsnorm = sqrt(sR.dx(0) ** 2 + 1.0)
     nvec = FacetNormal(mesh)
     F += (rho * g * dtsec / 2.0) * nsnorm * inner(u, nvec) * inner(v, nvec) * ds_t
-    aR = extend_from_p1base(mesh, a)
     F += (rho * g * dtsec) * aR * inner(v, nvec) * ds_t
+f_body = as_vector([0.0, -rho * g])
+F -= inner(f_body, v) * dx  # source term
 
 # boundary conditions:
 #   * noslip on 'bottom' and degenerate ends
@@ -134,18 +134,19 @@ stokespar = {
 }
 
 # parameters for SKE VI solver
-vipar = {#"snes_monitor": None,
-        "snes_converged_reason": None,
-        #"snes_rtol": 1.0e-6,
-        #"snes_atol": 1.0e-14,
-        "snes_stol": 0.0,
-        "snes_type": "vinewtonrsls",
-        "snes_vi_zero_tolerance": 1.0e-8,
-        "snes_linesearch_type": "basic",
-        "snes_max_it": 200,
-        "ksp_type": "preonly",
-        "pc_type": "lu",
-        "pc_factor_mat_solver_type": "mumps"}
+vipar = {  # "snes_monitor": None,
+    "snes_converged_reason": None,
+    # "snes_rtol": 1.0e-6,
+    # "snes_atol": 1.0e-14,
+    "snes_stol": 0.0,
+    "snes_type": "vinewtonrsls",
+    "snes_vi_zero_tolerance": 1.0e-8,
+    "snes_linesearch_type": "basic",
+    "snes_max_it": 200,
+    "ksp_type": "preonly",
+    "pc_type": "lu",
+    "pc_factor_mat_solver_type": "mumps",
+}
 
 # weak form for surface kinematical equation
 snew = Function(P1base)
@@ -169,7 +170,9 @@ bcske = [
     DirichletBC(P1base, Constant(0.0), (1, 2)),
 ]
 probske = NonlinearVariationalProblem(Fske, snew, bcske)
-solverske = NonlinearVariationalSolver(probske, solver_parameters=vipar, options_prefix="ske")
+solverske = NonlinearVariationalSolver(
+    probske, solver_parameters=vipar, options_prefix="ske"
+)
 lb = Function(P1base).interpolate(Constant(0.0))
 ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
@@ -199,7 +202,10 @@ for k in range(args.N):
     report_shape(t, s)
 
     # solve Stokes on current geometry
-    sR.dat.data[:] = s.dat.data_ro[:]  # update s in R space (for stabilization)
+    if not args.noswede:
+        # update s, a in R space (for stabilization)
+        sR.dat.data[:] = s.dat.data_ro[:]
+        aR.dat.data[:] = a.dat.data_ro[:]
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
 
     # print average and maximum velocity
