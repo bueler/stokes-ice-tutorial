@@ -42,8 +42,8 @@ from geometry import (
     PinchColumnPressure,
     PinchColumnVelocity,
     set_mesh_geometry,
-    trace_scalar_to_p1,
-    extend_p1_from_basemesh,
+    trace_to_p1base,
+    extend_from_p1base,
 )
 
 printpar = PETSc.Sys.Print  # print once even in parallel
@@ -109,7 +109,7 @@ if not args.noswede:  # formula (4.28) in Tominec et al 2026
     nsnorm = sqrt(sR.dx(0)**2 + 1.0)
     nvec = FacetNormal(mesh)
     F += (rho * g * dtsec / 2.0) * nsnorm * inner(u, nvec) * inner(v, nvec) * ds_t
-    aR = extend_p1_from_basemesh(mesh, a)
+    aR = extend_from_p1base(mesh, a)
     F += (rho * g * dtsec) * aR * inner(v, nvec) * ds_t
 
 # boundary conditions:
@@ -214,8 +214,8 @@ for k in range(args.N):
     )
 
     # solve SKE for one semi-implicit Euler time-step
-    usurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[0]))
-    wsurf.interpolate(trace_scalar_to_p1(basemesh, mesh, u[1]))
+    usurf.interpolate(trace_to_p1base(basemesh, mesh, u[0]))
+    wsurf.interpolate(trace_to_p1base(basemesh, mesh, u[1]))
     snew.interpolate(s)
     solverske.solve(bounds=(lb, ub))
     s.dat.data[:] = snew.dat.data_ro[:]

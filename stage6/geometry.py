@@ -81,7 +81,7 @@ def set_mesh_geometry(mesh, s, xzorig=None):
     return xzorig
 
 
-def trace_scalar_to_p1(basemesh, mesh, f, nointerpolate=False):
+def trace_to_p1base(basemesh, mesh, f, nointerpolate=False):
     """On an extruded mesh, compute the trace of any scalar function f
     along the top surface boundary at the P1 nodes.
     Set nointerpolate=True if f is already P1.  Returns a P1 function on
@@ -98,7 +98,7 @@ def trace_scalar_to_p1(basemesh, mesh, f, nointerpolate=False):
     return fbm
 
 
-def extend_p1_from_basemesh(mesh, f):
+def extend_from_p1base(mesh, f):
     """On an extruded mesh, extend a P1 function f(x), defined for x
     in basemesh, to the extruded (x,z) mesh.  Returns a function
     on mesh in the 'R' constant-in-the-vertical space."""
