@@ -5,8 +5,10 @@
 #     Dirichlet-type conditions for trivializing zero-height columns.
 #   * set_mesh_geometry() sets the extruded mesh geometry from a
 #     surface elevation on the base mesh.
-#   * trace_scalar_to_p1() returns a P1 field on the base mesh from
-#     the trace of a field on the extruded mesh.
+#   * extend_from_p1base() extends a scalar P1 function on the base mesh
+#     to a Q1 function in the R space on the extruded mesh.
+#   * trace_to_vector_p2base() transfers the trace of a P2 vector field
+#     on the extruded mesh to a vector field on the base mesh.
 #
 # Known limitation:  These tools currently assume the bed elevation is
 # identically zero.  This can easily be fixed.
@@ -80,29 +82,16 @@ def set_mesh_geometry(mesh, s, xzorig=None):
     push_appctx(dm, actx)
     return xzorig
 
-
-def trace_to_p1base(basemesh, mesh, f, nointerpolate=False):
-    """On an extruded mesh, compute the trace of any scalar function f
-    along the top surface boundary at the P1 nodes.
-    Set nointerpolate=True if f is already P1.  Returns a P1 function on
-    basemesh."""
-    P1 = fd.FunctionSpace(mesh, "CG", 1)
-    if nointerpolate:
-        fP1 = f
-    else:
-        fP1 = fd.Function(P1).interpolate(f)
-    bc = fd.DirichletBC(P1, 0.0, "top")
-    P1basemesh = fd.FunctionSpace(basemesh, "CG", 1)
-    fbm = fd.Function(P1basemesh)
-    fbm.dat.data_with_halos[:] = fP1.dat.data_with_halos[bc.nodes]
-    return fbm
-
-
 def extend_from_p1base(mesh, f):
-    """On an extruded mesh, extend a P1 function f(x), defined for x
-    in basemesh, to the extruded (x,z) mesh.  Returns a function
-    on mesh in the 'R' constant-in-the-vertical space."""
+    """On an extruded mesh, extend a P1 function f(x), defined for x in basemesh, to the extruded (x,z) mesh.  Returns a function on mesh in the 'R' constant-in-the-vertical space."""
     Q1R = fd.FunctionSpace(mesh, "CG", 1, vfamily="R", vdegree=0)
     fextend = fd.Function(Q1R)
     fextend.dat.data[:] = f.dat.data_ro[:]
     return fextend
+
+def trace_to_vector_p2base(basemesh, mesh, u, ubm):
+    """On an extruded mesh, put the trace of a vector-valued function u in P2 along the top surface, at the P2 nodes, into ubm which is a P2 vector-valued function on basemesh."""
+    P2V = fd.VectorFunctionSpace(mesh, "CG", 2)
+    bc = fd.DirichletBC(P2V, 0.0, "top")
+    ubm.dat.data_with_halos[:] = u.dat.data_with_halos[bc.nodes]
+    return None
