@@ -174,13 +174,16 @@ lb = Function(P1base).interpolate(Constant(0.0))
 ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
 
-# FIXME report exact mass to check conservation
 def report_shape(t, s, stol=1.0):
-    ss = s.dat.data_ro
+    with s.dat.vec_ro as ss:
+        smax = ss.max()[1]
+    # following not parallel
     xx = basemesh.coordinates.dat.data_ro
-    xlt = xx[ss > stol].min()
-    xrt = xx[ss > stol].max()
-    printpar(f"  width = {xrt - xlt:.3f}, max height = {ss.max():.3f}")
+    width = xx[s.dat.data_ro > stol].max() - xx[s.dat.data_ro > stol].min()
+    area = assemble(s * dx)
+    printpar(
+        f"  width = {width / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {area / 1e6:.3f} km^2"
+    )
 
 
 # time stepping loop
