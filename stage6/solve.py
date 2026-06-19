@@ -38,6 +38,7 @@ from geometry import (
     PinchColumnVelocity,
     set_mesh_geometry,
     trace_scalar_to_p1,
+    extend_p1_from_basemesh,
 )
 
 printpar = PETSc.Sys.Print  # print once even in parallel
@@ -74,6 +75,11 @@ set_halfar_profile(xbase[0], s)
 mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0 / args.mz)
 xzflat = set_mesh_geometry(mesh, s)
 
+# surface mass balance function, and s in R space for FSSA
+a = Function(P1base).interpolate(0.0)  # Halfar solution corresponds to a=0
+Q1R = FunctionSpace(mesh, "CG", 1, vfamily="R", vdegree=0)
+sR = Function(Q1R)
+
 # mixed spaces for Stokes
 V = VectorFunctionSpace(mesh, "CG", 2)
 W = FunctionSpace(mesh, "CG", 1)
@@ -82,18 +88,25 @@ up = Function(Z)
 u, p = split(up)
 v, q = TestFunctions(Z)
 
-
 # strain-rate tensor
 def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
 
 # weak form for Stokes problem (on given geometry)
-F = - inner(Constant((0.0, -rho * g)), v) * dx  # source term
+swede = True
+f_body = as_vector([0.0, -rho * g])
+F = - inner(f_body, v) * dx  # source term
 Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
 nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
 F += (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
-# FIXME symmetrized FSSA
+if swede:  # formula (4.28) in Tominec et al 2026
+    dts = args.dt * secpera
+    nsnorm = sqrt(sR.dx(0)**2 + 1.0)
+    nvec = FacetNormal(mesh)
+    F += (rho * g * dts / 2.0) * nsnorm * inner(u, nvec) * inner(v, nvec) * ds_t
+    aR = extend_p1_from_basemesh(mesh, a)
+    F += (rho * g * dts) * aR * inner(v, nvec) * ds_t
 
 # boundary conditions:
 #   * noslip on 'bottom' and degenerate ends
@@ -133,7 +146,6 @@ vipar = {#"snes_monitor": None,
 # weak form for surface kinematical equation
 snew = Function(P1base).interpolate(s)
 omega = TestFunction(P1base)
-a = Function(P1base).interpolate(0.0)  # Halfar solution corresponds to a=0
 usurf = Function(P1base)
 wsurf = Function(P1base)
 dsdt = (snew - s) / (args.dt * secpera)
@@ -163,11 +175,12 @@ n_u, n_p = V.dim(), W.dim()
 printpar("  sizes: n_u = %d, n_p = %d" % (n_u, n_p))
 t = 0.0
 for k in range(args.N):
-    # solve Stokes on current geometry
     printpar(f"t={t / secpera:.3f} a (k={k}):")
     report_shape(t, s)
+
+    # solve Stokes on current geometry
+    sR.dat.data[:] = s.dat.data_ro[:]  # update s in R space (for FSSA)
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
-    u, p = up.subfunctions
 
     # print average and maximum velocity
     R = FunctionSpace(mesh, "R", 0)

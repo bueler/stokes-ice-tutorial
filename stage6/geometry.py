@@ -96,3 +96,13 @@ def trace_scalar_to_p1(basemesh, mesh, f, nointerpolate=False):
     fbm = fd.Function(P1basemesh)
     fbm.dat.data_with_halos[:] = fP1.dat.data_with_halos[bc.nodes]
     return fbm
+
+
+def extend_p1_from_basemesh(mesh, f):
+    """On an extruded mesh, extend a P1 function f(x), defined for x
+    in basemesh, to the extruded (x,z) mesh.  Returns a function
+    on mesh in the 'R' constant-in-the-vertical space."""
+    Q1R = fd.FunctionSpace(mesh, "CG", 1, vfamily="R", vdegree=0)
+    fextend = fd.Function(Q1R)
+    fextend.dat.data[:] = f.dat.data_ro[:]
+    return fextend
