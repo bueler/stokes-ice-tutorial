@@ -4,7 +4,7 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage6/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Does first-order explicit, but Swedish stabilized, time-stepping from initial Halfar dome shape.""",
+    description="""stage6/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order explicit time-stepping and the Swedish stabilization.  Initial shape is from the Halfar solution.""",
     add_help=False,
 )
 hs = "time step in years (default=1.0)"
@@ -13,9 +13,9 @@ hs = "regularization used in viscosity (default=10^{-4})"
 parser.add_argument("-eps", type=float, metavar="X", default=1.0e-4, help=hs)
 hs = "subintervals in coarse mesh (default=50)"
 parser.add_argument("-mx", type=int, metavar="MX", default=50, help=hs)
-hs = "vertical layers in coarse mesh (default=2)"
-parser.add_argument("-mz", type=int, metavar="MZ", default=2, help=hs)
-hs = "number of time steps (default=50)"
+hs = "vertical layers in coarse mesh (default=4)"
+parser.add_argument("-mz", type=int, metavar="MZ", default=4, help=hs)
+hs = "number of time steps (default=5)"
 parser.add_argument("-N", type=int, metavar="N", default=5, help=hs)
 hs = "turn off stabilizations"
 parser.add_argument("-noswede", action="store_true", default=False, help=hs)
@@ -218,6 +218,7 @@ for k in range(args.N):
         sR.dat.data[:] = s.dat.data_ro[:]
         aR.dat.data[:] = a.dat.data_ro[:]
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
+    u, p = up.subfunctions
 
     # print average and maximum velocity
     R = FunctionSpace(mesh, "R", 0)

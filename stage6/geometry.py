@@ -12,7 +12,7 @@
 #
 # Known limitation:  These tools currently assume the bed elevation is
 # identically zero.  This can easily be fixed.
-
+#
 # More complete geometry-management tools, suitable for certain
 # multilevel hierarchies, are in https://github.com/bueler/stokes-extrude
 
@@ -82,6 +82,7 @@ def set_mesh_geometry(mesh, s, xzorig=None):
     push_appctx(dm, actx)
     return xzorig
 
+
 def extend_from_p1base(mesh, f):
     """On an extruded mesh, extend a P1 function f(x), defined for x in basemesh, to the extruded (x,z) mesh.  Returns a function on mesh in the 'R' constant-in-the-vertical space."""
     Q1R = fd.FunctionSpace(mesh, "CG", 1, vfamily="R", vdegree=0)
@@ -89,8 +90,9 @@ def extend_from_p1base(mesh, f):
     fextend.dat.data[:] = f.dat.data_ro[:]
     return fextend
 
+
 def trace_to_vector_p2base(basemesh, mesh, u, ubm):
-    """On an extruded mesh, put the trace of a vector-valued function u in P2 along the top surface, at the P2 nodes, into ubm which is a P2 vector-valued function on basemesh."""
+    """On an extruded mesh, put the surface trace of a vector-valued function u, which is in P2, into ubm which is a P2 vector-valued function on basemesh."""
     P2V = fd.VectorFunctionSpace(mesh, "CG", 2)
     bc = fd.DirichletBC(P2V, 0.0, "top")
     ubm.dat.data_with_halos[:] = u.dat.data_with_halos[bc.nodes]
