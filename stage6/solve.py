@@ -271,3 +271,12 @@ rank = Function(FunctionSpace(mesh, "DG", 0))
 rank.dat.data[:] = mesh.comm.rank
 rank.rename("rank")
 VTKFile(args.o).write(u, p, tau, nu, rank)
+
+flatname = "flat-" + args.o
+printpar(f"saving u,p,sR to flat file {flatname} (vert * 10^4) ...")
+sR = extend_from_p1base(mesh, s)
+sR.rename("s (in R space)")
+Vcoord = mesh.coordinates.function_space()
+XZ = Function(Vcoord).interpolate(as_vector([xzflat[0], 1.0e4 * xzflat[1]]))
+mesh.coordinates.assign(XZ)
+VTKFile(flatname).write(u, p, sR)
