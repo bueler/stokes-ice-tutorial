@@ -56,10 +56,7 @@ class PinchColumnVelocity(fd.DirichletBC):
         ctx = get_appctx(mesh.coordinates.function_space().dm)
         assert ctx is not None, f"got None for appctx from {mesh} coordinates DM"
         # return vector P2 nodes in columns with height (thickness) less than htol
-        # warning: assumes velocity space is P2
-        P2scalar = fd.FunctionSpace(V.mesh(), "CG", 2)
-        s = fd.Function(P2scalar).interpolate(ctx["sR"])
-        ss = fd.Function(V).interpolate(fd.as_vector([s, s]))
+        ss = fd.Function(V).interpolate(fd.as_vector([ctx["sR"], ctx["sR"]]))
         return np.where(ss.dat.data_ro_with_halos < self.htol)[0]
 
 
