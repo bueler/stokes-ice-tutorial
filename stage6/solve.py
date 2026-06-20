@@ -237,7 +237,7 @@ for k in range(args.N):
     solverske.solve(bounds=(lb, ub))
     s.interpolate(snew)  # update surface elevation
 
-    # update mesh geometry and time
+    # update mesh geometry (rescaling original geometry) and time
     set_mesh_geometry(mesh, s, xzorig=xzflat)
     t += dtsec
 
