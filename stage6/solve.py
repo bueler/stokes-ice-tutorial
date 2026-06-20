@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 
+# FIXME for doc
+"""# boundary conditions in default (VI version):
+#   * <u,w>=0 on 'bottom'
+#   * <u,w>=0 on lateral ends
+#   * pinch zero-height columns (trivialize all u,p d.o.f.s if s<stol)
+# boundary conditions for -walls (assumes s>b):
+#   * <u,w>=0 on 'bottom'
+#   * u=0 on lateral ends (and no tangential stress)
+"""
+
 import argparse
 import sys
 
@@ -86,55 +96,49 @@ xzflat = set_mesh_geometry(mesh, s)
 # surface mass balance function; a=0 in Halfar solution
 a = Function(P1base).interpolate(0.0)
 
+# copies of these fields on the extruded mesh (R space) are used in stabilization
+if not args.noswede:
+    sR = extend_from_p1base(mesh, s)
+    aR = extend_from_p1base(mesh, a)
+
 # mixed spaces for Stokes
 V = VectorFunctionSpace(mesh, "CG", 2)
 W = FunctionSpace(mesh, "CG", 1)
 Z = V * W
 up = Function(Z)
-u, p = split(up)
 v, q = TestFunctions(Z)
-
 
 # strain-rate tensor
 def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
-
-# weak form for Stokes problem (on given geometry)
-Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
-nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
-F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
-if not args.noswede:  # formula (4.28) in Tominec et al 2026
-    sR = extend_from_p1base(mesh, s)
-    aR = extend_from_p1base(mesh, a)
-    nsnorm = sqrt(sR.dx(0) ** 2 + 1.0)
-    nvec = FacetNormal(mesh)
-    F += (rho * g * dtsec / 2.0) * nsnorm * inner(u, nvec) * inner(v, nvec) * ds_t
-    F += (rho * g * dtsec) * aR * inner(v, nvec) * ds_t
-f_body = as_vector([0.0, -rho * g])
-F -= inner(f_body, v) * dx  # source term
-
-# boundary conditions in default:
-#   * <u,w>=0 on 'bottom'
-#   * <u,w>=0 on lateral ends
-#   * pinch zero-height columns (trivialize all u,p d.o.f.s if s<stol)
-# boundary conditions for -walls:
-#   * <u,w>=0 on 'bottom'
-#   * u=0 on lateral ends (and no tangential stress)
-bcs = [
-    DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
-]
-if args.walls:
-    bcs += [
-        DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
-    ]
-else:
-    bcs += [
-        DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1, 2)),
-        PinchColumnPressure(Z.sub(1), None, None),
-        PinchColumnVelocity(Z.sub(0), None, None),
-    ]
-
+def form_and_bcs_stokes(up):
+    """Weak form for the Stokes problem on the geometry stored in the current
+    mesh.  This must be called every time the geometry is re-set."""
+    u, p = split(up)
+    Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
+    nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
+    F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
+    if not args.noswede:  # formula (4.28) in Tominec et al 2026
+        nsnorm = sqrt(sR.dx(0) ** 2 + 1.0)
+        nvec = FacetNormal(mesh)
+        F += (rho * g * dtsec / 2.0) * nsnorm * inner(u, nvec) * inner(v, nvec) * ds_t
+        F += (rho * g * dtsec) * aR * inner(v, nvec) * ds_t
+    f_body = as_vector([0.0, -rho * g])
+    F -= inner(f_body, v) * dx  # source term
+    if args.walls:
+        bcs = [
+            DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
+            DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
+        ]
+    else:
+        bcs = [
+            DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
+            DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1, 2)),
+            PinchColumnPressure(Z.sub(1), None, None),
+            PinchColumnVelocity(Z.sub(0), None, None),
+        ]
+    return F, bcs
 
 # parameters for Stokes solver
 stokespar = {
@@ -210,11 +214,13 @@ for k in range(args.N):
     printpar(f"t={t / secpera:.3f} a (k={k}):")
     report_shape(t, s)
 
-    # solve Stokes on current geometry
+    # solve Stokes on current geometry (in current mesh), which requires
+    # resetting form F and boundary conditions bcs
     if not args.noswede:
         # update s, a in R space (for stabilization)
         sR.dat.data[:] = s.dat.data_ro[:]
         aR.dat.data[:] = a.dat.data_ro[:]
+    F, bcs = form_and_bcs_stokes(up)
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
     u, p = up.subfunctions
 
