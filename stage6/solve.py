@@ -202,12 +202,9 @@ def report_shape(t, s, stol=1.0):
 
 
 # time stepping loop
-printpar(
-    "solving %d steps (dt=%.3f) on %d x %d mesh ..."
-    % (args.N, args.dt, args.mx, args.mz)
-)
+printpar(f"solving {args.N} steps (dt={args.dt:.3f}) on {args.mx} x {args.mz} mesh ...")
 n_u, n_p = V.dim(), W.dim()
-printpar("  sizes: n_u = %d, n_p = %d" % (n_u, n_p))
+printpar(f"  sizes: n_u = {n_u}, n_p = {n_p}")
 t = 0.0
 for k in range(args.N):
     printpar(f"t={t / secpera:.3f} a (k={k}):")
@@ -231,8 +228,7 @@ for k in range(args.N):
     with umag.dat.vec_ro as vumag:
         umagmax = vumag.max()[1]
     printpar(
-        "  ice speed (m a-1) at t=%.3f a: av = %.3f, max = %.3f"
-        % (t / secpera, umagav * secpera, umagmax * secpera)
+        f"  ice speed (m a-1) at t={t / secpera:.3f} a: av = {umagav * secpera:.3f}, max = {umagmax * secpera:.3f}"
     )
 
     # solve SKE for one semi-implicit Euler time-step
@@ -263,7 +259,7 @@ def stresses(mesh, u):
     return tau, nu
 
 
-printpar("saving u,p,tau,nu,rank to %s ..." % args.o)
+printpar(f"saving u,p,tau,nu,rank to {args.o} ...")
 u, p = up.subfunctions
 tau, nu = stresses(mesh, u)
 u *= secpera
