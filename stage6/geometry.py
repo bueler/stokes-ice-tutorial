@@ -1,9 +1,11 @@
 # Geometry-management tools for an evolving glacier model which solves
 # the Stokes equations and the surface kinematical (free-surface)
 # equation on an extruded mesh.
+#
 # Components:
-#   * PinchColumnPressure and PinchColumnVelocity classes are
-#     Dirichlet-type conditions for trivializing zero-height columns
+#   * PinchColumnPressure is a class for Dirichlet-type conditions for
+#     trivializing the pressure in zero-height columns
+#   * PinchColumnVelocity is the same, but for velocity
 #   * set_mesh_geometry() sets the extruded mesh geometry from a
 #     surface elevation on the base mesh
 #   * extend_from_p1base() extends a scalar P1 function on the base mesh
@@ -38,6 +40,7 @@ class PinchColumnPressure(fd.DirichletBC):
         assert ctx is not None, f"got None for appctx from {V.mesh()} coordinates DM"
         # return P1 nodes in columns with surface elevation less than htol
         s = fd.Function(V).interpolate(ctx["sR"])
+        #print(np.where(s.dat.data_ro_with_halos < self.htol)[0])
         return np.where(s.dat.data_ro_with_halos < self.htol)[0]
 
 
