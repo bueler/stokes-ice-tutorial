@@ -104,6 +104,7 @@ if not args.noswede:
 # mixed spaces for Stokes
 V = VectorFunctionSpace(mesh, "CG", 2)
 W = FunctionSpace(mesh, "CG", 1)
+# alternatives for local conservation in Stokes:  W = FunctionSpace(mesh, "DQ", 0|1)
 Z = V * W
 up = Function(Z)
 v, q = TestFunctions(Z)
@@ -193,6 +194,24 @@ lb = Function(P1base).interpolate(Constant(0.0))
 ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
 
+# ALTERNATE weak form for surface kinematical equation, for snewDG in DG0base
+#   this is interesting because the characteristic function of a basemesh
+#   element *is* in DG0base
+DG0base = FunctionSpace(basemesh, "DG", 0)
+snewDG = Function(DG0base)
+omegaDG = TestFunction(DG0base)
+# basic surface equation
+dsdt = (snewDG - s) / (args.dt * secpera)
+FskeDG = (dsdt - dot(uwsurf, ns) - a) * omegaDG * dx
+# set up problem and solver (a variational inequality)
+probskeDG = NonlinearVariationalProblem(FskeDG, snewDG, [])  # bcs=[] .. no flux at (1,2)
+solverskeDG = NonlinearVariationalSolver(
+    probskeDG, solver_parameters=vipar, options_prefix="skeDG"
+)
+lbDG = Function(DG0base).interpolate(Constant(0.0))
+ubDG = Function(DG0base).interpolate(Constant(PETSc.INFINITY))
+
+
 def report_shape(t, s, stol=1.0):
     with s.dat.vec_ro as ss:
         smax = ss.max()[1]
@@ -243,6 +262,10 @@ for k in range(args.N):
     solverske.solve(bounds=(lb, ub))
     s.interpolate(snew)  # update surface elevation
 
+    # also solve ALTERNATE SKE for explicit in DG
+    snewDG.interpolate(snew)  # initial condition
+    solverskeDG.solve(bounds=(lbDG, ubDG))
+
     # update mesh geometry (rescaling original geometry) and time
     set_mesh_geometry(mesh, s, xzorig=xzflat)
     t += dtsec
@@ -281,8 +304,13 @@ VTKFile(args.o).write(u, p, tau, nu, rank)
 flatname = "flat-" + args.o
 printpar(f"saving u,p,sR to flat file {flatname} (vert * 10^4) ...")
 sR = extend_from_p1base(mesh, s)
-sR.rename("s (in R space)")
+sR.rename("snew (in R space)")
+DG0R = FunctionSpace(mesh, "DG", 0, vfamily="R", vdegree=0)
+sRDG = Function(DG0R, name="snewDG (in R space)")
+sRDG.dat.data[:] = snewDG.dat.data_ro[:]
+DG1R = FunctionSpace(mesh, "DG", 1, vfamily="R", vdegree=0)
+diff_sR = Function(DG1R, name="snew - snewDG (in R space)").interpolate(sR - sRDG)
 Vcoord = mesh.coordinates.function_space()
 XZ = Function(Vcoord).interpolate(as_vector([xzflat[0], 1.0e4 * xzflat[1]]))
 mesh.coordinates.assign(XZ)
-VTKFile(flatname).write(u, p, sR)
+VTKFile(flatname).write(u, p, sR, diff_sR)
