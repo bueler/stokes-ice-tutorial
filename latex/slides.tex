@@ -84,45 +84,46 @@
 
 \newcommand{\ds}{\displaystyle}
 
+\newcommand{\sdoi}[1]{\,{\scriptsize \href{https://doi.org/#1}{doi:#1}}}
+
 
 \title{Stokes problems using Firedrake}
 
-\subtitle{A glacier and ice sheet tutorial}
+\subtitle{A finite element tutorial for glacier and ice sheet dynamics}
 
 \author{Ed Bueler}
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[June 2026]{version June 2026  \\ \phantom{foo} \\ \phantom{foo} \\
-\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
+\date[version 2.0]{version 2.0 (July 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
+\href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 
 \begin{document}
 \beamertemplatenavigationsymbolsempty
 
+
 \begin{frame}
   \maketitle
 
-\vspace{-35mm}
+\vspace{-14mm}
 \hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
-
-\vspace{25mm}
 \end{frame}
 
 
-\begin{frame}{exclamation points}
+\begin{frame}{making this presentation effective}
 
 \begin{itemize}
-\item \alert{I cannot explain everything in an hour!}
+\item \alert{I cannot explain everything in these slides}
 
-\item \alert{ask questions!}
+\item \alert{please ask questions}
 
 \item \alert{please try the codes!}
 
-\item \alert{send future questions!}
+\item \alert{send future questions:}
   \begin{itemize}
-  \item[$\circ$] by email to \href{mailto:elbueler@alaska.edu}{\texttt{elbueler@alaska.edu}}, or
-  \item[$\circ$] using \href{https://github.com/bueler/stokes-ice-tutorial/issues}{github issues}
+  \item[$\circ$] by email to \href{mailto:elbueler@alaska.edu}{\texttt{elbueler@alaska.edu}}
+  \item[$\circ$] or by using \href{https://github.com/bueler/stokes-ice-tutorial/issues}{issues at \texttt{github.com/bueler/stokes-ice-tutorial/}}
   \end{itemize}
 \end{itemize}
 \end{frame}
@@ -133,59 +134,68 @@
 \begin{frame}
   \frametitle{Outline}
 
-\centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
+\qquad {\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
 
-\vspace{5mm}
+\vspace{-5mm}
 \hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
 
-\vspace{-15mm}
+\vspace{1mm}
   \tableofcontents[hideallsubsections]
 \end{frame}
 
 
-\section{stage 0 \hspace{9.3mm} the problem and the equations}
+\section{stage 0 \hspace{9.3mm} the glacier dynamics problem}
 
-\begin{frame}{the glacier \underline{dynamics} problem, without evolution of geometry}
+\begin{frame}{glacier dynamics using Stokes}
 
 \begin{itemize}
-\item conservation principles apply to ice sheets:
+\item at a high level, one applies these conservation principles to glaciers and ice sheets:
     \begin{itemize}
-    \item[$\circ$] mass \hfill \cmark
-    \item[$\circ$] momentum \hfill \cmark
-    \item[$\circ$] energy \hfill \xmark
+    \item[$\circ$] mass conservation \hfill \cmark
+    \item[$\circ$] momentum conservation \hfill \cmark
+    \item[$\circ$] energy conservation \hfill (not here)
     \end{itemize}
-\item Stokes model $=$ momentum conservation $+$ incompressibility
+\item incompressibility is one aspect of mass conservation
     \begin{itemize}
-    \item[$\circ$] incompressibility is one aspect of mass conservation
-    \item[$\circ$] no attempt \emph{today} to model geometry changes using surface balance, the other aspect of mass conservation
+    \item[$\circ$] another aspect is the free-surface equation; deferred to \texttt{stage5/}
     \end{itemize}
-\item \alert{the Stokes model determines velocity and pressure from given geometry}
+\item because glaciers are a slow flow problem, \alert{the Stokes model determines velocity and pressure from current geometry and boundary stresses}
+    \begin{itemize}
+    \item[$\circ$] thus momentum conservation is called a ``stress balance''
+    \end{itemize}
 
 \bigskip
-{\scriptsize velocity} \hfill \includegraphics[width=0.85\textwidth]{figs/speed.png}
+{\scriptsize velocity} \hfill \includegraphics[width=0.8\textwidth]{figs/speed.png}
+
+\medskip
+{\scriptsize pressure} \hfill \includegraphics[width=0.8\textwidth]{figs/pressure.png}
 
 \bigskip
-{\scriptsize pressure} \hfill \includegraphics[width=0.85\textwidth]{figs/pressure.png}
 
-\bigskip
+\item Stokes equations $=$ stress balance $+$ incompressibility
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}{Glen-Stokes equations}
 
+\begin{itemize}
+\item notation: $\bu$ is velocity, $p$ is pressure, and $\tau$ is the deviatoric stress tensor
+\item also $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain-rate tensor
+\item the main equations:
+
 \begin{columns}
 \begin{column}{0.8\textwidth}
 \begin{align*}
-- \nabla \cdot \tau + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
-\nabla \cdot \bu &= 0 &&\text{\emph{incompressibility}} \\
-\tau &= B_n |D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{Glen-Nye flow law}}
+- \Div \tau + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
+\Div \bu &= 0 &&\text{\emph{incompressibility}} \\
+\tau = B_n &|D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{Glen-Nye flow law}}
 \end{align*}
 \end{column}
 
 \begin{column}{0.2\textwidth}
 
-\vspace{5mm}
+\vspace{3mm}
 %https://www.bl.uk/voices-of-science/interviewees/john-glen#
 \hfill \includegraphics[width=0.6\textwidth]{figs/people/jglen.png}
 
@@ -193,24 +203,41 @@
 \end{column}
 \end{columns}
 
-\medskip
-\begin{itemize}
-\item $\bu$ is velocity, $p$ is pressure, $\tau$ is the deviatoric stress tensor, and
-  $$D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$$
-is the strain-rate tensor
-\item constants: {\small $\rhoi=910 \,\text{kg}\,\text{m}^{-3}$, $g=9.81\,\text{m}\,\text{s}^{-2}$, $n=3$, $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$}
+\smallskip
+
+\item constants:
     \begin{itemize}
-    \item[$\circ$] isothermal, so $B_n$ is constant
+    \item[$\circ$] $\rhoi=910 \,\text{kg}\,\text{m}^{-3}$
+    \item[$\circ$] $g=|\bg|=9.81\,\text{m}\,\text{s}^{-2}$
+    \item[$\circ$] $n=3$
+    \item[$\circ$] isothermal, so $B_n$ is constant: $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$
     \end{itemize}
-\item now regularize viscosity using $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$:
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{avoiding unbounded viscosity}
+
+\begin{itemize}
+\item one may use a classical viscosity relationship $\tau=2\nu D\bu$ to eliminate $\tau$ from the equations, to give system for $\bu,p$
+\item however, the coefficient $|D\bu|^{(1/n) - 1}$ in the flow law yields unbounded values as $D\bu\to 0$, that is, as strain rates vanish
+\item so we also regularize to generate bounded viscosity
+
+\begin{block}{Glen-Stokes equations with regularized viscosity}
+
+\begin{align*}
+- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
+\Div \bu &= 0 &&\text{\emph{incompressibility}}
+\end{align*}
+
+\smallskip
+\end{block}
+
+\item where
 \begin{equation*}
 \nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}
 \end{equation*}
-\item eliminate $\tau$ to give system for $\bu,p$:
-\begin{align*}
-- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \\
-\Div \bu &= 0
-\end{align*}
+\item we will use $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$
 \end{itemize}
 \end{frame}
 
@@ -218,6 +245,7 @@ is the strain-rate tensor
 \begin{frame}{boundary conditions, as simple as possible}
 
 \begin{itemize}
+\item note that $\sigma = 2 \nu_\eps(|D\bu|) D\bu - pI$ is the (Cauchy) stress tensor
 \item stress-free top:
 \begin{equation*}
 \sigma \bn = \left(2 \nu_\eps(|D\bu|) D\bu - pI\right) \bn = \bzero
@@ -227,7 +255,7 @@ is the strain-rate tensor
 \includegraphics[width=0.9\textwidth]{figs/speed.png}
 
 \bigskip
-\item no slip base:
+\item no-slip base:
 \begin{equation*}
 \bu = \bzero
 \end{equation*}
@@ -236,6 +264,24 @@ is the strain-rate tensor
     \end{itemize}
 \end{itemize}
 \end{frame}
+
+
+\AtBeginSection[]
+{
+  \begin{frame}{Outline}
+
+\qquad {\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
+
+\vspace{-5mm}
+\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
+
+\vspace{1mm}
+
+  \tableofcontents[currentsection]
+  \end{frame}
+}
+
+\section{\texttt{stage1/} \qquad linear Stokes as a first demo}
 
 
 \begin{frame}{the linear Stokes equations}
@@ -249,13 +295,14 @@ is the strain-rate tensor
 - \nabla \cdot \left(2 \nu_0\, D\bu\right) + \nabla p &= \rhoi \mathbf{g}  \\
 \Div \bu &= 0
 \end{align*}
-\item with reformatting, using \quad $2 \nabla \cdot D\bu = \nabla^2 \bu$
+\item use $2 \nabla \cdot D\bu = \nabla^2 \bu$ to reformat:
 \begin{align*}
 - \nu_0 \nabla^2 \bu + \nabla p &= \rhoi \mathbf{g}  \\
 -\Div \bu \qquad \,\,\,\, &= 0
 \end{align*}
 \item which has symmetric block structure
   $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
+since $(-\Div)^\top = \grad$, conceptually-speaking
 \end{itemize}
 \end{column}
 
@@ -288,10 +335,10 @@ is the strain-rate tensor
 \begin{itemize}
 \item exact solution of the Stokes model is impossible for most geometries
     \begin{itemize}
-    \item[$\circ$] \emph{exercise.}  solve slab-on-a-slope, which is an exception
+    \item[$\circ$] \emph{exercise.}  solve slab-on-a-slope (an exception)
     \end{itemize}
 \item so we solve numerically using the finite element (FE) method
-\item in summary, the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize then more and more details which I am skipping \dots}}}
+\item in summary, the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize but I will skip the details \dots}}}
 
 \medskip
 \includegraphics[width=0.2\textwidth]{figs/hat.png} \hfill
@@ -300,8 +347,7 @@ is the strain-rate tensor
 \hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
 
 \bigskip
-\item the whole point of Firedrake is \alert{suppress the details of FE}
-\item one needs to know the first step:\, write a weak form
+\item the whole point of Firedrake is \alert{suppress the details of FE}, but one needs to know the first step:\, \alert{write a weak form}
 \end{itemize}
 \end{frame}
 
@@ -310,7 +356,7 @@ is the strain-rate tensor
 \frametitle{weak form}
 
 \begin{itemize}
-\item start from the original equations, also called the \emph{strong form}:
+\item start from the equations, also called the \emph{strong form}:
 \small
 \begin{align}
 - \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \\
@@ -331,7 +377,7 @@ F = ( inner(2.0 * nu * D(u), D(v)) \
 \end{Verbatim}
 
 \medskip
-\item the problem statement solved by the FE method:
+\item this weak-form problem statement is solved by the FE method:
    $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all } \bv \text{ and } q$$
 \end{itemize}
 \end{frame}
@@ -343,18 +389,18 @@ F = ( inner(2.0 * nu * D(u), D(v)) \
 \begin{itemize}
 \item the other details we need to know about:
     \begin{itemize}
-    \item[{\color{black} 1.}] \alert{choose separate function spaces for the velocity and the pressure}
-    \item[{\color{black} 2.}] \alert{choose spaces that the experts say are ``stable''}
+    \item[{\color{black} 1.}] choose \alert{separate function spaces for the velocity and the pressure}
+    \item[{\color{black} 2.}] choose spaces that the experts say are \alert{stable}
     \end{itemize}
 
 \bigskip
-\item Firedrake makes choosing $P_2 \times P_1$ (Taylor-Hood) elements very easy:
+\item Firedrake makes choosing mixed elements easy:
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
-V = VectorFunctionSpace(mesh, 'Lagrange', 2)   # u space
-W = FunctionSpace(mesh, 'Lagrange', 1)         # p space
-Z = V * W
+V = VectorFunctionSpace(mesh, 'Lagrange', 2)  # u space
+W = FunctionSpace(mesh, 'Lagrange', 1)        # p space
+Z = V * W                                     # mixed space
 up = Function(Z)
 u, p = split(up)
 v, q = TestFunctions(Z)
@@ -362,29 +408,22 @@ v, q = TestFunctions(Z)
 
 \medskip
     \begin{itemize}
+    \item[$\circ$] this $P_2 \times P_1$ choice is called Taylor-Hood
     \item[$\circ$] other mixed spaces are just as easy
     \end{itemize}
 \end{itemize}
 \end{frame}
 
 
-\AtBeginSection[]
-{
-  \begin{frame}{Outline}
-  \centerline{\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
-
-  \bigskip
-  \tableofcontents[currentsection]
-  \end{frame}
-}
-
-\section{\texttt{stage1/} \qquad linear Stokes}
-
 \begin{frame}[fragile]
 \frametitle{running Firedrake programs}
 
+\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
+
+\vspace{-10mm}
+
 \begin{itemize}
-\item now I'm actually going to run some code
+\item let's run a demo
 \item grab my tutorial (codes and these slides):
 
 \medskip
@@ -424,7 +463,7 @@ $ source ~/venv-firedrake/bin/activate
 \frametitle{\texttt{stage1/} \qquad linear Stokes}
 
 \begin{itemize}
-\item \emph{purpose:} solve linear Stokes on a trapezoidal glacier
+\item \emph{purpose:} solve linear Stokes on a trapezoidal ``glacier''
 
     \begin{itemize}
     \item[$\circ$] simplified weak form
@@ -432,7 +471,7 @@ $ source ~/venv-firedrake/bin/activate
 {\small
     $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_0\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
 }
-\item \emph{source files:} \texttt{domain.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these!}
+\item \emph{source files:} \texttt{domain.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{domain.msh}, \texttt{domain.pvd}
 \end{itemize}
 
@@ -455,7 +494,7 @@ $ paraview domain.pvd            # view the solution
 \end{frame}
 
 
-\section{\texttt{stage2/} \qquad Glen-Stokes}
+\section{\texttt{stage2/} \qquad Glen-Stokes for glacier ice}
 
 \begin{frame}{Newton's method}
 
@@ -472,7 +511,7 @@ $ paraview domain.pvd            # view the solution
 $$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
 \normalsize
 \item Firedrake automatically applies Newton's method if we write the problem as \texttt{solve(F == 0,\dots)}
-\item all you need to know about Newton's iteration:
+\item what you need to know about Newton's iteration:
     \begin{itemize}
     \item[$\circ$] it does linearization around each iterate
     \item[$\circ$] Firedrake uses UFL symbolic differentiation for linearization
@@ -497,7 +536,7 @@ $$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - 
 
 \begin{itemize}
 \item \emph{purpose:} solve Glen-Stokes on a flat-bed glacier
-\item \emph{source files:} \texttt{domain.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these!}
+\item \emph{source files:} \texttt{domain.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{dome.geo}, \texttt{dome.msh}, \texttt{dome.pvd}
 \end{itemize}
 
@@ -520,33 +559,40 @@ $ paraview dome.pvd
 \end{frame}
 
 
-\section{\texttt{stage3/} \qquad extruded meshes}
+\section{\texttt{stage3/} \qquad extruded meshes and other bells \& whistles}
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage3/} \qquad extruded meshes}
+\frametitle{\texttt{stage3/} \qquad bells and whistles}
 
 \begin{itemize}
-\item \emph{purpose:} solve same problem using an extruded quadrilateral mesh
+\item \emph{purpose:} additional robust and/or useful features
     \begin{itemize}
-    \item[$\circ$] simplifies the toolchain; Gmsh no longer needed
+    \item[$\circ$] construct 2D mesh by vertically \alert{extruding} 1D base mesh  \hfill \emph{allows refinement}
+    \item[$\circ$] rescale the equations  \hfill \emph{better conditioning}
+    \item[$\circ$] vertical grid sequencing  \hfill \emph{better initial iterates}
+    \item[$\circ$] $100\eps$ on coarse meshes in sequencing  \hfill \emph{better initial iterates}
+    \item[$\circ$] generate stress tensor $\tau$ from solution  \hfill \emph{diagnostic}
+    \item[$\circ$] generate effective viscosity $\nu_\eps$ from solution  \hfill \emph{diagnostic}
     \end{itemize}
-\item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
-\item \emph{generated files:} \texttt{dome.pvd}
-\end{itemize}
+\item \emph{source file:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this}
+\item \emph{generated file:} \texttt{dome.pvd}
 
-\bigskip
-\begin{Verbatim}
+\smallskip
+\begin{Verbatim}[fontsize=\small]
 $ cd stage3/
-$ python3 solve.py
+$ python3 solve.py                    # default resolution
+$ python3 solve.py -mx 400 -refine 2  # high resolution
 $ paraview dome.pvd
 \end{Verbatim}
 %$
 
-\vspace{10mm}
-\begin{center}
-\includegraphics[width=0.9\textwidth]{figs/stage3.png}
+\smallskip
+\item solution speed and deviatoric stress magnitude below:
+\end{itemize}
 
-{\tiny speed $|\bu|$}
+\begin{center}
+\includegraphics<1>[height=0.09\textwidth]{figs/stage3speed.png}
+\includegraphics<2>[height=0.09\textwidth]{figs/stage3tau.png}
 \end{center}
 \end{frame}
 
@@ -555,84 +601,59 @@ $ paraview dome.pvd
 \frametitle{convergence?}
 
 \begin{itemize}
-\item \texttt{stage3/} code \texttt{solve.py} allows adjustable resolution, e.g.:
+\item our \texttt{stage3/} code \texttt{solve.py} permits adjusting resolution at runtime
+\item for example:
 \begin{Verbatim}
-$ ./solve.py -mx 40 -mz 4
+$ ./solve.py -mx 400 -mz 4 -refine 2
 \end{Verbatim}
 %$
-\item velocity results are reasonable and consistent:
+    \begin{itemize}
+    \item[$\circ$] refine the vertical twice, by factors of four, from the initial 4 levels
+    \item[$\circ$] generates a $400$ by $64$ mesh
+    \end{itemize}
+\item velocity results, in meters per year, from a refinement study:
 
 \medskip
-% timer python3 solve.py -mx MX -mz MZ
+% -mx 50 -mz 2 -refine 1     50 x 8      400m x 125m
+% -mx 100 -mz 4 -refine 1    100 x 16    200m x 63m
+% -mx 200 -mz 2 -refine 2    200 x 32    100m x 31m
+% -mx 400 -mz 4 -refine 2    400 x 64    50m x 16m
+% -mx 800 -mz 2 -refine 3    800 x 128   25m x 8m
 \begin{center}
 \small
 \begin{tabular}{c|rrr}
-mesh           &   $\Delta x\times \Delta z$ (m) & av.~$|\bu|$ (m/a) & max.~$|\bu|$ (m/a) \\ \hline
-$40\times 4$   &   $500 \times 250$ &        1788 &         3272 \\
-$80\times 8$   &   $250 \times 125$ &        1769 &         3215 \\
-$160\times 16$ &    $125 \times 63$ &        1762 &         3197 \\
-$320\times 32$ &     $63 \times 31$ &        1759 &         3191 \\
-$640\times 64$ &     $31 \times 16$ &        1758 &         3189
+mesh           &   $\Delta x\times \Delta z$ (m) & average $|\bu|$ & maximum $|\bu|$ \\ \hline
+$50\times 8$   &   $400 \times 125$ &        1782 &     3263     \\
+$100\times 16$ &   $200 \times 63$  &        1766 &     3211     \\
+$200\times 32$ &   $100 \times 31$  &        1761 &     3196     \\
+$400\times 64$ &   $50  \times 16$  &        1759 &     3191     \\
+$800\times 128$&   $25  \times 8$   &        1759 &     3190    
 \end{tabular}
 \normalsize
 \end{center}
 
-\item quantities of interest are seemingly converging
-\item however: we do not know the exact solution and we cannot check for actual numerical convergence
-\end{itemize}
-\end{frame}
-
-
-\section{\texttt{stage4/} \qquad bells and whistles}
-
-\begin{frame}[fragile]
-\frametitle{\texttt{stage4/} \qquad bells and whistles}
-
-\begin{itemize}
-\item \emph{purpose:} additional robust and/or useful features
     \begin{itemize}
-    \item[$\circ$] rescale the equations  \hfill \emph{better conditioning}
-    \item[$\circ$] vertical grid sequencing  \hfill \emph{better initial iterates}
-    \item[$\circ$] $100\eps$ on coarse meshes in sequencing  \hfill \emph{better initial iterates}
-    \item[$\circ$] generate stress tensor $\tau$ from solution  \hfill \emph{diagnostic}
-    \item[$\circ$] generate effective viscosity $\nu_\eps$ from solution  \hfill \emph{diagnostic}
+    \item[$\circ$] velocities are apparently converging
+    \item[$\circ$] however, we do not know the exact solution and we cannot check for actual numerical convergence
     \end{itemize}
-\item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
-\item \emph{generated files:} \texttt{dome.pvd}
 \end{itemize}
-
-\bigskip
-\begin{Verbatim}[fontsize=\small]
-$ cd stage4/
-$ python3 solve.py                          # default resolution
-$ python3 solve.py -mx 320 -mz 2 -refine 2  # high resolution
-$ paraview dome.pvd
-\end{Verbatim}
-%$
-
-\bigskip
-\begin{center}
-\includegraphics[width=0.9\textwidth]{figs/stage4.png}
-
-{\tiny deviatoric stress magnitude $\|\tau\|$}
-\end{center}
 \end{frame}
 
 
-\section{\texttt{stage5/} \qquad 3D glaciers in parallel}
+\section{\texttt{stage4/} \qquad 3D glaciers in parallel}
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage5/} \qquad 3D glaciers in parallel}
+\frametitle{\texttt{stage4/} \qquad 3D glaciers in parallel}
 
 \begin{itemize}
 \item \emph{purpose:} 3D ice sheet in parallel on bumpy bed
-\item \emph{source files:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this!}
-\item \emph{generated files:} \texttt{dome.pvd}
+\item \emph{source file:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this}
+\item \emph{generated file:} \texttt{dome.pvd}
 \end{itemize}
 
 \bigskip
 \begin{Verbatim}
-$ cd stage5/
+$ cd stage4/
 $ mpiexec -n 4 python3 solve.py
 $ paraview dome.pvd              # "rank" field below
 $ mpiexec -n 4 python3 solve.py -o finer.pvd \
@@ -641,7 +662,7 @@ $ paraview finer.pvd
 \end{Verbatim}
 %$
 
-\hfill \includegraphics[width=0.4\textwidth]{figs/stage5.png} \hspace{10mm}
+\hfill \includegraphics[width=0.4\textwidth]{figs/stage4.png} \hspace{10mm}
 \end{frame}
 
 
@@ -662,17 +683,24 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
     \end{itemize}
 
 \bigskip
-\item \alert{\emph{limiting factor:} the direct solver for each Newton step linear system uses too much memory when generating the LU factors}
+\item \alert{\emph{limiting factor:}} the \alert{direct solver} for each Newton step linear system uses too much memory when generating the LU factors
     \begin{itemize}
     \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D, and they are slow
-    \item[$\circ$] {\scriptsize E.~Bueler (2023). \emph{Performance analysis of high-resolution ice-sheet simulations}, J.~Glaciol.~69~(276), 930--935\, \href{https://doi.org/10.1017/jog.2022.113}{10.1017/jog.2022.113}}
+    \item[$\circ$] see Bueler (2021, 2023)
     \end{itemize}
 \item for higher resolution we need a scalable solver: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
     \begin{itemize}
-    \item[$\circ$] {\scriptsize T.~Isaac, G.~Stadler, \& O.~Ghattas (2015). \emph{Solution of nonlinear Stokes equations discretized by high-order finite elements on nonconforming and anisotropic meshes, with application to ice sheet dynamics}, SIAM J.~Sci.~Comput.~37 (6), B804--B833, \href{https://doi.org/10.1137/140974407}{10.1137/140974407}}
+    \item[$\circ$] see Isaac, Stadler, \& Ghattas (2015) for such a scalable solver
     \item[$\circ$] but scalable solvers is a different talk
     \end{itemize}
 \end{itemize}
+\end{frame}
+
+
+\section{\texttt{stage5/} \qquad evolving glaciers (coupling the free-surface equation)}
+
+\begin{frame}{FIXME}
+xx
 \end{frame}
 
 
@@ -690,18 +718,13 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{itemize}
 \item Firedrake: \href{https://www.firedrakeproject.org/}{\texttt{firedrakeproject.org}}
 \item PETSc: \href{https://petsc.org}{\texttt{petsc.org}}
-\item for Glen-Stokes eqns, see Ch.~1 by Hewitt:
 
+\bigskip
+\item for Glen-Stokes eqns, see Ch.~1 by Hewitt:  Fowler \& Ng (2021)
 
-{\scriptsize Fowler \& Ng, ed., \emph{Glaciers and Ice Sheets in the Climate System: The Karthaus Summer School Lecture Notes}, Springer 2021}
+\item for finite elements and linear Stokes:  Elman, Silvester, \& Wathen (2014)
 
-\item for finite elements and linear Stokes:
-
-{\scriptsize Elman, Silvester, \& Wathen, \emph{Finite Elements and Fast Iterative Solvers, With Applications in Incompressible Fluid Dynamics}, Oxford 2014, 2nd ed.}
-
-\item for PETSc, Firedrake, and Stokes (Ch.~14):
-
-{\scriptsize Bueler, \emph{PETSc for Partial Differential Equations: Numerical Solutions in C and Python}, SIAM 2021}
+\item for PETSc, Firedrake, and Stokes (Ch.~14):  Bueler (2021)
 \end{itemize}
 \end{column}
 
@@ -720,6 +743,12 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \end{column}
 
 \end{columns}
+\end{frame}
+
+
+\begin{frame}{references}
+
+{\scriptsize \input{references.tex}}
 \end{frame}
 
 
