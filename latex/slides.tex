@@ -85,6 +85,7 @@
 \newcommand{\ds}{\displaystyle}
 
 \newcommand{\sdoi}[1]{\,{\scriptsize \href{https://doi.org/#1}{doi:#1}}}
+\newcommand{\surl}[2]{\,{\scriptsize \href{#1}{#2}}}
 
 
 \title{Stokes glacier models using Firedrake}
@@ -541,12 +542,12 @@ $$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - 
 \end{itemize}
 
 \bigskip
-\begin{Verbatim}
-$ cd stage2/
-$ python3 domain.py
-$ gmsh -2 dome.geo
-$ python3 solve.py
-$ paraview dome.pvd
+\begin{Verbatim}[fontsize=\small]
+  $ cd stage2/
+  $ python3 domain.py       # generate the domain outline
+  $ gmsh -2 dome.geo        # mesh the domain
+  $ python3 solve.py        # solve glacier Stokes
+  $ paraview dome.pvd       # view the solution
 \end{Verbatim}
 %$
 
@@ -731,8 +732,82 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 
 \section{\texttt{stage5/} \qquad evolving glaciers (coupling the free-surface equation)}
 
-\begin{frame}{FIXME}
+\begin{frame}{glaciers actually change with the climate}
+
+\begin{itemize}
+\item we do not yet have a ``real'' glacier model
+    \begin{itemize}
+    \item[$\circ$] the climate (e.g.~surface mass balance) has not appeared as an input
+    \item[$\circ$] time derivatives have not appeared in our equations
+    \end{itemize}
+\item so how do glaciers change their shape?
+
+\bigskip
+\item the key is the \alert{free-surface equation} (or kinematical equation):
+   $$\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s = a$$
+
+    \begin{itemize}
+    \item[$\circ$] functions are defined on a map-plane region $\Omega \subset \RR^d$
+        \begin{itemize}
+        \item $d=2$ in reality, but $d=1$ in the \texttt{stage5/} demo
+        \end{itemize}
+    \item[$\circ$] $z=s(t,x,y)$ is the \alert{surface elevation} of the glacier
+    \item[$\circ$] $a(t,x,y)$ is the \alert{surface mass balance}
+    \item[$\circ$] $\bn_s=\left<-\frac{\partial s}{\partial x},-\frac{\partial s}{\partial y},1\right>$ is a \alert{normal vector} to the surface
+    \item[$\circ$] $\bu_s$ is the surface value of the Stokes solution velocity
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{coupled system of equations}
+
+\begin{itemize}
+
+\item the free-surface equation is coupled to the Stokes problem
+    \begin{itemize}
+    \item[$\circ$] free-surface equation uses $\bu|_s$
+    \end{itemize}
+\item the Stokes problem is coupled to the surface elevation $s$
+    \begin{itemize}
+    \item[$\circ$] $s$ determines the domain on which the problem is solved
+    \end{itemize}
+
+\bigskip
+\item the strong form of the coupled system:
+\begin{align*}
+\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
+- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
+\Div \bu &= 0 &&\text{\emph{incompressibility}}
+\end{align*}
+
+\item weak form FIXME
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{technique 1: variational inequality for free surface}
+
+only introduce bed here
+
 xx
+\end{frame}
+
+
+\begin{frame}{technique 2: semi-implicit surface stabilization in stress balance}
+xx
+\end{frame}
+
+
+\begin{frame}{technique 3: edge stabilization in free-surface equation}
+xx
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{\texttt{stage5/} \qquad a dome flowing outward}
+
+xx FIXME
 \end{frame}
 
 
