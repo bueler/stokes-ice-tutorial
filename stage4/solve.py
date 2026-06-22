@@ -141,10 +141,8 @@ for j in jrange:
           - sc * p * div(v) - sc * q * div(scu) \
           - sc * inner(fbody, v) ) * dx(degree=3)
 
-    # different boundary conditions relative to stage2/:
-    #   base label is 'bottom', and we add noslip condition on degenerate ends
-    bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0, 0.0)), 'bottom'),
-            DirichletBC(Z.sub(0), Constant((0.0, 0.0, 0.0)), (1,)) ]
+    # base label is 'bottom'
+    bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0, 0.0)), 'bottom'), ]
 
     # get initial condition by coarsening previous level
     if upcoarse is not None:

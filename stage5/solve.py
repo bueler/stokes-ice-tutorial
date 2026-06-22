@@ -127,15 +127,12 @@ def form_and_bcs_stokes(up):
         F += (rho * g * dtsec) * aR * inner(v, nvec) * ds_t
     f_body = as_vector([0.0, -rho * g])
     F -= inner(f_body, v) * dx  # source term
-    if args.walls:
-        bcs = [
-            DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
-            DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
-        ]
-    else:
-        bcs = [
-            DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
-            DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (1, 2)),
+    bcs = [
+        DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
+        DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
+    ]
+    if not args.walls:
+        bcs += [
             PinchColumnPressure(Z.sub(1), None, None),
             PinchColumnVelocity(Z.sub(0), None, None),
         ]
