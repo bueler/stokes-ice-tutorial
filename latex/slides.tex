@@ -87,9 +87,9 @@
 \newcommand{\sdoi}[1]{\,{\scriptsize \href{https://doi.org/#1}{doi:#1}}}
 
 
-\title{Stokes problems using Firedrake}
+\title{Stokes glacier models using Firedrake}
 
-\subtitle{A finite element tutorial for glacier and ice sheet dynamics}
+\subtitle{A finite element tutorial for ice dynamics}
 
 \author{Ed Bueler}
 
@@ -114,17 +114,17 @@
 \begin{frame}{making this presentation effective}
 
 \begin{itemize}
-\item \alert{I cannot explain everything in these slides}
-
 \item \alert{please ask questions}
-
-\item \alert{please try the codes!}
 
 \item \alert{send future questions:}
   \begin{itemize}
   \item[$\circ$] by email to \href{mailto:elbueler@alaska.edu}{\texttt{elbueler@alaska.edu}}
   \item[$\circ$] or by using \href{https://github.com/bueler/stokes-ice-tutorial/issues}{issues at \texttt{github.com/bueler/stokes-ice-tutorial/}}
   \end{itemize}
+
+\bigskip
+\item these slides are the primary documentation for some Python codes
+\item \alert{please try the codes and give me your feedback?}  thanks!
 \end{itemize}
 \end{frame}
 
@@ -559,7 +559,7 @@ $ paraview dome.pvd
 \end{frame}
 
 
-\section{\texttt{stage3/} \qquad extruded meshes and other bells \& whistles}
+\section{\texttt{stage3/} \qquad extruded meshes and bells \& whistles}
 
 \begin{frame}[fragile]
 \frametitle{\texttt{stage3/} \qquad bells and whistles}
@@ -634,13 +634,44 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
 
     \begin{itemize}
     \item[$\circ$] velocities are apparently converging
-    \item[$\circ$] however, we do not know the exact solution and we cannot check for actual numerical convergence
+    \item[$\circ$] however, we do not know the exact solution; not verification here
     \end{itemize}
 \end{itemize}
 \end{frame}
 
 
-\section{\texttt{stage4/} \qquad 3D glaciers in parallel}
+\begin{frame}[fragile]
+\frametitle{parallel computation}
+
+\begin{itemize}
+\item as usual with Firedrake, everything works in parallel
+    \begin{itemize}
+    \item[$\circ$] extruded mesh gets partitioned following base mesh partition
+    \item[$\circ$] see \texttt{rank} field in \texttt{.pvd} output (bottom)
+    \end{itemize}
+\item using the default direct solver (Mumps), results are independent of number of processes
+\item speed-up is sublinear because of significant serial workloads
+\item your results may vary \dots
+\end{itemize}
+
+\bigskip
+\begin{Verbatim}[fontsize=\footnotesize]
+$ python3 solve.py -mx 800 -refine 2               # 38 seconds run time
+  ...
+  ice speed (m a-1): av = 1758.861, max = 3190.043
+
+$ mpiexec -n 4 python3 solve.py -mx 800 -refine 2  # 20 seconds run time
+  ...
+  ice speed (m a-1): av = 1758.861, max = 3190.043
+\end{Verbatim}
+%$
+
+\bigskip
+\qquad \includegraphics[width=0.85\textwidth]{figs/stage3rank.png}
+\end{frame}
+
+
+\section{\texttt{stage4/} \qquad 3D glaciers, and scalability limitations}
 
 \begin{frame}[fragile]
 \frametitle{\texttt{stage4/} \qquad 3D glaciers in parallel}
@@ -688,10 +719,11 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
     \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D, and they are slow
     \item[$\circ$] see Bueler (2021, 2023)
     \end{itemize}
-\item for higher resolution we need a scalable solver: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
+\item for higher resolution we need a scalable solver
+\item solver composition: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
     \begin{itemize}
     \item[$\circ$] see Isaac, Stadler, \& Ghattas (2015) for such a scalable solver
-    \item[$\circ$] but scalable solvers is a different talk
+    \item[$\circ$] addressing this properly is a different talk!
     \end{itemize}
 \end{itemize}
 \end{frame}
