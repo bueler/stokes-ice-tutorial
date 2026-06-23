@@ -14,7 +14,7 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage6/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order explicit time-stepping and the Swedish stabilization.  Initial shape is from the Halfar solution.""",
+    description="""stage5/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order mostly-explicit time-stepping based on the two Swedish stabilizations.  Initial shape is from the Halfar solution.""",
     add_help=False,
 )
 hs = "time step in years (default=1.0)"
@@ -80,14 +80,14 @@ def set_halfar_profile(x, s, R0=10000.0, H0=1000.0):
 
 # create 1D base mesh
 if args.walls:
-    L = 8000.0
+    L = 8000.0  # here s>b initially (and later too) because L < R0
 else:
-    L = 15000.0
+    L = 15000.0  # initial margin locations at +-R0 in Halfar profile
 basemesh = IntervalMesh(args.mx, -L, L)
 xbase = SpatialCoordinate(basemesh)
 P1base = FunctionSpace(basemesh, "Lagrange", 1)
 
-# set initial 2D mesh geometry, but keep flat coordinates too
+# set initial 2D mesh geometry, but store flat coordinates
 s = Function(P1base)
 set_halfar_profile(xbase[0], s)
 mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0 / args.mz)
@@ -104,10 +104,35 @@ if not args.noswede:
 # mixed spaces for Stokes
 V = VectorFunctionSpace(mesh, "Lagrange", 2)
 W = FunctionSpace(mesh, "Lagrange", 1)
-# alternatives for local conservation in Stokes:  W = FunctionSpace(mesh, "DQ", 0|1)
 Z = V * W
 up = Function(Z)
 v, q = TestFunctions(Z)
+
+# parameters for Stokes solver
+stokespar = {
+    "snes_converged_reason": None,
+    # "snes_monitor": None,
+    "snes_type": "newtonls",
+    "snes_linesearch_type": "bt",
+    "ksp_type": "preonly",
+    "pc_type": "lu",
+    "pc_factor_shift_type": "inblocks",
+    "pc_factor_mat_solver_type": "mumps",
+}
+
+# parameters for SKE VI solver
+vipar = {
+    "snes_converged_reason": None,
+    # "snes_monitor": None,
+    "snes_stol": 0.0,
+    "snes_type": "vinewtonrsls",
+    "snes_linesearch_type": "basic",
+    "snes_vi_zero_tolerance": 1.0e-8,
+    "snes_max_it": 200,
+    "ksp_type": "preonly",
+    "pc_type": "lu",
+    "pc_factor_mat_solver_type": "mumps",
+}
 
 # strain-rate tensor
 def D(w):
@@ -120,7 +145,8 @@ def form_and_bcs_stokes(up):
     Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
     nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
     F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
-    if not args.noswede:  # formula (4.28) in Tominec et al 2026
+    if not args.noswede:
+        # apply semi-implicit coupling formula (4.28) in Tominec et al 2026
         nsnorm = sqrt(sR.dx(0) ** 2 + 1.0)
         nvec = FacetNormal(mesh)
         F += (rho * g * dtsec / 2.0) * nsnorm * inner(u, nvec) * inner(v, nvec) * ds_t
@@ -138,41 +164,14 @@ def form_and_bcs_stokes(up):
         ]
     return F, bcs
 
-# parameters for Stokes solver
-stokespar = {
-    "snes_converged_reason": None,
-    # "snes_monitor": None,
-    "snes_linesearch_type": "bt",
-    "ksp_type": "preonly",
-    "pc_type": "lu",
-    "pc_factor_shift_type": "inblocks",
-    "pc_factor_mat_solver_type": "mumps",
-}
-
-# parameters for SKE VI solver
-vipar = {  # "snes_monitor": None,
-    "snes_converged_reason": None,
-    # "snes_rtol": 1.0e-6,
-    # "snes_atol": 1.0e-14,
-    "snes_stol": 0.0,
-    "snes_type": "vinewtonrsls",
-    "snes_vi_zero_tolerance": 1.0e-8,
-    "snes_linesearch_type": "basic",
-    "snes_max_it": 200,
-    "ksp_type": "preonly",
-    "pc_type": "lu",
-    "pc_factor_mat_solver_type": "mumps",
-}
-
 # weak form for surface kinematical equation
 snew = Function(P1base)
 omega = TestFunction(P1base)
 VP2base = VectorFunctionSpace(basemesh, "CG", 2, dim=2)
 uwsurf = Function(VP2base)
 # basic surface equation
-dsdt = (snew - s) / (args.dt * secpera)
 ns = as_vector([-s.dx(0), Constant(1.0)])
-Fske = (dsdt - dot(uwsurf, ns) - a) * omega * dx
+Fske = ((snew - s) / dtsec - dot(uwsurf, ns) - a) * omega * dx
 # integrating by parts to get this alternate form seems to make no difference:
 #Fske = (dsdt - uwsurf[1] - a) * omega * dx - s * (uwsurf[0] * omega).dx(0) * dx
 if not args.noswede:
@@ -191,24 +190,6 @@ solverske = NonlinearVariationalSolver(
 )
 lb = Function(P1base).interpolate(Constant(0.0))
 ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
-
-
-# ALTERNATE weak form for surface kinematical equation, for snewDG in DG0base
-#   this is interesting because the characteristic function of a basemesh
-#   element *is* in DG0base
-DG0base = FunctionSpace(basemesh, "DG", 0)
-snewDG = Function(DG0base)
-omegaDG = TestFunction(DG0base)
-# basic surface equation
-dsdt = (snewDG - s) / (args.dt * secpera)
-FskeDG = (dsdt - dot(uwsurf, ns) - a) * omegaDG * dx
-# set up problem and solver (a variational inequality)
-probskeDG = NonlinearVariationalProblem(FskeDG, snewDG, [])  # bcs=[] .. no flux at (1,2)
-solverskeDG = NonlinearVariationalSolver(
-    probskeDG, solver_parameters=vipar, options_prefix="skeDG"
-)
-lbDG = Function(DG0base).interpolate(Constant(0.0))
-ubDG = Function(DG0base).interpolate(Constant(PETSc.INFINITY))
 
 
 def report_shape(t, s, stol=1.0):
@@ -261,10 +242,6 @@ for k in range(args.N):
     solverske.solve(bounds=(lb, ub))
     s.interpolate(snew)  # update surface elevation
 
-    # also solve ALTERNATE SKE for explicit in DG
-    snewDG.interpolate(snew)  # initial condition
-    solverskeDG.solve(bounds=(lbDG, ubDG))
-
     # update mesh geometry (rescaling original geometry) and time
     set_mesh_geometry(mesh, s, xzorig=xzflat)
     t += dtsec
@@ -299,17 +276,3 @@ rank = Function(FunctionSpace(mesh, "DG", 0))
 rank.dat.data[:] = mesh.comm.rank
 rank.rename("rank")
 VTKFile(args.o).write(u, p, tau, nu, rank)
-
-flatname = "flat-" + args.o
-printpar(f"saving u,p,sR to flat file {flatname} (vert * 10^4) ...")
-sR = extend_from_p1base(mesh, s)
-sR.rename("snew (in R space)")
-DG0R = FunctionSpace(mesh, "DG", 0, vfamily="R", vdegree=0)
-sRDG = Function(DG0R, name="snewDG (in R space)")
-sRDG.dat.data[:] = snewDG.dat.data_ro[:]
-DG1R = FunctionSpace(mesh, "DG", 1, vfamily="R", vdegree=0)
-diff_sR = Function(DG1R, name="snew - snewDG (in R space)").interpolate(sR - sRDG)
-Vcoord = mesh.coordinates.function_space()
-XZ = Function(Vcoord).interpolate(as_vector([xzflat[0], 1.0e4 * xzflat[1]]))
-mesh.coordinates.assign(XZ)
-VTKFile(flatname).write(u, p, sR, diff_sR)
