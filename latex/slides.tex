@@ -55,6 +55,8 @@
 
 \newcommand{\bzero}{\mathbf{0}}
 
+\newcommand{\cK}{\mathcal{K}}
+
 \newcommand{\grad}{\nabla}
 \newcommand{\Div}{\nabla\cdot}
 \newcommand{\minmod}{\operatorname{minmod}}
@@ -81,6 +83,8 @@
 \newcommand{\xmark}{\ding{55}}
 
 \newcommand{\rhoi}{\rho_{\text{i}}}
+
+\newcommand{\snew}{s^{\text{new}}}
 
 \newcommand{\ds}{\displaystyle}
 
@@ -152,7 +156,8 @@
 \begin{frame}{glacier dynamics using Stokes}
 
 \begin{itemize}
-\item at a high level, one applies these conservation principles to glaciers and ice sheets:
+\item before the equations, what is the high-level view of the model? 
+\item we apply conservation principles to glaciers:
     \begin{itemize}
     \item[$\circ$] mass conservation \hfill \cmark
     \item[$\circ$] momentum conservation \hfill \cmark
@@ -160,11 +165,12 @@
     \end{itemize}
 \item incompressibility is one aspect of mass conservation
     \begin{itemize}
-    \item[$\circ$] another aspect is the free-surface equation; deferred to \texttt{stage5/}
+    \item[$\circ$] another is the free-surface equation; deferred to \texttt{stage5/}
     \end{itemize}
-\item because glaciers are a slow flow problem, \alert{the Stokes model determines velocity and pressure from current geometry and boundary stresses}
+\item glaciers are a ``slow flow'' problem because the forces of inertia are tiny
     \begin{itemize}
-    \item[$\circ$] thus momentum conservation is called a ``stress balance''
+    \item[$\circ$] momentum conservation is called a ``stress balance''
+    \item[$\circ$] \alert{velocity \& pressure are determined by current geometry \& boundary stress}
     \end{itemize}
 
 \bigskip
@@ -175,7 +181,7 @@
 
 \bigskip
 
-\item Stokes equations $=$ stress balance $+$ incompressibility
+\item \alert{Stokes equations $=$ stress balance $+$ incompressibility}
 \end{itemize}
 \end{frame}
 
@@ -208,12 +214,12 @@
 
 \smallskip
 
-\item constants:
+\item constants, default in demos:
     \begin{itemize}
     \item[$\circ$] $\rhoi=910 \,\text{kg}\,\text{m}^{-3}$
     \item[$\circ$] $g=|\bg|=9.81\,\text{m}\,\text{s}^{-2}$
     \item[$\circ$] $n=3$
-    \item[$\circ$] isothermal, so $B_n$ is constant: $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$
+    \item[$\circ$] $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$ \quad (constant because isothermal)
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -222,24 +228,21 @@
 \begin{frame}{avoiding unbounded viscosity}
 
 \begin{itemize}
-\item one may use a classical viscosity relationship $\tau=2\nu D\bu$ to eliminate $\tau$ from the equations, to give system for $\bu,p$
-\item however, the coefficient $|D\bu|^{(1/n) - 1}$ in the flow law yields unbounded values as $D\bu\to 0$, that is, as strain rates vanish
+\item the classical viscosity relationship $\tau=2\nu D\bu$ eliminates $\tau$ from the equations, giving a system for $\bu,p$
+\item however, the coefficient $|D\bu|^{(1/n) - 1}$ in the flow law yields unbounded values as $D\bu\to 0$ (vanishing strain rates)
 \item so we also regularize to generate bounded viscosity
 
 \begin{block}{Glen-Stokes equations with regularized viscosity}
 
 \begin{align*}
-- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
-\Div \bu &= 0 &&\text{\emph{incompressibility}}
+- \Div \left(2 \alert{\nu_\eps} D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
+\Div \bu &= 0 &&\text{\emph{incompressibility}} \\
+\alert{\nu_\eps} = \nu_\eps(|D\bu|) &= \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}
 \end{align*}
 
 \smallskip
 \end{block}
 
-\item where
-\begin{equation*}
-\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}
-\end{equation*}
 \item we will use $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$
 \end{itemize}
 \end{frame}
@@ -263,68 +266,9 @@
 \bu = \bzero
 \end{equation*}
     \begin{itemize}
-    \item[$\circ$] no attempt in these slides to model sliding
+    \item[$\circ$] \alert{no attempt in these slides to model sliding}
     \end{itemize}
 \end{itemize}
-\end{frame}
-
-
-\AtBeginSection[]
-{
-  \begin{frame}{Outline}
-  \tableofcontents[currentsection]
-
-\vspace{5mm}
-  \outlinelink
-  \end{frame}
-}
-
-\section{\texttt{stage1/} \qquad linear Stokes as a first demo}
-
-
-\begin{frame}{the linear Stokes equations}
-
-\begin{columns}
-
-\begin{column}{0.6\textwidth}
-\begin{itemize}
-\item if we make viscosity constant ($\nu_0$) then we get a linear Stokes system
-\begin{align*}
-- \nabla \cdot \left(2 \nu_0\, D\bu\right) + \nabla p &= \rhoi \mathbf{g}  \\
-\Div \bu &= 0
-\end{align*}
-\item use $2 \nabla \cdot D\bu = \nabla^2 \bu$ to reformat:
-\begin{align*}
-- \nu_0 \nabla^2 \bu + \nabla p &= \rhoi \mathbf{g}  \\
--\Div \bu \qquad \,\,\,\, &= 0
-\end{align*}
-\item which has symmetric block structure
-  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
-since $(-\Div)^\top = \grad$, conceptually-speaking
-\end{itemize}
-\end{column}
-
-\begin{column}{0.4\textwidth}
-\hfill \includegraphics[width=0.4\textwidth]{figs/people/gstokes.jpg}
-
-\hfill {\tiny George Stokes}
-
-\vspace{7mm}
-\hfill
-\begin{tikzpicture}
-  \node[anchor=south west, inner sep=0] (img) at (0,0)
-    {\includegraphics[width=0.8\textwidth]{figs/Kstokes.pdf}};
-  \begin{scope}[x={(img.south east)},y={(img.north west)}]
-    % block boundary: pressure DOFs are roughly last 18% of DOFs
-    \node[red, font=\Large\bfseries] at (0.38,0.62) {$A$};
-    \node[red, font=\Large\bfseries] at (0.91,0.62) {$B^T$};
-    \node[red, font=\Large\bfseries] at (0.38,0.09) {$B$};
-    \node[red, font=\Large\bfseries] at (0.91,0.09) {$0$};
-  \end{scope}
-\end{tikzpicture}
-\end{column}
-
-\end{columns}
 \end{frame}
 
 
@@ -346,13 +290,12 @@ since $(-\Div)^\top = \grad$, conceptually-speaking
 
 \bigskip
 \item the whole point of Firedrake is \alert{suppress the details of FE}
-\item however, one needs to know the first step:\, \alert{write a weak form}
+\item however, one needs to know a key step:\, \alert{write a weak form}
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}[fragile]
-\frametitle{weak form}
+\begin{frame}{weak form}
 
 \begin{itemize}
 \item start from the equations, also called the \emph{strong form}:
@@ -364,20 +307,42 @@ since $(-\Div)^\top = \grad$, conceptually-speaking
 \normalsize
 \item multiply (1) by test velocity $\bv$ and (2) by test pressure $q$, integrate by parts, and combine into one nonlinear residual function:
     $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
-\item in Firedrake's language (= \emph{Unified Form Language}) it looks like:
+
+\medskip
+\item the actual weak-form problem statement:
+   $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all test functions } \bv \text{ and } q$$
+
+    \begin{itemize}
+    \item[$\circ$] which says\, ``residual $=0$''
+    \end{itemize}
+\item this weak form problem is solved by the FE method, but over a finite-dimensional space
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{UFL for the weak form}
+
+\begin{itemize}
+\item the nonlinear residual function:
+    $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
+with $\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}$
+
+\bigskip
+\item the \emph{Unified Form Language} (UFL) used by Firedrake cleanly translates:
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
+def D(w):
+    return 0.5 * (grad(w) + grad(w).T)
+
 fbody = rho * Constant((0.0, 0.0, - g))
 Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp)**2.0
 nu = 0.5 * Bn * Du2**((1.0 / n - 1.0)/2.0)
+
 F = ( inner(2.0 * nu * D(u), D(v)) \
       - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 \end{Verbatim}
-
-\medskip
-\item this weak-form problem statement is solved by the FE method:
-   $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all } \bv \text{ and } q$$
 \end{itemize}
 \end{frame}
 
@@ -411,6 +376,65 @@ v, q = TestFunctions(Z)
     \item[$\circ$] other mixed spaces are just as easy
     \end{itemize}
 \end{itemize}
+\end{frame}
+
+
+\AtBeginSection[]
+{
+  \begin{frame}{Outline}
+  \tableofcontents[currentsection]
+
+\vspace{5mm}
+  \outlinelink
+  \end{frame}
+}
+
+\section{\texttt{stage1/} \qquad linear Stokes as a first demo}
+
+
+\begin{frame}{the linear Stokes equations}
+
+\begin{columns}
+
+\begin{column}{0.6\textwidth}
+\begin{itemize}
+\item if we make viscosity constant ($\nu_0>0$) then we get a linear Stokes system:
+\begin{align*}
+- \nabla \cdot \left(2 \nu_0\, D\bu\right) + \nabla p &= \rhoi \mathbf{g}  \\
+\Div \bu &= 0
+\end{align*}
+\item classical reformat with $2 \nabla \cdot D\bu = \nabla^2 \bu$:
+\begin{align*}
+- \nu_0 \nabla^2 \bu + \nabla p &= \rhoi \mathbf{g}  \\
+-\Div \bu \qquad \,\,\,\, &= 0
+\end{align*}
+\item which has symmetric block structure:
+  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
+since $(-\Div)^\top = \grad$, conceptually-speaking
+\end{itemize}
+\end{column}
+
+\begin{column}{0.4\textwidth}
+\hfill \includegraphics[width=0.4\textwidth]{figs/people/gstokes.jpg}
+
+\hfill {\tiny George Stokes}
+
+\vspace{7mm}
+\hfill
+\begin{tikzpicture}
+  \node[anchor=south west, inner sep=0] (img) at (0,0)
+    {\includegraphics[width=0.8\textwidth]{figs/Kstokes.pdf}};
+  \begin{scope}[x={(img.south east)},y={(img.north west)}]
+    % block boundary: pressure DOFs are roughly last 18% of DOFs
+    \node[red, font=\Large\bfseries] at (0.38,0.62) {$A$};
+    \node[red, font=\Large\bfseries] at (0.91,0.62) {$B^T$};
+    \node[red, font=\Large\bfseries] at (0.38,0.09) {$B$};
+    \node[red, font=\Large\bfseries] at (0.91,0.09) {$0$};
+  \end{scope}
+\end{tikzpicture}
+\end{column}
+
+\end{columns}
 \end{frame}
 
 
@@ -505,7 +529,7 @@ $ paraview domain.pvd            # view the solution
     \begin{itemize}
     \item[$\circ$] default solver: Firedrake $\to$ PETSc KSP $\to$ MUMPS
     \end{itemize}
-\item but for Glen-Stokes the weak form is nonlinear in $\bu$:
+\item but for Glen-Stokes the residual function is nonlinear in $\bu$:
 \small
 $$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
 \normalsize
@@ -755,8 +779,9 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \medskip
 \item the free-surface equation holds on $[0,T] \times \Omega$
     \begin{itemize}
-    \item[$\circ$] $\Omega \subset \RR^d$ is a fixed map-plane region, with $d=2$ in reality, but $d=1$ in the coming demo
+    \item[$\circ$] $\Omega \subset \RR^d$ is a fixed map-plane region ($d=2$ in reality)
     \end{itemize}
+\item the \emph{mass continuity} equation is an alternative way to describe change
 \end{itemize}
 \end{frame}
 
@@ -764,17 +789,19 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{coupled system of equations}
 
 \begin{itemize}
-\item the strong form of the \alert{coupled} system:
+\item so we have a \alert{coupled} system:
 \begin{align*}
 \frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
 - \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
 \Div \bu &= 0 &&\text{\emph{incompressibility}}
 \end{align*}
+\item the coupling has two aspects \dots
 \end{itemize}
 
+\medskip
 \begin{columns}
 \begin{column}{0.47\textwidth}
-\begin{itemize}
+\begin{enumerate}
 \item the free-surface equation is coupled to the Stokes problem
     \begin{itemize}
     \item[$\circ$] \alert{free-surface equation has $\bu|_s$ as a coefficient}
@@ -783,7 +810,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
     \begin{itemize}
     \item[$\circ$] \alert{$s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved}
     \end{itemize}
-\end{itemize}
+\end{enumerate}
 \end{column}
 \begin{column}{0.53\textwidth}
 \quad \includegraphics[width=\textwidth]{figs/domain.png}
@@ -799,32 +826,107 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \item multiply by test functions and integrate by parts:
 {\small
 \begin{align*}
-\int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r\,dx dy &=0  &&\forall r \\
-\int_{\Lambda(t)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rhoi \mathbf{g} \cdot \bv \,dx dy dz &= 0 &&\forall \bv \\
-\int_{\Lambda(t)} - (\Div \bu) q \,dx dy dz &= 0 &&\forall q
+\int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r &=0  &&\forall r \\
+\int_{\Lambda(t)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rhoi \mathbf{g} \cdot \bv &= 0 &&\forall \bv \\
+\int_{\Lambda(t)} - (\Div \bu) q &= 0 &&\forall q
 \end{align*}
 }
 
-FIXME
+\bigskip
+\item we need to make high-level choices about this coupled system:
+    \begin{enumerate}
+    \item[1.] solve it together (\emph{monolithic}) or split?
+    \item[2.] time-stepping: explicit or implicit?
+    \item[3.] spaces and elements for $s,\bu,p$?
+    \end{enumerate}
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}{technique 1: variational inequality for free surface}
+\begin{frame}{making choices}
 
-only introduce bed here
+\begin{itemize}
+\item early/naive approaches to solving this evolving glacier problem have been fragile and stability-limited
+    \begin{itemize}
+    \item[$\circ$] the problem has a mix of advective and diffusive aspects
+    \item[$\circ$] the second coupling ($s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved) ties $s$ to the mesh used for the $\bu,p$ solver
+    \end{itemize}
 
-xx
+\medskip
+\item we demonstrate a coupled-system solver based on these choices:
+    \begin{enumerate}
+    \item[1.] split the coupled system
+        \begin{itemize}
+        \item[$\circ$] but add a stabilizing heuristic to the Stokes solver
+        \end{itemize}
+    \item[2.] use mostly explicit time-stepping
+        \begin{itemize}
+        \item[$\circ$] but add an implicit free-surface stabilization
+        \end{itemize}
+    \item[3.] use $P_1$ elements for $s$ and $P_2\times P_1$ (as before) for $\bu,p$
+        \begin{itemize}
+        \item[$\circ$] $s\in P_1$ means Stokes is solved on a polygonal domain
+        \end{itemize}
+    \end{enumerate}
+
+\medskip
+\item the whole method is \emph{semi-implicit}, \emph{stabilized}, and \emph{free boundary}
+\item in fact, we apply 3 recent techniques \dots
+\end{itemize}
 \end{frame}
 
 
-\begin{frame}{technique 2: semi-implicit surface stabilization in stress balance}
-xx
+\begin{frame}{technique 1: semi-implicit coupling heuristic in stress balance}
+
+\begin{itemize}
+\item suppose $s$ is the current surface elevation (at time $t_n$)
+\item we can solve the Stokes problem, on the domain defined by $s$, for $\bu,p$
+\item FIXME but instead add Tominec coupling heuristic
+\end{itemize}
 \end{frame}
 
 
-\begin{frame}{technique 3: edge stabilization in free-surface equation}
-xx
+\begin{frame}{technique 2: edge stabilization in free-surface equation}
+
+\begin{itemize}
+\item suppose we time-step the free surface equation with forward Euler:
+    $$\int_\Omega \left(\frac{\snew - s}{\Delta t} - \bu|_s \cdot \bn_s - a\right)\, r = 0$$
+
+    \begin{itemize}
+    \item[$\circ$] $s$ is the current surface elevation (at time $t_n$)
+    \item[$\circ$] $\snew$ is the updated value (at time $t_{n+1} = t_n + \Delta t$)
+    \end{itemize}
+\item FIXME add edge stabilization to above
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{technique 3: variational inequality for free surface}
+
+\begin{itemize}
+\item to state the obvious, the \alert{surface elevation of a glacier is above its bed}
+    \begin{itemize}
+    \item[$\circ$] enforcing this fact provides the lateral boundary condition
+    \end{itemize}
+\item given a bed elevation function $b(x,y)$, time-independent for simplicity, define the \alert{admissible set $\cK = \left\{r \,:\, r\ge b\right\}$} of surface elevations
+\item the weak-form free-surface ``equation'' is actually a \alert{variational inequality}:
+    $$\int_\Omega \left(\frac{\snew - s}{\Delta t} - \bu|_s \cdot \bn_s - a\right)\, (r-s) \ge 0  \quad \forall r \in \cK$$
+
+    \begin{itemize}
+    \item[$\circ$] the previous surface elevation
+
+was admissible: $s \in \cK$
+    \item[$\circ$] we seek $\snew \in \cK$ solving this
+
+weak-form inequality
+    \item[$\circ$] the new \alert{glacier margin} is where
+
+$\snew$ meets $b$
+    \end{itemize}
+
+\vspace{-20mm}
+\hfill \includegraphics[width=0.47\textwidth]{figs/domain.png}
+\end{itemize}
 \end{frame}
 
 
