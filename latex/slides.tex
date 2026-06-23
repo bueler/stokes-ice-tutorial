@@ -753,7 +753,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
     \end{itemize}
 
 \medskip
-\item the functions in the free-surface equation are defined on $[0,T] \times \Omega$
+\item the free-surface equation holds on $[0,T] \times \Omega$
     \begin{itemize}
     \item[$\circ$] $\Omega \subset \RR^d$ is a fixed map-plane region, with $d=2$ in reality, but $d=1$ in the coming demo
     \end{itemize}
@@ -764,7 +764,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{coupled system of equations}
 
 \begin{itemize}
-\item the strong form of the coupled system:
+\item the strong form of the \alert{coupled} system:
 \begin{align*}
 \frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
 - \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
@@ -795,16 +795,17 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{weak form of coupled system of equations}
 
 \begin{itemize}
-\item we get the \alert{weak form of the coupled system} in the usual way:
+\item we get the \alert{weak form of the coupled system} in the usual way
+\item multiply by test functions and integrate by parts:
+{\small
+\begin{align*}
+\int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r\,dx dy &=0  &&\forall r \\
+\int_{\Lambda(t)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rhoi \mathbf{g} \cdot \bv \,dx dy dz &= 0 &&\forall \bv \\
+\int_{\Lambda(t)} - (\Div \bu) q \,dx dy dz &= 0 &&\forall q
+\end{align*}
+}
 
 FIXME
-
-\begin{align*}
-\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
-- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
-\Div \bu &= 0 &&\text{\emph{incompressibility}}
-\end{align*}
-
 \end{itemize}
 \end{frame}
 
