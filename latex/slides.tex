@@ -115,33 +115,35 @@
 \begin{frame}{making this presentation effective}
 
 \begin{itemize}
+\item these slides are the primary documentation for some Python codes
+\item \alert{please try the codes}, and give me your feedback?  thanks!
+
+\bigskip
 \item \alert{please ask questions}
 
-\item \alert{send future questions:}
+\item \alert{send comments \& questions, now and in the future:}
   \begin{itemize}
   \item[$\circ$] by email to \href{mailto:elbueler@alaska.edu}{\texttt{elbueler@alaska.edu}}
   \item[$\circ$] or by using \href{https://github.com/bueler/stokes-ice-tutorial/issues}{issues at \texttt{github.com/bueler/stokes-ice-tutorial/}}
   \end{itemize}
-
-\bigskip
-\item these slides are the primary documentation for some Python codes
-\item \alert{please try the codes and give me your feedback?}  thanks!
 \end{itemize}
 \end{frame}
 
 
 \setbeamertemplate{section in toc}[default] 
 
+\newcommand{\outlinelink}{\hspace{20mm} \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} \par %
+%
+\vspace{-10mm} %
+\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png}}
+
 \begin{frame}
   \frametitle{Outline}
 
-\qquad {\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
-
-\vspace{-5mm}
-\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
-
-\vspace{1mm}
   \tableofcontents[hideallsubsections]
+
+\vspace{5mm}
+  \outlinelink
 \end{frame}
 
 
@@ -270,15 +272,10 @@
 \AtBeginSection[]
 {
   \begin{frame}{Outline}
-
-\qquad {\large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}}
-
-\vspace{-5mm}
-\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
-
-\vspace{1mm}
-
   \tableofcontents[currentsection]
+
+\vspace{5mm}
+  \outlinelink
   \end{frame}
 }
 
@@ -342,13 +339,14 @@ since $(-\Div)^\top = \grad$, conceptually-speaking
 \item in summary, the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize but I will skip the details \dots}}}
 
 \medskip
-\includegraphics[width=0.2\textwidth]{figs/hat.png} \hfill
+\input{figs/trihat.tex}
 
 \vspace{-9mm}
 \hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
 
 \bigskip
-\item the whole point of Firedrake is \alert{suppress the details of FE}, but one needs to know the first step:\, \alert{write a weak form}
+\item the whole point of Firedrake is \alert{suppress the details of FE}
+\item however, one needs to know the first step:\, \alert{write a weak form}
 \end{itemize}
 \end{frame}
 
@@ -672,7 +670,7 @@ $ mpiexec -n 4 python3 solve.py -mx 800 -refine 2  # 20 seconds run time
 \end{frame}
 
 
-\section{\texttt{stage4/} \qquad 3D glaciers, and scalability limitations}
+\section{\texttt{stage4/} \qquad 3D glaciers and scalability limitations}
 
 \begin{frame}[fragile]
 \frametitle{\texttt{stage4/} \qquad 3D glaciers in parallel}
@@ -730,31 +728,34 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \end{frame}
 
 
-\section{\texttt{stage5/} \qquad evolving glaciers (coupling the free-surface equation)}
+\section{\texttt{stage5/} \qquad evolving glaciers: coupling the free-surface equation}
 
-\begin{frame}{glaciers actually change with the climate}
+\begin{frame}{but don't glaciers actually change with the climate?}
 
 \begin{itemize}
 \item we do not yet have a ``real'' glacier model
     \begin{itemize}
     \item[$\circ$] the climate (e.g.~surface mass balance) has not appeared as an input
-    \item[$\circ$] time derivatives have not appeared in our equations
+    \item[$\circ$] time derivatives have not appeared either
     \end{itemize}
-\item so how do glaciers change their shape?
 
-\bigskip
-\item the key is the \alert{free-surface equation} (or kinematical equation):
+\medskip
+\item[Q.] how do glaciers change shape?
+
+\item[A.] via the \alert{free-surface equation} (or kinematical equation):
    $$\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s = a$$
 
     \begin{itemize}
-    \item[$\circ$] functions are defined on a map-plane region $\Omega \subset \RR^d$
-        \begin{itemize}
-        \item $d=2$ in reality, but $d=1$ in the \texttt{stage5/} demo
-        \end{itemize}
     \item[$\circ$] $z=s(t,x,y)$ is the \alert{surface elevation} of the glacier
     \item[$\circ$] $a(t,x,y)$ is the \alert{surface mass balance}
     \item[$\circ$] $\bn_s=\left<-\frac{\partial s}{\partial x},-\frac{\partial s}{\partial y},1\right>$ is a \alert{normal vector} to the surface
     \item[$\circ$] $\bu_s$ is the surface value of the Stokes solution velocity
+    \end{itemize}
+
+\medskip
+\item the functions in the free-surface equation are defined on $[0,T] \times \Omega$
+    \begin{itemize}
+    \item[$\circ$] $\Omega \subset \RR^d$ is a fixed map-plane region, with $d=2$ in reality, but $d=1$ in the coming demo
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -763,25 +764,47 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{coupled system of equations}
 
 \begin{itemize}
-
-\item the free-surface equation is coupled to the Stokes problem
-    \begin{itemize}
-    \item[$\circ$] free-surface equation uses $\bu|_s$
-    \end{itemize}
-\item the Stokes problem is coupled to the surface elevation $s$
-    \begin{itemize}
-    \item[$\circ$] $s$ determines the domain on which the problem is solved
-    \end{itemize}
-
-\bigskip
 \item the strong form of the coupled system:
 \begin{align*}
 \frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
 - \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
 \Div \bu &= 0 &&\text{\emph{incompressibility}}
 \end{align*}
+\end{itemize}
 
-\item weak form FIXME
+\begin{columns}
+\begin{column}{0.47\textwidth}
+\begin{itemize}
+\item the free-surface equation is coupled to the Stokes problem
+    \begin{itemize}
+    \item[$\circ$] \alert{free-surface equation has $\bu|_s$ as a coefficient}
+    \end{itemize}
+\item the Stokes problem is coupled to the surface elevation
+    \begin{itemize}
+    \item[$\circ$] \alert{$s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved}
+    \end{itemize}
+\end{itemize}
+\end{column}
+\begin{column}{0.53\textwidth}
+\quad \includegraphics[width=\textwidth]{figs/domain.png}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+\begin{frame}{weak form of coupled system of equations}
+
+\begin{itemize}
+\item we get the \alert{weak form of the coupled system} in the usual way:
+
+FIXME
+
+\begin{align*}
+\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
+- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
+\Div \bu &= 0 &&\text{\emph{incompressibility}}
+\end{align*}
+
 \end{itemize}
 \end{frame}
 
