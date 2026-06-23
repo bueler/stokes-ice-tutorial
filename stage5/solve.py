@@ -173,6 +173,8 @@ uwsurf = Function(VP2base)
 dsdt = (snew - s) / (args.dt * secpera)
 ns = as_vector([-s.dx(0), Constant(1.0)])
 Fske = (dsdt - dot(uwsurf, ns) - a) * omega * dx
+# integrating by parts to get this alternate form seems to make no difference:
+#Fske = (dsdt - uwsurf[1] - a) * omega * dx - s * (uwsurf[0] * omega).dx(0) * dx
 if not args.noswede:
     # implicit edge stabilization, formula (4.3) in Tominec et al 2026
     hbase = CellDiameter(basemesh)
