@@ -148,9 +148,8 @@ def form_and_bcs_stokes(up):
     if not args.noswede:
         # apply semi-implicit coupling formula (4.28) in Tominec et al 2026
         nsnorm = sqrt(sR.dx(0) ** 2 + 1.0)
-        nvec = FacetNormal(mesh)
-        F += (rho * g * dtsec / 2.0) * nsnorm * inner(u, nvec) * inner(v, nvec) * ds_t
-        F += (rho * g * dtsec) * aR * inner(v, nvec) * ds_t
+        nn = FacetNormal(mesh)
+        F += rho * g * dtsec * (0.5 * nsnorm * inner(u, nn) + aR) * inner(v, nn) * ds_t
     f_body = as_vector([0.0, -rho * g])
     F -= inner(f_body, v) * dx  # source term
     bcs = [
