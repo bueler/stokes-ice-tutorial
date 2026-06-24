@@ -176,8 +176,8 @@ Fske = ((snew - s) / dtsec - dot(uwsurf, ns) - a) * omega * dx
 if not args.noswede:
     # implicit edge stabilization, formula (4.3) in Tominec et al 2026
     hbase = CellDiameter(basemesh)
-    nbase = FacetNormal(basemesh)
     h = (hbase("+") + hbase("-")) / 2
+    nbase = FacetNormal(basemesh)
     velmag = sqrt(dot(uwsurf, uwsurf))
     gamma = 0.5 * h**2 * velmag
     Fske += gamma * jump(grad(snew), nbase) * jump(grad(omega), nbase) * dS
