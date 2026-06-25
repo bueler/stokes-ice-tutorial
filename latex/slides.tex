@@ -16,7 +16,7 @@
 
 \usepackage[english]{babel}
 \usepackage[latin1]{inputenc}
-\usepackage{times}
+\usepackage{times,stmaryrd}
 \usepackage[T1]{fontenc}
 % Or whatever. Note that the encoding and the font should match. If T1
 % does not look nice, try deleting the line with the fontenc.
@@ -82,9 +82,6 @@
 \newcommand{\cmark}{\ding{51}}
 \newcommand{\xmark}{\ding{55}}
 
-\newcommand{\rhoi}{\rho_{\text{i}}}
-
-\newcommand{\snew}{s^{\text{new}}}
 
 \newcommand{\ds}{\displaystyle}
 
@@ -196,7 +193,7 @@
 \begin{columns}
 \begin{column}{0.8\textwidth}
 \begin{align*}
-- \Div \tau + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
+- \Div \tau + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
 \Div \bu &= 0 &&\text{\emph{incompressibility}} \\
 \tau = B_n &|D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{Glen-Nye flow law}}
 \end{align*}
@@ -216,7 +213,7 @@
 
 \item constants, default in demos:
     \begin{itemize}
-    \item[$\circ$] $\rhoi=910 \,\text{kg}\,\text{m}^{-3}$
+    \item[$\circ$] $\rho=910 \,\text{kg}\,\text{m}^{-3}$
     \item[$\circ$] $g=|\bg|=9.81\,\text{m}\,\text{s}^{-2}$
     \item[$\circ$] $n=3$
     \item[$\circ$] $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$ \quad (constant because isothermal)
@@ -235,7 +232,7 @@
 \begin{block}{Glen-Stokes equations with regularized viscosity}
 
 \begin{align*}
-- \Div \left(2 \alert{\nu_\eps} D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
+- \Div \left(2 \alert{\nu_\eps} D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
 \Div \bu &= 0 &&\text{\emph{incompressibility}} \\
 \alert{\nu_\eps} = \nu_\eps(|D\bu|) &= \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}
 \end{align*}
@@ -299,23 +296,21 @@
 
 \begin{itemize}
 \item start from the equations, also called the \emph{strong form}:
-\small
 \begin{align}
-- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \mathbf{g} \\
+- \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rho \mathbf{g} \\
 \Div \bu &= 0
 \end{align}
-\normalsize
 \item multiply (1) by test velocity $\bv$ and (2) by test pressure $q$, integrate by parts, and combine into one nonlinear residual function:
-    $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
-
-\medskip
-\item the actual weak-form problem statement:
-   $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all test functions } \bv \text{ and } q$$
+    $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 
     \begin{itemize}
-    \item[$\circ$] which says\, ``residual $=0$''
+    \item[$\circ$] $\Lambda$ is the domain of ice, and ``$dx$'' $=dx\,dz$ in the planar case
     \end{itemize}
-\item this weak form problem is solved by the FE method, but over a finite-dimensional space
+
+\medskip
+\item the actual weak-form problem statement is ``residual $=0$'':
+   $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all test functions } \bv \text{ and } q$$
+\item the FE method solves this problem, but over a finite-dimensional space
 \end{itemize}
 \end{frame}
 
@@ -325,7 +320,7 @@
 
 \begin{itemize}
 \item the nonlinear residual function:
-    $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
+    $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 with $\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}$
 
 \bigskip
@@ -362,9 +357,9 @@ F = ( inner(2.0 * nu * D(u), D(v)) \
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
-V = VectorFunctionSpace(mesh, 'Lagrange', 2)  # u space
-W = FunctionSpace(mesh, 'Lagrange', 1)        # p space
-Z = V * W                                     # mixed space
+V = VectorFunctionSpace(mesh, 'CG', 2)  # u space
+W = FunctionSpace(mesh, 'CG', 1)        # p space
+Z = V * W                               # mixed space
 up = Function(Z)
 u, p = split(up)
 v, q = TestFunctions(Z)
@@ -400,12 +395,12 @@ v, q = TestFunctions(Z)
 \begin{itemize}
 \item if we make viscosity constant ($\nu_0>0$) then we get a linear Stokes system:
 \begin{align*}
-- \nabla \cdot \left(2 \nu_0\, D\bu\right) + \nabla p &= \rhoi \mathbf{g}  \\
+- \nabla \cdot \left(2 \nu_0\, D\bu\right) + \nabla p &= \rho \mathbf{g}  \\
 \Div \bu &= 0
 \end{align*}
 \item classical reformat with $2 \nabla \cdot D\bu = \nabla^2 \bu$:
 \begin{align*}
-- \nu_0 \nabla^2 \bu + \nabla p &= \rhoi \mathbf{g}  \\
+- \nu_0 \nabla^2 \bu + \nabla p &= \rho \mathbf{g}  \\
 -\Div \bu \qquad \,\,\,\, &= 0
 \end{align*}
 \item which has symmetric block structure:
@@ -492,7 +487,7 @@ $ source ~/venv-firedrake/bin/activate
     \item[$\circ$] simplified weak form
     \end{itemize}
 {\small
-    $$F(\bu,p;\bv,q) = \int_{\Omega} 2 \nu_0\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
+    $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_0\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 }
 \item \emph{source files:} \texttt{domain.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{domain.msh}, \texttt{domain.pvd}
@@ -531,7 +526,7 @@ $ paraview domain.pvd            # view the solution
     \end{itemize}
 \item but for Glen-Stokes the residual function is nonlinear in $\bu$:
 \small
-$$F(\bu,p;\bv,q) = \int_{\Omega} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rhoi \mathbf{g} \cdot \bv \,dx$$
+$$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 \normalsize
 \item Firedrake automatically applies Newton's method if we write the problem as \texttt{solve(F == 0,\dots)}
 \item what you need to know about Newton's iteration:
@@ -779,9 +774,9 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \medskip
 \item the free-surface equation holds on $[0,T] \times \Omega$
     \begin{itemize}
-    \item[$\circ$] $\Omega \subset \RR^d$ is a fixed map-plane region ($d=2$ in reality)
+    \item[$\circ$] \alert{$\Omega \subset \RR^d$ is a fixed map-plane region} \hfill {\footnotesize \emph{$d=2$ in reality, $d=1$ for planar}}
     \end{itemize}
-\item the \emph{mass continuity} equation is an alternative way to describe change
+\item the \emph{mass continuity} equation is an alternative to the free-surface equation
 \end{itemize}
 \end{frame}
 
