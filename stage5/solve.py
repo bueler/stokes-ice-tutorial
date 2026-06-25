@@ -29,8 +29,10 @@ hs = "vertical layers in coarse mesh (default=4)"
 parser.add_argument("-mz", type=int, metavar="MZ", default=4, help=hs)
 hs = "number of time steps (default=5)"
 parser.add_argument("-N", type=int, metavar="N", default=5, help=hs)
-hs = "turn off stabilizations"
-parser.add_argument("-noswede", action="store_true", default=False, help=hs)
+hs = "turn off edge stabilization"
+parser.add_argument("-noedge", action="store_true", default=False, help=hs)
+hs = "turn off extrapolated-load (FSSA-type) stabilization"
+parser.add_argument("-noload", action="store_true", default=False, help=hs)
 hs = "output filename (default=dome.pvd)"
 parser.add_argument("-o", metavar="FILE.pvd", default="dome.pvd", help=hs)
 hs = "print help for solve.py options and stop"
@@ -98,8 +100,8 @@ xzflat = set_mesh_geometry(mesh, s)
 # surface mass balance function; a=0 in Halfar solution
 a = Function(P1base).interpolate(0.0)
 
-# copies of these fields on the extruded mesh (R space) are used in stabilization
-if not args.noswede:
+# copies of these fields on the extruded mesh (R space) are used in load stabilization
+if not args.noload:
     sR = extend_from_p1base(mesh, s)
     aR = extend_from_p1base(mesh, a)
 
@@ -147,8 +149,8 @@ def form_and_bcs_stokes(up):
     Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
     nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
     F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
-    if not args.noswede:
-        # apply semi-implicit coupling formula (4.28) in Tominec et al 2026
+    if not args.noload:
+        # apply load-stablization FSSA-type coupling formula (4.28) in Tominec et al 2026
         nsnorm = sqrt(sR.dx(0) ** 2 + 1.0)
         nn = FacetNormal(mesh)
         F += rho * g * dtsec * (0.5 * nsnorm * inner(u, nn) + aR) * inner(v, nn) * ds_t
@@ -173,9 +175,7 @@ uwsurf = Function(VP2base)
 # basic surface equation
 ns = as_vector([-s.dx(0), Constant(1.0)])
 Fske = ((snew - s) / dtsec - dot(uwsurf, ns) - a) * omega * dx
-# integrating by parts to get this alternate form seems to make no difference:
-#Fske = (dsdt - uwsurf[1] - a) * omega * dx - s * (uwsurf[0] * omega).dx(0) * dx
-if not args.noswede:
+if not args.noedge:
     # implicit edge stabilization, formula (4.3) in Tominec et al 2026
     hbase = CellDiameter(basemesh)
     h = (hbase("+") + hbase("-")) / 2
@@ -216,7 +216,7 @@ for k in range(args.N):
 
     # solve Stokes on current geometry (in current mesh), which requires
     # resetting form F and boundary conditions bcs
-    if not args.noswede:
+    if not args.noload:
         # update s, a in R space (for stabilization)
         sR.dat.data[:] = s.dat.data_ro[:]
         aR.dat.data[:] = a.dat.data_ro[:]
