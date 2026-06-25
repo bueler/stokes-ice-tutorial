@@ -20,7 +20,9 @@ parser = argparse.ArgumentParser(
 hs = "time step in years (default=1.0)"
 parser.add_argument("-dt", type=float, metavar="DT", default=1.0, help=hs)
 hs = "regularization used in viscosity (default=10^{-4})"
-parser.add_argument("-eps", type=float, metavar="X", default=1.0e-4, help=hs)
+parser.add_argument("-eps", type=float, metavar="EPS", default=1.0e-4, help=hs)
+hs = "initial ice thickness in center (default=1000 m)"
+parser.add_argument("-H0", type=float, metavar="H0", default=1000.0, help=hs)
 hs = "subintervals in coarse mesh (default=50)"
 parser.add_argument("-mx", type=int, metavar="MX", default=50, help=hs)
 hs = "vertical layers in coarse mesh (default=4)"
@@ -68,7 +70,7 @@ Dtyp = 1.0 / secpera  # s-1;  strain rate scale
 dtsec = args.dt * secpera
 
 
-def set_halfar_profile(x, s, R0=10000.0, H0=1000.0):
+def set_halfar_profile(x, s, R0=10000.0, H0=args.H0):
     # Set surface geometry from t = t0 Halfar time-dependent SIA geometry solution,
     # a dome with zero SMB.  The surface is zero outside of (-R0,R0).  Reference:
     #   * P. Halfar (1981), On the dynamics of the ice sheets, J. Geophys. Res. 86 (C11), 11065--11072
