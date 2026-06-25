@@ -784,27 +784,23 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{coupled system of equations}
 
 \begin{itemize}
-\item so we have a \alert{coupled} system:
+\item so we have a \alert{coupled} system of simultaneous equations:
 \begin{align*}
 \frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
-- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rhoi \bg &&\text{\emph{stress balance}} \\
+- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
 \Div \bu &= 0 &&\text{\emph{incompressibility}}
 \end{align*}
-\item the coupling has two aspects \dots
 \end{itemize}
 
 \medskip
 \begin{columns}
 \begin{column}{0.47\textwidth}
+\begin{itemize}
+\item the coupling has two aspects:
+\end{itemize}
 \begin{enumerate}
-\item the free-surface equation is coupled to the Stokes problem
-    \begin{itemize}
-    \item[$\circ$] \alert{free-surface equation has $\bu|_s$ as a coefficient}
-    \end{itemize}
-\item the Stokes problem is coupled to the surface elevation
-    \begin{itemize}
-    \item[$\circ$] \alert{$s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved}
-    \end{itemize}
+\item[I.] \alert{the free-surface equation has $\bu|_s$ as a coefficient}
+\item[II.] \alert{$s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved}
 \end{enumerate}
 \end{column}
 \begin{column}{0.53\textwidth}
@@ -821,78 +817,153 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \item multiply by test functions and integrate by parts:
 {\small
 \begin{align*}
-\int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r &=0  &&\forall r \\
-\int_{\Lambda(t)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rhoi \mathbf{g} \cdot \bv &= 0 &&\forall \bv \\
-\int_{\Lambda(t)} - (\Div \bu) q &= 0 &&\forall q
+\int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r\,dx &=0  &&\forall r \\
+\int_{\Lambda(t)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rho \mathbf{g} \cdot \bv\,dx &= 0 &&\forall \bv \\
+\int_{\Lambda(t)} - (\Div \bu) q\,dx &= 0 &&\forall q
 \end{align*}
 }
+\end{itemize}
 
-\bigskip
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\begin{itemize}
 \item we need to make high-level choices about this coupled system:
     \begin{enumerate}
-    \item[1.] solve it together (\emph{monolithic}) or split?
-    \item[2.] time-stepping: explicit or implicit?
+    \item[1.] time-stepping: explicit or implicit?
+    \item[2.] solve it together (\emph{monolithic}) or split?
     \item[3.] spaces and elements for $s,\bu,p$?
     \end{enumerate}
 \end{itemize}
+\end{column}
+\begin{column}{0.45\textwidth}
+\phantom{foo}
+
+\vspace{2mm}
+\hfill \includegraphics[width=0.9\textwidth]{figs/domain.png}
+\end{column}
+\end{columns}
 \end{frame}
 
 
 \begin{frame}{making choices}
 
 \begin{itemize}
-\item early/naive approaches to solving this evolving glacier problem have been fragile and stability-limited
+\item early/naive approaches to solving this coupled problem have been fragile and performance limited because of severe time-step restrictions
     \begin{itemize}
-    \item[$\circ$] the problem has a mix of advective and diffusive aspects
-    \item[$\circ$] the second coupling ($s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved) ties $s$ to the mesh used for the $\bu,p$ solver
+    \item[$\circ$] the coupled problem mixes advective and diffusive aspects
+    \item[$\circ$] coupling II\footnote{$s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved} ties the surface $s$ to the mesh used for the $\bu,p$ solver, which is difficult to implement in a monolithic or implicit manner
     \end{itemize}
 
 \medskip
-\item we demonstrate a coupled-system solver based on these choices:
+\item we will demonstrate a solver which is \alert{semi-implicit}, \alert{split}, and \alert{stabilized}
+    \begin{itemize}
+    \item[$\circ$] ``stabilize'' means several things here, sorry
+    \end{itemize}
+\item it is based on these choices:
     \begin{enumerate}
-    \item[1.] split the coupled system
+    \item[1.] use first-order and mostly explicit time-stepping
         \begin{itemize}
-        \item[$\circ$] but add a stabilizing heuristic to the Stokes solver
+        \item[$\circ$] $\frac{\partial s}{\partial t} \approx \frac{s_{k+1}-s_k}{\Delta t}$
+
+\smallskip
+        \item[$\circ$] but add an implicit free-surface \alert{stabilization}
         \end{itemize}
-    \item[2.] use mostly explicit time-stepping
+    \item[2.] split the coupled system, alternating free-surface and Stokes solves
         \begin{itemize}
-        \item[$\circ$] but add an implicit free-surface stabilization
+        \item[$\circ$] but add a \alert{stabilizing} semi-implicit heuristic to the Stokes solver
         \end{itemize}
-    \item[3.] use $P_1$ elements for $s$ and $P_2\times P_1$ (as before) for $\bu,p$
+    \item[3.] use $P_1$ elements for $s$, and \alert{stable} $P_2\times P_1$ (as before) for $\bu,p$
         \begin{itemize}
-        \item[$\circ$] $s\in P_1$ means Stokes is solved on a polygonal domain
+        \item[$\circ$] note that $s\in P_1$ means $\Lambda(t)$ is polygonal
         \end{itemize}
     \end{enumerate}
 
 \medskip
-\item the whole method is \emph{semi-implicit}, \emph{stabilized}, and \emph{free boundary}
-\item in fact, we apply 3 recent techniques \dots
+\item the next slides give more detail on techniques \dots
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}{technique 1: semi-implicit coupling heuristic in stress balance}
+\newcommand{\jump}[1]{\llbracket #1 \rrbracket}
+
+
+\begin{frame}{technique 1: edge stabilization in free-surface equation}
 
 \begin{itemize}
-\item suppose $s$ is the current surface elevation (at time $t_n$)
-\item we can solve the Stokes problem, on the domain defined by $s$, for $\bu,p$
-\item FIXME but instead add Tominec coupling heuristic
-\end{itemize}
-\end{frame}
-
-
-\begin{frame}{technique 2: edge stabilization in free-surface equation}
-
-\begin{itemize}
-\item suppose we time-step the free surface equation with forward Euler:
-    $$\int_\Omega \left(\frac{\snew - s}{\Delta t} - \bu|_s \cdot \bn_s - a\right)\, r = 0$$
+\item motivated by similar forms used in FE advection solvers
+    \begin{itemize}
+    \item[$\circ$] see Tominec et al (2026) and references therein
+    \end{itemize}
+\item consider forward Euler for the free surface equation: $\frac{\partial s}{\partial t} \approx \frac{s_{k+1}-s_k}{\Delta t}$
+\item add FE \alert{edge stabilization}, applied \alert{implicitly}:
+    $$\int_{\Omega^h} \left(\frac{s_{k+1}^h - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right) r^h\,dx \alert{+ J(s_{k+1}^h,r^h)} = 0$$
+where
+    $$J(s,r) = \sum_{e\in E^h} \int_e \tfrac{1}{2} h_e^2 \left|\bu|_{s_k^h}\right| \jump{\grad s} \jump{\grad r}\,dS$$
 
     \begin{itemize}
-    \item[$\circ$] $s$ is the current surface elevation (at time $t_n$)
-    \item[$\circ$] $\snew$ is the updated value (at time $t_{n+1} = t_n + \Delta t$)
+    \item[$\circ$] $E^h$ is the set of interior edges in the triangulation $\Omega^h$
+    \item[$\circ$] $\jump{\bv} = \bv_+ \cdot \bn_+ - \bv_- \cdot \bn_-$ is the jump of a vector field along an edge
+    \item[$\circ$] $h_e$ is the average of the diameters of the two cells which meet $e$
     \end{itemize}
-\item FIXME add edge stabilization to above
+\item note surface velocity and slope are evaluated explicitly, at $t_k$
 \end{itemize}
+\end{frame}
+
+
+\begin{frame}{technique 2: semi-implicit coupling heuristic in stress balance}
+
+\begin{itemize}
+\item from Tominec et al (2026), based on L\"ofgren et al (2022)
+\item the Stokes system is modifed by adding an extrapolated (and symmetrized) load on the upper surface as a coupling stabilization:
+{\small
+\begin{align*}
+\int_{\Lambda(t_k)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rho \mathbf{g} \cdot \bv\,dx \qquad& \\
+\alert{+ \int_{\Gamma_s(t_k)} \rho g \Delta t \left[\frac{1}{2} \omega (\bu\cdot \bn) + a\right] (\bv\cdot \bn) \,ds} &= 0\\
+\int_{\Lambda(t_k)} - (\Div \bu) q\,dx &= 0
+\end{align*}
+
+    \begin{itemize}
+    \item[$\circ$] the Stokes domain $\Lambda(t_k)$ is defined by the current surface elevation $s_k$
+    \item[$\circ$] $\Gamma_s(t_k)$ is the upper surface of $\Lambda(t_k)$
+    \item[$\circ$] in surface integral $\bn$ is the outward unit normal and $\omega=|\bn_{s_k}|$
+    \end{itemize}
+}
+\item L\"ofgren et al (2022) use Reynold's transport theorem to motivate this type of stabilization of the coupled system
+\item Tominec et al (2026) \alert{prove} that techniques 1 \& 2 together stabilize the $L^2$ norm of the evolving surface, and that mass is conserved
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{\texttt{stage5/} part 1 \qquad slumping in a box}
+
+\begin{itemize}
+\item \emph{purpose:} evolving surface, while exhibiting numerical stability and mass conservation
+\item \emph{source files:} \texttt{geometry.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
+\item \emph{generated file:} \texttt{dome.pvd}
+\end{itemize}
+
+\bigskip
+\begin{Verbatim}
+$ cd stage5/
+$ python3 solve.py -walls
+$ paraview dome.pvd
+\end{Verbatim}
+%$
+
+%\hfill \includegraphics[width=0.4\textwidth]{figs/stage4.png} \hspace{10mm}
+\end{frame}
+
+
+\begin{frame}{need for technique 2}
+
+show
+\end{frame}
+
+
+\begin{frame}{mass conservation}
+
+fine with \texttt{-walls}
 \end{frame}
 
 
@@ -903,39 +974,33 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
     \begin{itemize}
     \item[$\circ$] enforcing this fact provides the lateral boundary condition
     \end{itemize}
-\item given a bed elevation function $b(x,y)$, time-independent for simplicity, define the \alert{admissible set $\cK = \left\{r \,:\, r\ge b\right\}$} of surface elevations
+\item given a (time-independent)) bed elevation function $b(x,y)$, define the \alert{admissible set $\cK = \left\{r \,:\, r\ge b\right\}$}
 \item the weak-form free-surface ``equation'' is actually a \alert{variational inequality}:
-    $$\int_\Omega \left(\frac{\snew - s}{\Delta t} - \bu|_s \cdot \bn_s - a\right)\, (r-s) \ge 0  \quad \forall r \in \cK$$
+    $$\int_\Omega \left(\frac{s_{k+1} - s_k}{\Delta t} - \bu|_{s_k} \cdot \bn_{s_k} - a\right)\, (r-s_k)\,dx \ge 0  \quad \forall r \in \cK$$
 
     \begin{itemize}
-    \item[$\circ$] the previous surface elevation
+    \item[$\circ$] we seek an admissible new surface $s_{k+1} \in \cK$
 
-was admissible: $s \in \cK$
-    \item[$\circ$] we seek $\snew \in \cK$ solving this
-
-weak-form inequality
-    \item[$\circ$] the new \alert{glacier margin} is where
-
-$\snew$ meets $b$
+solving this weak-form inequality
+    \item[$\circ$] the new \alert{glacier margin} is where $s_{k+1}$ meets $b$
     \end{itemize}
 
-\vspace{-20mm}
-\hfill \includegraphics[width=0.47\textwidth]{figs/domain.png}
+\vspace{-14mm}
+\hfill \includegraphics[width=0.3\textwidth]{figs/domain.png}
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage5/} \qquad a dome flowing outward}
+\frametitle{\texttt{stage5/} part 2 \qquad a dome flowing outward}
 
 xx FIXME
 \end{frame}
 
 
+\begin{frame}{mass conservation a problem for free boundaries}
 
-\begin{frame}{mass conservation}
-
-subtle because fine with \texttt{-walls} but otherwise needs resolution
+subtle; needs resolution
 
 time-step control needed for reasonable margin shape with free boundary? (to avoid advance by more than one cell in dt)
 \end{frame}
