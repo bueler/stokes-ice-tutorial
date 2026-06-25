@@ -10,6 +10,15 @@
 #   * u=0 on lateral ends (and no tangential stress)
 """
 
+# stable default run, *with* mass conservation:
+#   python3 solve.py -walls
+# easily destabilizes without load stabilization:
+#   python3 solve.py -walls -noload
+#   python3 solve.py -walls -noload -N 1   # visualize early slosh
+# harder to catch destabilization without edge stabilization:
+#   python3 solve.py -mx 400 -dt 0.01 -N 100          # reasonable dome shape at t=1a
+#   python3 solve.py -mx 400 -dt 0.01 -N 100 -noedge  # not reasonable; wiggles at edge
+
 import argparse
 import sys
 
