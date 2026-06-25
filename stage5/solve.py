@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
 # FIXME for doc
-"""# boundary conditions in default (VI version):
-#   * <u,w>=0 on 'bottom'
-#   * <u,w>=0 on lateral ends
+#
+# Stokes boundary conditions in all versions (includes VI)
+#   Dirichlet:
+#     * <u,w>=0 on 'bottom'
+#     * u=0 on lateral ends (1,2); note  <u,w> . n = u
+#   Neumann:
+#     * stress free on 'top'
+#     * zero tangential stress on lateral ends (1,2)
+#
+# Added in default VI case (turn off with -walls)
 #   * pinch zero-height columns (trivialize all u,p d.o.f.s if s<stol)
-# boundary conditions for -walls (assumes s>b):
-#   * <u,w>=0 on 'bottom'
-#   * u=0 on lateral ends (and no tangential stress)
-"""
-
+#
 # stable default run, *with* mass conservation:
 #   python3 solve.py -walls
 # easily destabilizes without load stabilization:
@@ -105,13 +108,12 @@ s = Function(P1base)
 set_halfar_profile(xbase[0], s)
 mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0 / args.mz)
 xzflat = set_mesh_geometry(mesh, s)
+if not args.noload:
+    sR = extend_from_p1base(mesh, s)
 
 # surface mass balance function; a=0 in Halfar solution
 a = Function(P1base).interpolate(0.0)
-
-# copies of these fields on the extruded mesh (R space) are used in load stabilization
 if not args.noload:
-    sR = extend_from_p1base(mesh, s)
     aR = extend_from_p1base(mesh, a)
 
 # mixed spaces for Stokes
@@ -151,20 +153,20 @@ vipar = {
 def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
-def form_and_bcs_stokes(up):
+def form_and_bcs_stokes(mesh, up):
     """Weak form for the Stokes problem on the geometry stored in the current
     mesh.  This must be called every time the geometry is re-set."""
     u, p = split(up)
     Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
     nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
     F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
+    # body force source term
+    F -= inner(as_vector([0.0, -rho * g]), v) * dx
     if not args.noload:
-        # apply load-stablization FSSA-type coupling formula (4.28) in Tominec et al 2026
-        nsnorm = sqrt(sR.dx(0) ** 2 + 1.0)
+        # apply load (FSSA-type) coupling stabilization, (4.28) in Tominec et al 2026
         nn = FacetNormal(mesh)
+        nsnorm = sqrt(sR.dx(0) ** 2 + 1.0)
         F += rho * g * dtsec * (0.5 * nsnorm * inner(u, nn) + aR) * inner(v, nn) * ds_t
-    f_body = as_vector([0.0, -rho * g])
-    F -= inner(f_body, v) * dx  # source term
     bcs = [
         DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
         DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
@@ -229,7 +231,7 @@ for k in range(args.N):
         # update s, a in R space (for stabilization)
         sR.dat.data[:] = s.dat.data_ro[:]
         aR.dat.data[:] = a.dat.data_ro[:]
-    F, bcs = form_and_bcs_stokes(up)
+    F, bcs = form_and_bcs_stokes(mesh, up)
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
     u, p = up.subfunctions
 
