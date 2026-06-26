@@ -165,8 +165,8 @@ def form_and_bcs_stokes(mesh, up):
     if not args.noload:
         # apply load (FSSA-type) coupling stabilization, (4.28) in Tominec et al 2026
         nn = FacetNormal(mesh)
-        nsnorm = sqrt(sR.dx(0) ** 2 + 1.0)
-        F += rho * g * dtsec * (0.5 * nsnorm * inner(u, nn) + aR) * inner(v, nn) * ds_t
+        nsR = as_vector([-sR.dx(0), Constant(1.0)])
+        F += rho * g * dtsec * (0.5 * inner(u, nsR) + aR) * inner(v, nn) * ds_t
     bcs = [
         DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
         DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
