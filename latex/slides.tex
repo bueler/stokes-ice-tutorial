@@ -849,20 +849,35 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \end{frame}
 
 
+\begin{frame}{challenges in solving the coupled system}
+
+\begin{itemize}
+\item early/naive approaches to solving this coupled problem have been fragile
+    \begin{itemize}
+    \item[$\circ$] the method everyone tries first is to solve Stokes for the current geometry, then advance the surface, and repeat
+    \item[$\circ$] this is a \emph{split} and \emph{explicit} approach to the coupled problem
+    \end{itemize}
+\item result: limited performance because of time-step restrictions
+
+\bigskip
+\item challenges in designing better schemes:
+    \begin{itemize}
+    \item[$\circ$] the coupled problem mixes advective and diffusive aspects, so the precise restriction remains unclear (Bueler (2023), and references therein)
+    \item[$\circ$] coupling aspect II, that $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved, ties the surface $s$ to the mesh used for the $\bu,p$ solver; this makes a monolithic or implicit implementation difficult
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
 \begin{frame}{making choices}
 
 \begin{itemize}
-\item early/naive approaches to solving this coupled problem have been fragile, with limited performance because of severe time-step restrictions
-    \begin{itemize}
-    \item[$\circ$] the coupled problem mixes advective and diffusive aspects
-    \item[$\circ$] coupling aspect II, that $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved, ties the surface $s$ to the mesh used for the $\bu,p$ solver, which is difficult to implement in a monolithic or implicit manner
-    \end{itemize}
-
-\medskip
 \item we will demonstrate a solver which is \alert{semi-implicit}, \alert{split}, and \alert{stabilized}
     \begin{itemize}
     \item[$\circ$] warning: ``stabilize'' means several things here
     \end{itemize}
+
+\medskip
 \item it is based on these choices:
     \begin{enumerate}
     \item[1.] use first-order and mostly explicit time-stepping
@@ -943,7 +958,7 @@ where
 \frametitle{\texttt{stage5/} part 1 \qquad slumping in a box}
 
 \begin{itemize}
-\item \emph{purpose:} evolving surface between walls, while exhibiting numerical stability and mass conservation
+\item \emph{purpose:} evolving surface between walls, exhibiting numerical stability and mass conservation
 \item \emph{source files:} \texttt{geometry.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated file:} \texttt{dome.pvd}
 \end{itemize}
@@ -956,20 +971,53 @@ $ paraview dome.pvd
 \end{Verbatim}
 %$
 
-FIXME bling
-%\hfill \includegraphics[width=0.4\textwidth]{figs/stage4.png} \hspace{10mm}
+
+\bigskip
+
+{\footnotesize $t=0$ a:}\, \includegraphics[width=0.8\textwidth]{figs/stage5wallsstart.png}
+
+\centerline{$\to$}
+
+\medskip
+\hfill {\footnotesize $t=5$ a:}\, \includegraphics[width=0.8\textwidth]{figs/stage5wallsend.png}
 \end{frame}
 
 
-\begin{frame}{need for technique 2}
+\begin{frame}{time-stepping stability (and need for technique 2)}
 
-show
+\begin{itemize}
+\item for runs using both techniques \alert{$\Delta t=1$ a was stable} at all tested resolutions
+
+\medskip
+\item without technique 2, time steps are significantly restricted
+\item runs w/o technique 2 produce ``sloshing'' (L\"ofgren et al (2022)), and then Stokes solver failures
+\item for each resolution in this table we start with $\Delta t=1$ a, and reduce $\Delta t$ by a factor of two until the $5$ a run completes without a solver failure
+
+% typical run:
+%   ./solve.py -walls -noload -mx 50 -dt 0.25 -N 20   % for dx = 320
+\medskip
+\begin{center}
+\small
+\begin{tabular}{c|c}
+$\Delta x$ (m) & stable $\Delta t$ (a) w/o technique 2 \\ \hline
+$640$ & $0.25$ \\
+$320$ & $0.25$ \\
+$160$ & $0.125$ \\
+$80$ & $0.125$ \\
+$40$ & $0.125$
+\end{tabular}
+\normalsize
+\end{center}
+
+\bigskip
+\item see Tominec et al (2026) and L\"ofgren et al (2022) for more experimentation
+\end{itemize}
 \end{frame}
 
 
 \begin{frame}{mass conservation}
 
-fine with \texttt{-walls}
+FIXME fine with \texttt{-walls}
 \end{frame}
 
 
@@ -1004,11 +1052,25 @@ xx FIXME
 \end{frame}
 
 
-\begin{frame}{mass conservation a problem for free boundaries}
+\begin{frame}{need for technique 1 when using technique 3}
 
-subtle; needs resolution
+FIXME runs with \texttt{-walls} do not show much need for technique 1
 
-time-step control needed for reasonable margin shape with free boundary? (to avoid advance by more than one cell in dt)
+FIXME see runs at start of \texttt{stage5/solve.py}
+\end{frame}
+
+
+\begin{frame}{difficulties with free boundaries}
+
+FIXME time-step control needed for reasonable margin shape with free boundary? (to avoid advance by more than one cell in dt)
+
+FIXME mass conservation approximate (Bueler (2021)); needs resolution
+\end{frame}
+
+
+\begin{frame}{evidence of correctness}
+
+FIXME compare Halfar
 \end{frame}
 
 
