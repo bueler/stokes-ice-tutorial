@@ -150,7 +150,7 @@
 
 \section{stage 0 \hspace{9.3mm} the glacier dynamics problem}
 
-\begin{frame}{glacier dynamics using Stokes}
+\begin{frame}{glacier dynamics using the Stokes model}
 
 \begin{itemize}
 \item before the equations, what is the high-level view of the model? 
@@ -187,7 +187,7 @@
 
 \begin{itemize}
 \item notation: $\bu$ is velocity, $p$ is pressure, and $\tau$ is the deviatoric stress tensor
-\item also $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain-rate tensor
+\item $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain-rate tensor
 \item the main equations:
 
 \begin{columns}
@@ -211,12 +211,12 @@
 
 \smallskip
 
-\item constants, default in demos:
+\item constants (\emph{with default values in demos}):
     \begin{itemize}
     \item[$\circ$] $\rho=910 \,\text{kg}\,\text{m}^{-3}$
     \item[$\circ$] $g=|\bg|=9.81\,\text{m}\,\text{s}^{-2}$
     \item[$\circ$] $n=3$
-    \item[$\circ$] $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$ \quad (constant because isothermal)
+    \item[$\circ$] $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$ \hfill {\footnotesize $\leftarrow$ \emph{constant because isothermal}}
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -226,8 +226,8 @@
 
 \begin{itemize}
 \item the classical viscosity relationship $\tau=2\nu D\bu$ eliminates $\tau$ from the equations, giving a system for $\bu,p$
-\item however, the coefficient $|D\bu|^{(1/n) - 1}$ in the flow law yields unbounded values as $D\bu\to 0$ (vanishing strain rates)
-\item so we also regularize to generate bounded viscosity
+\item however, the viscosity formula $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ yields unbounded values as $D\bu\to 0$ (vanishing strain rates)
+\item so we also regularize with \alert{$\eps>0$} to generate bounded viscosity
 
 \begin{block}{Glen-Stokes equations with regularized viscosity}
 
@@ -240,7 +240,7 @@
 \smallskip
 \end{block}
 
-\item we will use $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$
+\item we will use $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$ in the demonstrations
 \end{itemize}
 \end{frame}
 
@@ -248,10 +248,10 @@
 \begin{frame}{boundary conditions, as simple as possible}
 
 \begin{itemize}
-\item note that $\sigma = 2 \nu_\eps(|D\bu|) D\bu - pI$ is the (Cauchy) stress tensor
+\item note that $\sigma = 2 \nu_\eps D\bu - pI$ is the (Cauchy) stress tensor
 \item stress-free top:
 \begin{equation*}
-\sigma \bn = \left(2 \nu_\eps(|D\bu|) D\bu - pI\right) \bn = \bzero
+\sigma \bn = \left(2 \nu_\eps D\bu - pI\right) \bn = \bzero
 \end{equation*}
 
 \bigskip
@@ -274,10 +274,10 @@
 \begin{itemize}
 \item exact solution of the Stokes model is impossible for most geometries
     \begin{itemize}
-    \item[$\circ$] \emph{exercise.}  solve slab-on-a-slope (an exception)
+    \item[$\circ$] \emph{exercise.}  solve slab-on-a-slope, which is an exception
     \end{itemize}
 \item so we solve numerically using the finite element (FE) method
-\item in summary, the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize but I will skip the details \dots}}}
+\item the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize but I will skip the details \dots}}}
 
 \medskip
 \input{figs/trihat.tex}
@@ -287,6 +287,9 @@
 
 \bigskip
 \item the whole point of Firedrake is \alert{suppress the details of FE}
+    \begin{itemize}
+    \item[$\circ$] try Elman, Sylvester \& Wathen (2014) for self-study on FE?
+    \end{itemize}
 \item however, one needs to know a key step:\, \alert{write a weak form}
 \end{itemize}
 \end{frame}
@@ -324,17 +327,18 @@
 with $\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}$
 
 \bigskip
-\item the \emph{Unified Form Language} (UFL) used by Firedrake cleanly translates:
+\item we write this using the \emph{Unified Form Language} (UFL) from Firedrake
+\item it cleanly translates:
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
 def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
-fbody = rho * Constant((0.0, 0.0, - g))
 Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp)**2.0
 nu = 0.5 * Bn * Du2**((1.0 / n - 1.0)/2.0)
 
+fbody = rho * Constant((0.0, 0.0, - g))
 F = ( inner(2.0 * nu * D(u), D(v)) \
       - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 \end{Verbatim}
@@ -349,16 +353,16 @@ F = ( inner(2.0 * nu * D(u), D(v)) \
 \item the other details we need to know about:
     \begin{itemize}
     \item[{\color{black} 1.}] choose \alert{separate function spaces for the velocity and the pressure}
-    \item[{\color{black} 2.}] choose spaces that the experts say are \alert{stable}
+    \item[{\color{black} 2.}] choose finite element spaces that (the experts say) are \alert{stable}
     \end{itemize}
 
 \bigskip
-\item Firedrake makes choosing mixed elements easy:
+\item Firedrake makes choosing such mixed elements easy:
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
-V = VectorFunctionSpace(mesh, 'CG', 2)  # u space
-W = FunctionSpace(mesh, 'CG', 1)        # p space
+V = VectorFunctionSpace(mesh, 'CG', 2)  # u space is P2
+W = FunctionSpace(mesh, 'CG', 1)        # p space is P1
 Z = V * W                               # mixed space
 up = Function(Z)
 u, p = split(up)
@@ -434,21 +438,10 @@ since $(-\Div)^\top = \grad$, conceptually-speaking
 
 
 \begin{frame}[fragile]
-\frametitle{running Firedrake programs}
-
-\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
-
-\vspace{-10mm}
+\frametitle{running the demonstration programs}
 
 \begin{itemize}
 \item let's run a demo
-\item grab my tutorial (codes and these slides):
-
-\medskip
-\begin{Verbatim}[fontsize=\small]
-$ git clone https://github.com/bueler/stokes-ice-tutorial.git
-\end{Verbatim}
-%$
 
 \medskip
 \item install Firedrake following these directions:
@@ -460,19 +453,31 @@ $ git clone https://github.com/bueler/stokes-ice-tutorial.git
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
-$ unset PETSC_DIR; unset PETSC_ARCH;  # may be needed
 $ source ~/venv-firedrake/bin/activate
 \end{Verbatim}
+%$
 
 \medskip
-    \begin{itemize}
-    \item[$\circ$] I use an alias \texttt{drakeme} for this
-    \end{itemize}
-\item other tools I will need:
+\item other tools we will need:
     \begin{itemize}
     \item[$\circ$] Gmsh \quad \href{https://gmsh.info/}{\texttt{gmsh.info}}
     \item[$\circ$] Paraview \quad \href{https://www.paraview.org/}{\texttt{paraview.org}}
     \end{itemize}
+
+\medskip
+\item clone this tutorial ($=$ codes and slides):
+
+\medskip
+\begin{Verbatim}[fontsize=\small]
+$ git clone https://github.com/bueler/stokes-ice-tutorial.git
+\end{Verbatim}
+%$
+
+\vspace{-22mm}
+
+\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
+
+\vspace{5mm}
 \end{itemize}
 \end{frame}
 
@@ -528,13 +533,13 @@ $ paraview domain.pvd            # view the solution
 \small
 $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 \normalsize
-\item Firedrake automatically applies Newton's method if we write the problem as \texttt{solve(F == 0,\dots)}
+\item Firedrake applies Newton's method by default if we write the problem as\, \texttt{solve(F == 0,\dots)}
 \item what you need to know about Newton's iteration:
     \begin{itemize}
     \item[$\circ$] it does linearization around each iterate
     \item[$\circ$] Firedrake uses UFL symbolic differentiation for linearization
     \item[$\circ$] Firedrake asks PETSc's SNES to do the Newton iteration
-    \item[$\circ$] SNES options will monitor and control the Newton iteration
+    \item[$\circ$] SNES options will monitor and control the iteration
     \end{itemize}
 \end{itemize}
 \end{column}
@@ -585,11 +590,11 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \begin{itemize}
 \item \emph{purpose:} additional robust and/or useful features
     \begin{itemize}
-    \item[$\circ$] construct 2D mesh by vertically \alert{extruding} 1D base mesh  \hfill \emph{allows refinement}
+    \item[$\circ$] construct 2D mesh by vertically \alert{extruding} a base mesh  \hfill \emph{allows refinement}
     \item[$\circ$] rescale the equations  \hfill \emph{better conditioning}
     \item[$\circ$] vertical grid sequencing  \hfill \emph{better initial iterates}
     \item[$\circ$] $100\eps$ on coarse meshes in sequencing  \hfill \emph{better initial iterates}
-    \item[$\circ$] generate stress tensor $\tau$ from solution  \hfill \emph{diagnostic}
+    \item[$\circ$] generate deviatoric stress tensor $\tau$ from solution  \hfill \emph{diagnostic}
     \item[$\circ$] generate effective viscosity $\nu_\eps$ from solution  \hfill \emph{diagnostic}
     \end{itemize}
 \item \emph{source file:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this}
@@ -605,7 +610,7 @@ $ paraview dome.pvd
 %$
 
 \smallskip
-\item solution speed and deviatoric stress magnitude below:
+\item solution speed $|\bu|$ and deviatoric stress magnitude $|\tau|$ below:
 \end{itemize}
 
 \begin{center}
@@ -626,8 +631,7 @@ $ ./solve.py -mx 400 -mz 4 -refine 2
 \end{Verbatim}
 %$
     \begin{itemize}
-    \item[$\circ$] refine the vertical twice, by factors of four, from the initial 4 levels
-    \item[$\circ$] generates a $400$ by $64$ mesh
+    \item[$\circ$] refine the vertical twice, by factors of four, from the initial 4 levels, to generate a $400$ by $64$ mesh
     \end{itemize}
 \item velocity results, in meters per year, from a refinement study:
 
@@ -665,27 +669,30 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
 \item as usual with Firedrake, everything works in parallel
     \begin{itemize}
     \item[$\circ$] extruded mesh gets partitioned following base mesh partition
-    \item[$\circ$] see \texttt{rank} field in \texttt{.pvd} output (bottom)
+    \item[$\circ$] see \texttt{rank} field in \texttt{.pvd} output
     \end{itemize}
-\item using the default direct solver (Mumps), results are independent of number of processes
-\item speed-up is sublinear because of significant serial workloads
-\item your results may vary \dots
-\end{itemize}
 
-\bigskip
-\begin{Verbatim}[fontsize=\footnotesize]
-$ python3 solve.py -mx 800 -refine 2               # 38 seconds run time
+\qquad \includegraphics[width=0.85\textwidth]{figs/stage3rank.png}
+
+\medskip
+\item using the default direct solver (Mumps), solution values are essentially independent of number of processes
+\item however, speed-up is sublinear because of significant serial workloads
+
+\medskip
+\begin{Verbatim}[fontsize=\footnotesize,xleftmargin=-4mm]
+$ python3 solve.py -mx 800 -refine 2               # 38 secs run time
   ...
   ice speed (m a-1): av = 1758.861, max = 3190.043
 
-$ mpiexec -n 4 python3 solve.py -mx 800 -refine 2  # 20 seconds run time
+$ mpiexec -n 4 python3 solve.py -mx 800 -refine 2  # 20 secs run time
   ...
   ice speed (m a-1): av = 1758.861, max = 3190.043
 \end{Verbatim}
 %$
 
-\bigskip
-\qquad \includegraphics[width=0.85\textwidth]{figs/stage3rank.png}
+\medskip
+\item your performance results may vary \dots
+\end{itemize}
 \end{frame}
 
 
@@ -695,22 +702,20 @@ $ mpiexec -n 4 python3 solve.py -mx 800 -refine 2  # 20 seconds run time
 \frametitle{\texttt{stage4/} \qquad 3D glaciers in parallel}
 
 \begin{itemize}
-\item \emph{purpose:} 3D ice sheet in parallel on bumpy bed
+\item \emph{purpose:} Firedrake allows easy extension to 3D ice sheet; add a bumpy bed
 \item \emph{source file:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this}
 \item \emph{generated file:} \texttt{dome.pvd}
 \end{itemize}
 
-\bigskip
+\medskip
 \begin{Verbatim}
 $ cd stage4/
 $ mpiexec -n 4 python3 solve.py
 $ paraview dome.pvd              # "rank" field below
-$ mpiexec -n 4 python3 solve.py -o finer.pvd \
-    -refine 2 -baserefine 3
-$ paraview finer.pvd
 \end{Verbatim}
 %$
 
+\bigskip
 \hfill \includegraphics[width=0.4\textwidth]{figs/stage4.png} \hspace{10mm}
 \end{frame}
 
@@ -732,7 +737,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
     \end{itemize}
 
 \bigskip
-\item \alert{\emph{limiting factor:}} the \alert{direct solver} for each Newton step linear system uses too much memory when generating the LU factors
+\item \emph{limiting factor:} the \alert{direct solver} for each Newton step linear system uses too much memory when generating the LU factors
     \begin{itemize}
     \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D, and they are slow
     \item[$\circ$] see Bueler (2021, 2023)
@@ -765,16 +770,16 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
    $$\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s = a$$
 
     \begin{itemize}
-    \item[$\circ$] $z=s(t,x,y)$ is the \alert{surface elevation} of the glacier
-    \item[$\circ$] $a(t,x,y)$ is the \alert{surface mass balance}
-    \item[$\circ$] $\bn_s=\left<-\frac{\partial s}{\partial x},-\frac{\partial s}{\partial y},1\right>$ is a \alert{normal vector} to the surface
-    \item[$\circ$] $\bu_s$ is the surface value of the Stokes solution velocity
+    \item[$\circ$] $z=s(t,x,y)$ is the surface elevation of the glacier
+    \item[$\circ$] $a(t,x,y)$ is the surface mass balance
+    \item[$\circ$] $\bn_s=\left<-\frac{\partial s}{\partial x},-\frac{\partial s}{\partial y},1\right>$ is a normal vector to the surface
+    \item[$\circ$] $\bu|_s$ is the surface value (\emph{trace}) of the Stokes solution velocity
     \end{itemize}
 
 \medskip
 \item the free-surface equation holds on $[0,T] \times \Omega$
     \begin{itemize}
-    \item[$\circ$] \alert{$\Omega \subset \RR^d$ is a fixed map-plane region} \hfill {\footnotesize \emph{$d=2$ in reality, $d=1$ for planar}}
+    \item[$\circ$] $\Omega \subset \RR^d$ is a fixed map-plane region \hfill {\footnotesize \emph{$d=2$ in reality, $d=1$ for planar}}
     \end{itemize}
 \item the \emph{mass continuity} equation is an alternative to the free-surface equation
 \end{itemize}
@@ -799,8 +804,8 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \item the coupling has two aspects:
 \end{itemize}
 \begin{enumerate}
-\item[I.] \alert{the free-surface equation has $\bu|_s$ as a coefficient}
-\item[II.] \alert{$s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved}
+\item[I.] the free-surface equation has $\bu|_s$ as a coefficient
+\item[II.] $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved
 \end{enumerate}
 \end{column}
 \begin{column}{0.53\textwidth}
@@ -813,8 +818,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{weak form of coupled system of equations}
 
 \begin{itemize}
-\item we get the \alert{weak form of the coupled system} in the usual way
-\item multiply by test functions and integrate by parts:
+\item get the weak form of the coupled system in the usual way, namely multiply by test functions and integrate by parts:
 {\small
 \begin{align*}
 \int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r\,dx &=0  &&\forall r \\
@@ -848,16 +852,16 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{making choices}
 
 \begin{itemize}
-\item early/naive approaches to solving this coupled problem have been fragile and performance limited because of severe time-step restrictions
+\item early/naive approaches to solving this coupled problem have been fragile, with limited performance because of severe time-step restrictions
     \begin{itemize}
     \item[$\circ$] the coupled problem mixes advective and diffusive aspects
-    \item[$\circ$] coupling II\footnote{$s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved} ties the surface $s$ to the mesh used for the $\bu,p$ solver, which is difficult to implement in a monolithic or implicit manner
+    \item[$\circ$] coupling aspect II, that $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved, ties the surface $s$ to the mesh used for the $\bu,p$ solver, which is difficult to implement in a monolithic or implicit manner
     \end{itemize}
 
 \medskip
 \item we will demonstrate a solver which is \alert{semi-implicit}, \alert{split}, and \alert{stabilized}
     \begin{itemize}
-    \item[$\circ$] ``stabilize'' means several things here, sorry
+    \item[$\circ$] warning: ``stabilize'' means several things here
     \end{itemize}
 \item it is based on these choices:
     \begin{enumerate}
@@ -872,7 +876,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
         \begin{itemize}
         \item[$\circ$] but add a \alert{stabilizing} semi-implicit heuristic to the Stokes solver
         \end{itemize}
-    \item[3.] use $P_1$ elements for $s$, and \alert{stable} $P_2\times P_1$ (as before) for $\bu,p$
+    \item[3.] use $P_1$ elements for $s$, and \alert{stable} $P_2\times P_1$ elements (\emph{as before}) for $\bu,p$
         \begin{itemize}
         \item[$\circ$] note that $s\in P_1$ means $\Lambda(t)$ is polygonal
         \end{itemize}
@@ -887,16 +891,15 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \newcommand{\jump}[1]{\llbracket #1 \rrbracket}
 
 
-\begin{frame}{technique 1: edge stabilization in free-surface equation}
+\begin{frame}{technique 1: implicit edge stabilization in free-surface equation}
 
 \begin{itemize}
-\item motivated by similar forms used in FE advection solvers
+\item motivated by similar stabilizations used in FE advection solvers
     \begin{itemize}
     \item[$\circ$] see Tominec et al (2026) and references therein
     \end{itemize}
-\item consider forward Euler for the free surface equation: $\frac{\partial s}{\partial t} \approx \frac{s_{k+1}-s_k}{\Delta t}$
 \item add FE \alert{edge stabilization}, applied \alert{implicitly}:
-    $$\int_{\Omega^h} \left(\frac{s_{k+1}^h - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right) r^h\,dx \alert{+ J(s_{k+1}^h,r^h)} = 0$$
+    $$\int_{\Omega^h} \left(\frac{\alert{s_{k+1}^h} - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right) r^h\,dx + J(\alert{s_{k+1}^h},r^h) = 0$$
 where
     $$J(s,r) = \sum_{e\in E^h} \int_e \tfrac{1}{2} h_e^2 \left|\bu|_{s_k^h}\right| \jump{\grad s} \jump{\grad r}\,dS$$
 
@@ -905,7 +908,10 @@ where
     \item[$\circ$] $\jump{\bv} = \bv_+ \cdot \bn_+ - \bv_- \cdot \bn_-$ is the jump of a vector field along an edge
     \item[$\circ$] $h_e$ is the average of the diameters of the two cells which meet $e$
     \end{itemize}
-\item note surface velocity and slope are evaluated explicitly, at $t_k$
+
+\medskip
+\item surface velocity and slope are evaluated explicitly, at $t_k$
+\item the implicit system to solve for $\alert{s_{k+1}^h}$ is linear
 \end{itemize}
 \end{frame}
 
@@ -914,22 +920,21 @@ where
 
 \begin{itemize}
 \item from Tominec et al (2026), based on L\"ofgren et al (2022)
-\item the Stokes system is modifed by adding an extrapolated (and symmetrized) load on the upper surface as a coupling stabilization:
+\item the stress balance is modifed by adding an extrapolated (and symmetrized) load on the upper surface as a coupling stabilization:
 {\small
 \begin{align*}
 \int_{\Lambda(t_k)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rho \mathbf{g} \cdot \bv\,dx \qquad& \\
-\alert{+ \int_{\Gamma_s(t_k)} \rho g \Delta t \left[\frac{1}{2} \omega (\bu\cdot \bn) + a\right] (\bv\cdot \bn) \,ds} &= 0\\
-\int_{\Lambda(t_k)} - (\Div \bu) q\,dx &= 0
+\alert{+ \int_{\Gamma_s(t_k)} \rho g \Delta t \left[\frac{1}{2} (\bu\cdot \bn_{s_k}) + a\right] (\bv\cdot \bn) \,ds} &= 0
 \end{align*}
 
     \begin{itemize}
     \item[$\circ$] the Stokes domain $\Lambda(t_k)$ is defined by the current surface elevation $s_k$
     \item[$\circ$] $\Gamma_s(t_k)$ is the upper surface of $\Lambda(t_k)$
-    \item[$\circ$] in surface integral $\bn$ is the outward unit normal and $\omega=|\bn_{s_k}|$
+    \item[$\circ$] $\bn$ is the outward \emph{unit} normal on $\Gamma_s(t_k)$, while $\bn_{s_k}=\left<-\grad s_k,1\right>$
     \end{itemize}
 }
 \item L\"ofgren et al (2022) use Reynold's transport theorem to motivate this type of stabilization of the coupled system
-\item Tominec et al (2026) \alert{prove} that techniques 1 \& 2 together stabilize the $L^2$ norm of the evolving surface, and that mass is conserved
+\item Tominec et al (2026) \alert{prove} that techniques 1 \& 2 together stabilize the $L^2$ norm of the evolving surface, and that mass is conserved when $s>b$
 \end{itemize}
 \end{frame}
 
@@ -938,7 +943,7 @@ where
 \frametitle{\texttt{stage5/} part 1 \qquad slumping in a box}
 
 \begin{itemize}
-\item \emph{purpose:} evolving surface, while exhibiting numerical stability and mass conservation
+\item \emph{purpose:} evolving surface between walls, while exhibiting numerical stability and mass conservation
 \item \emph{source files:} \texttt{geometry.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated file:} \texttt{dome.pvd}
 \end{itemize}
@@ -951,6 +956,7 @@ $ paraview dome.pvd
 \end{Verbatim}
 %$
 
+FIXME bling
 %\hfill \includegraphics[width=0.4\textwidth]{figs/stage4.png} \hspace{10mm}
 \end{frame}
 
