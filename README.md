@@ -22,19 +22,17 @@ We use the [Firedrake](https://www.firedrakeproject.org/) library, which calls [
 
     source venv-firedrake/bin/activate
 
-Also, for `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to generate the meshes, and for all stages I recommend [Paraview](https://www.paraview.org/) to visualize the results.
+For `stage1/` and `stage2/` you will need [Gmsh](https://gmsh.info/) to generate the meshes.  For all stages [Paraview](https://www.paraview.org/) is recommended to visualize the results.
 
 ### stages
 
-To do this tutorial, read `slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  Stages 1 through 4 have 2D geometry and stage 5 has 3D geometry.  All stages currently use direct solvers, which limits ultimate performance, but they all allow parallel runs.
+To do this tutorial, read `slides.pdf` and follow the stages.  Each stage is self-contained, with increasing sophistication.  All stages currently use direct solvers, which limits scalability, but they all allow parallel runs.
 
 In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separate actions.  Mesh generation uses [Gmsh](https://gmsh.info/) on `.geo` geometry-outline files, which generates `.msh` mesh files.
 
-Stages 3 through 6 combine these actions into a single program by using extruded meshes, so the entire mesh management is through [Firedrake](https://www.firedrakeproject.org/).  `stage3/` and `stage4/` are in 2D, and the only purpose of the latter is to show more scalable and robust numerics, and much better diagnostics.
+Stages 3--5 combine these actions into a single program by using extruded meshes, so that mesh management is entirely through [Firedrake](https://www.firedrakeproject.org/).  `stage3/` and `stage5/` are in 2D.  `stage4/` shows a 3D ice sheet with a bumpy bed.  The use of parallel computation for performance, and performance issues generally, are substantially more important in 3D.
 
-`stage5/` shows a 3D ice sheet with a bumpy bed.  The use of parallel computation for performance, and performance issues generally, are substantially more important in 3D.
-
-FIXME `stage6/` is an under-development time-stepping demonstration, again in 2D space.
+FIXME `stage5/` is an under-development time-stepping demonstration using advanced and recent techniques.
 
 ## another playground
 
