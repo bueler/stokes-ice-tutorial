@@ -217,7 +217,8 @@ def report_shape(t, s, stol=1.0):
 
 
 # time stepping loop
-printpar(f"solving {args.N} steps (dt={args.dt:.3f}) on {args.mx} x {args.mz} mesh ...")
+deltax = 2.0 * L / args.mx
+printpar(f"solving {args.N} steps (dt={args.dt:.3f}) on {args.mx} x {args.mz} mesh (dx = {deltax:.3f} m) ...")
 n_u, n_p = V.dim(), W.dim()
 printpar(f"  sizes: n_u = {n_u}, n_p = {n_p}")
 t = 0.0
