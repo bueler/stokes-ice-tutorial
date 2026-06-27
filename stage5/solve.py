@@ -1,18 +1,6 @@
 #!/usr/bin/env python3
 
 # FIXME for doc
-#
-# Stokes boundary conditions in all versions (includes VI)
-#   Dirichlet:
-#     * <u,w>=0 on 'bottom'
-#     * u=0 on lateral ends (1,2); note  <u,w> . n = u
-#   Neumann:
-#     * stress free on 'top'
-#     * zero tangential stress on lateral ends (1,2)
-#
-# Added in default VI case (turn off with -walls)
-#   * pinch zero-height columns (trivialize all u,p d.o.f.s if s<stol)
-#
 # stable default run, *with* mass conservation:
 #   python3 solve.py -walls
 # easily destabilizes without load stabilization:
@@ -91,7 +79,7 @@ def set_halfar_profile(x, s, R0=10000.0, H0=args.H0):
     pp = 1.0 + 1.0 / n
     rr = n / (2.0 * n + 1.0)
     xi = conditional(abs(x) < R0, 1.0 - abs(x / R0) ** pp, 0.0)
-    s.interpolate(H0 * xi**rr)
+    s.interpolate(H0 * xi ** rr)
 
 
 # create 1D base mesh
@@ -153,7 +141,8 @@ vipar = {
 def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
-def form_and_bcs_stokes(mesh, up):
+
+def form_stokes(mesh, up):
     """Weak form for the Stokes problem on the geometry stored in the current
     mesh.  This must be called every time the geometry is re-set."""
     u, p = split(up)
@@ -167,6 +156,15 @@ def form_and_bcs_stokes(mesh, up):
         nn = FacetNormal(mesh)
         nsR = as_vector([-sR.dx(0), Constant(1.0)])
         F += rho * g * dtsec * (0.5 * inner(u, nsR) + aR) * inner(v, nn) * ds_t
+    return F
+
+
+def bcs_stokes(Z):
+    """Boundary conditions in all cases, both -walls and free-boundary:
+      Dirichlet: <u,w>=0 on 'bottom', u=0 on lateral ends (1,2)
+      Neumann: stress free on 'top', zero tangential stress on (1,2)
+    Added in default free-boundar (VI) case:
+      pinch zero-height columns = trivialize all u,p dofs if s<stol"""
     bcs = [
         DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
         DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
@@ -176,7 +174,8 @@ def form_and_bcs_stokes(mesh, up):
             PinchColumnPressure(Z.sub(1), None, None),
             PinchColumnVelocity(Z.sub(0), None, None),
         ]
-    return F, bcs
+    return bcs
+
 
 # weak form for surface kinematical equation
 snew = Function(P1base)
@@ -192,7 +191,7 @@ if not args.noedge:
     h = (hbase("+") + hbase("-")) / 2
     nbase = FacetNormal(basemesh)
     velmag = sqrt(dot(uwsurf, uwsurf))
-    gamma = 0.5 * h**2 * velmag
+    gamma = 0.5 * h ** 2 * velmag
     Fske += gamma * jump(grad(snew), nbase) * jump(grad(omega), nbase) * dS
 
 # set up surface kinematical equation solver, a variational inequality
@@ -218,7 +217,9 @@ def report_shape(t, s, stol=1.0):
 
 # time stepping loop
 deltax = 2.0 * L / args.mx
-printpar(f"solving {args.N} steps (dt={args.dt:.3f}) on {args.mx} x {args.mz} mesh (dx = {deltax:.3f} m) ...")
+printpar(
+    f"solving {args.N} steps (dt={args.dt:.3f}) on {args.mx} x {args.mz} mesh (dx = {deltax:.3f} m) ..."
+)
 n_u, n_p = V.dim(), W.dim()
 printpar(f"  sizes: n_u = {n_u}, n_p = {n_p}")
 t = 0.0
@@ -232,7 +233,8 @@ for k in range(args.N):
         # update s, a in R space (for stabilization)
         sR.dat.data[:] = s.dat.data_ro[:]
         aR.dat.data[:] = a.dat.data_ro[:]
-    F, bcs = form_and_bcs_stokes(mesh, up)
+    F = form_stokes(mesh, up)
+    bcs = bcs_stokes(Z)  # why has to be re-set? (must use current s immediately?)
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
     u, p = up.subfunctions
 
