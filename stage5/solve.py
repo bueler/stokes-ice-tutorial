@@ -10,6 +10,8 @@
 #   python3 solve.py -mx 400 -dt 0.01 -N 100          # reasonable dome shape at t=1a
 #   python3 solve.py -mx 400 -dt 0.01 -N 100 -noedge  # not reasonable; wiggles at edge
 
+# FIXME add CFL scheme, to avoid "piling up" at moving free margin
+
 import argparse
 import sys
 
@@ -35,6 +37,8 @@ hs = "turn off extrapolated-load (FSSA-type) stabilization"
 parser.add_argument("-noload", action="store_true", default=False, help=hs)
 hs = "output filename (default=dome.pvd)"
 parser.add_argument("-o", metavar="FILE.pvd", default="dome.pvd", help=hs)
+hs = "output filename for movie; setting this name turns it on"
+parser.add_argument("-omovie", metavar="FILE.pvd", default=None, help=hs)
 hs = "print help for solve.py options and stop"
 parser.add_argument("-solvehelp", action="store_true", default=False, help=hs)
 hs = "put in no-tangential-traction walls so s>b everywhere"
@@ -222,6 +226,8 @@ printpar(
 )
 n_u, n_p = V.dim(), W.dim()
 printpar(f"  sizes: n_u = {n_u}, n_p = {n_p}")
+if args.omovie is not None:
+    movie = VTKFile(args.omovie)
 t = 0.0
 for k in range(args.N):
     printpar(f"t={t / secpera:.3f} a (k={k}):")
@@ -237,6 +243,11 @@ for k in range(args.N):
     bcs = bcs_stokes(Z)  # why has to be re-set? (must use current s immediately?)
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
     u, p = up.subfunctions
+
+    if args.omovie is not None:
+        u.rename("velocity (m/s)")
+        p.rename("pressure (Pa)")
+        movie.write(u, p, time=t)
 
     # print average and maximum velocity
     R = FunctionSpace(mesh, "R", 0)
