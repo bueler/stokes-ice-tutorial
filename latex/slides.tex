@@ -955,10 +955,10 @@ where
 
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage5/} part 1 \qquad slumping in a box}
+\frametitle{\texttt{stage5/}(a) \qquad slumping in a box}
 
 \begin{itemize}
-\item \emph{purpose:} evolving surface between walls, exhibiting numerical stability and mass conservation
+\item \emph{purpose:} evolving surface between walls, exhibiting numerical stability and exact mass conservation
 \item \emph{source files:} \texttt{geometry.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated file:} \texttt{dome.pvd}
 \end{itemize}
@@ -1009,44 +1009,50 @@ $40$ & $0.125$
 \normalsize
 \end{center}
 
-\bigskip
+\medskip
 \item see Tominec et al (2026) and L\"ofgren et al (2022) for more experimentation
+\item next we consider a free-boundary glacier
 \end{itemize}
-\end{frame}
-
-
-\begin{frame}{mass conservation}
-
-FIXME fine with \texttt{-walls}
 \end{frame}
 
 
 \begin{frame}{technique 3: variational inequality for free surface}
 
 \begin{itemize}
-\item to state the obvious, the \alert{surface elevation of a glacier is above its bed}
+\item to state the obvious, \alert{glacier surface elevation must be above the bed}
     \begin{itemize}
-    \item[$\circ$] enforcing this fact provides the lateral boundary condition
+    \item[$\circ$] enforcing this fact provides the (lateral) free-boundary condition
+    \item[$\circ$] at the free boundary the ice thickness and ice flux are both zero
     \end{itemize}
-\item given a (time-independent)) bed elevation function $b(x,y)$, define the \alert{admissible set $\cK = \left\{r \,:\, r\ge b\right\}$}
+
+\medskip
+\item suppose a (time-independent) bed elevation function $b(x,y)$
+    \begin{itemize}
+    \item[$\circ$] the meshed $\text{CG}_1$ bed is denoted $b^h$
+    \end{itemize}
+\item define the FE \alert{admissible set $\cK^h = \left\{r^h \in \text{CG}_1 \,:\, r^h\ge b^h\right\}$} for surfaces
 \item the weak-form free-surface ``equation'' is actually a \alert{variational inequality}:
-    $$\int_\Omega \left(\frac{s_{k+1} - s_k}{\Delta t} - \bu|_{s_k} \cdot \bn_{s_k} - a\right)\, (r-s_k)\,dx \ge 0  \quad \forall r \in \cK$$
+    $$\int_\Omega \left(\frac{s_{k+1}^h - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right)\, (r^h-s_{k+1}^h)\,dx + J(s_{k+1}^h,r^h-s_{k+1}^h) \ge 0$$
+for all $r^h$ in $\cK^h$
 
+\bigskip
+\item we seek an admissible new surface
+
+$s_{k+1}^h \in \cK^h$ solving this weak-form
     \begin{itemize}
-    \item[$\circ$] we seek an admissible new surface $s_{k+1} \in \cK$
+    \item[$\circ$] the computed \alert{glacier margin} is where
 
-solving this weak-form inequality
-    \item[$\circ$] the new \alert{glacier margin} is where $s_{k+1}$ meets $b$
+$s_{k+1}^h$ meets $b^h$
     \end{itemize}
 
-\vspace{-14mm}
-\hfill \includegraphics[width=0.3\textwidth]{figs/domain.png}
+\vspace{-27mm}
+\hfill \includegraphics[width=0.4\textwidth]{figs/domain-margin.png}
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage5/} part 2 \qquad a dome flowing outward}
+\frametitle{\texttt{stage5/}(b) \qquad a dome flowing outward}
 
 xx FIXME
 \end{frame}

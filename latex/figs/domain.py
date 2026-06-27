@@ -2,10 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from writeout import writeout
 
-#plt.rcParams["mathtext.font.family"] = "sans-serif"
-#plt.rcParams["mathtext.fontset"] = "cm"
-#plt.rcParams["mathtext.fontset"] = "stixsans"
-
 smallfsize=14.0
 fsize=18.0
 bigfsize=24.0
@@ -16,7 +12,6 @@ def genbasicfig(xshift=0.0, soffset=0.0):
     # bed elevation
     b = 0.07*(x-3.0)**2 + 0.2*np.sin(2.0*x) - 0.1
     plt.plot(x + xshift, b, 'k--', lw=2.5)
-    # current thickness for Omega^{n-1}
     h0 = 3.0
     L = 3.0
     firstshape = h0*(-0.2 + np.sqrt(np.maximum(0.0,1.0 - (x-5)**2/L**2)))
@@ -58,16 +53,9 @@ plt.plot([min(x),max(x)],[yR,yR],color='k',lw=1.0)
 plt.text(x[875],yR+0.2,r'$\Omega$',fontsize=fsize)
 #plt.axis([0.0,10.0,yR-0.8,4.5])
 
-# coordinate axes
-#z0 = min(b) - 0.1
-#x0 = -0.1
-#plt.plot([x0,max(x)],[z0,z0],color='k',lw=1.0)
-#plt.plot([x0,x0],[z0-0.1,max(z)],color='k',lw=1.0)
-#plt.text(max(x),z0,r'$x$',fontsize=fsize)
-#plt.text(max(x),z0,r'$x$',fontsize=fsize)
-#plt.axis([0.0,10.0,yR-0.8,4.5])
-
-#plt.axis([0.0,10.0,min(b)-0.03,4.5])
-
 plt.axis('off')
 writeout('domain.png')
+
+xm = [205, 795]
+plt.plot(x[xm], b[xm], 'r.', ms=24.0)
+writeout('domain-margin.png')
