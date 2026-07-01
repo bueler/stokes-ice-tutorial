@@ -11,6 +11,8 @@
 #   python3 solve.py -mx 400 -dt 0.01 -N 100 -noedge  # not reasonable; wiggles at edge
 
 # FIXME add CFL scheme, to avoid "piling up" at moving free margin
+# demonstrates need:
+#   ./solve.py -omovie movie.pvd -mx 400
 
 import argparse
 import sys
@@ -227,6 +229,7 @@ printpar(
 n_u, n_p = V.dim(), W.dim()
 printpar(f"  sizes: n_u = {n_u}, n_p = {n_p}")
 if args.omovie is not None:
+    printpar(f"opening {args.omovie} for writing u,p at each time step ...")
     movie = VTKFile(args.omovie)
 t = 0.0
 for k in range(args.N):
@@ -272,9 +275,10 @@ for k in range(args.N):
     set_mesh_geometry(mesh, s, xzorig=xzflat)
     t += dtsec
 
-printpar(f"t={t / secpera:.3f} a (done):")
+printpar(f"done ... t={t / secpera:.3f} a")
 report_shape(t, s)
-
+if args.omovie is not None:
+    printpar(f"done with file {args.omovie}")
 
 # generate tensor-valued deviatoric stress tau, and effective viscosity nu,
 #   from the velocity solution
