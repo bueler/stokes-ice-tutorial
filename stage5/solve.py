@@ -148,7 +148,7 @@ def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
 
-def form_stokes(mesh, up):
+def form_stokes(mesh, up, loadstab=False, dt=None):
     """Weak form for the Stokes problem on the geometry stored in the current
     mesh.  This must be called every time the geometry is re-set."""
     u, p = split(up)
@@ -157,11 +157,11 @@ def form_stokes(mesh, up):
     F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
     # body force source term
     F -= inner(as_vector([0.0, -rho * g]), v) * dx
-    if not args.noload:
+    if loadstab:
         # apply load (FSSA-type) coupling stabilization, (4.28) in Tominec et al 2026
         nn = FacetNormal(mesh)
         nsR = as_vector([-sR.dx(0), Constant(1.0)])
-        F += rho * g * dtsec * (0.5 * inner(u, nsR) + aR) * inner(v, nn) * ds_t
+        F += rho * g * dt * (0.5 * inner(u, nsR) + aR) * inner(v, nn) * ds_t
     return F
 
 
@@ -242,7 +242,7 @@ for k in range(args.N):
         # update s, a in R space (for stabilization)
         sR.dat.data[:] = s.dat.data_ro[:]
         aR.dat.data[:] = a.dat.data_ro[:]
-    F = form_stokes(mesh, up)
+    F = form_stokes(mesh, up, loadstab=(not args.noload), dt=dtsec)
     bcs = bcs_stokes(Z)  # why has to be re-set? (must use current s immediately?)
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
     u, p = up.subfunctions
