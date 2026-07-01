@@ -183,24 +183,28 @@ def bcs_stokes(Z):
     return bcs
 
 
-# weak form for surface kinematical equation
+# function spaces for surface kinematical equation
 snew = Function(P1base)
 omega = TestFunction(P1base)
 VP2base = VectorFunctionSpace(basemesh, "CG", 2, dim=2)
 uwsurf = Function(VP2base)
-# basic surface equation
-ns = as_vector([-s.dx(0), Constant(1.0)])
-Fske = ((snew - s) / dtsec - dot(uwsurf, ns) - a) * omega * dx
-if not args.noedge:
-    # implicit edge stabilization, formula (4.3) in Tominec et al 2026
-    hbase = CellDiameter(basemesh)
-    h = (hbase("+") + hbase("-")) / 2
-    nbase = FacetNormal(basemesh)
-    velmag = sqrt(dot(uwsurf, uwsurf))
-    gamma = 0.5 * h ** 2 * velmag
-    Fske += gamma * jump(grad(snew), nbase) * jump(grad(omega), nbase) * dS
+
+def form_ske(s, snew, dt):
+    """weak form for surface kinematical equation"""
+    ns = as_vector([-s.dx(0), Constant(1.0)])
+    Fske = ((snew - s) / dt - dot(uwsurf, ns) - a) * omega * dx
+    if not args.noedge:
+        # implicit edge stabilization, formula (4.3) in Tominec et al 2026
+        hbase = CellDiameter(basemesh)
+        h = (hbase("+") + hbase("-")) / 2
+        nbase = FacetNormal(basemesh)
+        velmag = sqrt(dot(uwsurf, uwsurf))
+        gamma = 0.5 * h ** 2 * velmag
+        Fske += gamma * jump(grad(snew), nbase) * jump(grad(omega), nbase) * dS
+    return Fske
 
 # set up surface kinematical equation solver, a variational inequality
+Fske = form_ske(s, snew, dtsec)
 probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
 solverske = NonlinearVariationalSolver(
     probske, solver_parameters=vipar, options_prefix="ske"
