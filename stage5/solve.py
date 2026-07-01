@@ -3,16 +3,19 @@
 # FIXME for doc
 # stable default run, *with* mass conservation:
 #   python3 solve.py -walls
+
+# FIXME what does Tominec et al say about CFL?  seems to me one can exceed CFL=1 *if* all stabilizations are on
+
+# FIXME also for doc
+# to make these work, there needs to be an option to turn off CFL time stepping
+# demonstrates need for CFL:
+#   ./solve.py -omovie movie.pvd -mx 400    # with turn-off and dt=1 a
 # easily destabilizes without load stabilization:
 #   python3 solve.py -walls -noload
 #   python3 solve.py -walls -noload -N 1   # visualize early slosh
-# harder to catch destabilization without edge stabilization:
+# harder to catch wiggles which happen without edge stabilization:
 #   python3 solve.py -mx 400 -dt 0.01 -N 100          # reasonable dome shape at t=1a
 #   python3 solve.py -mx 400 -dt 0.01 -N 100 -noedge  # not reasonable; wiggles at edge
-
-# FIXME add CFL scheme, to avoid "piling up" at moving free margin
-# demonstrates need:
-#   ./solve.py -omovie movie.pvd -mx 400
 
 import argparse
 import sys
@@ -21,18 +24,20 @@ parser = argparse.ArgumentParser(
     description="""stage5/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order mostly-explicit time-stepping based on the two Swedish stabilizations.  Initial shape is from the Halfar solution.""",
     add_help=False,
 )
-hs = "time step in years (default=1.0)"
-parser.add_argument("-dt", type=float, metavar="DT", default=1.0, help=hs)
+hs = "coefficient to use in CFL scheme for time-stepping (default=0.5)"
+parser.add_argument("-cfl", type=float, metavar="CFL", default=0.5, help=hs)
 hs = "regularization used in viscosity (default=10^{-4})"
 parser.add_argument("-eps", type=float, metavar="EPS", default=1.0e-4, help=hs)
 hs = "initial ice thickness in center (default=1000 m)"
 parser.add_argument("-H0", type=float, metavar="H0", default=1000.0, help=hs)
+hs = "maximum number of time steps (default=10000)"
+parser.add_argument("-maxN", type=int, metavar="N", default=10000, help=hs)
+hs = "maximum time step in years (default=1.0)"
+parser.add_argument("-maxdt", type=float, metavar="DT", default=1.0, help=hs)
 hs = "subintervals in coarse mesh (default=50)"
 parser.add_argument("-mx", type=int, metavar="MX", default=50, help=hs)
 hs = "vertical layers in coarse mesh (default=4)"
 parser.add_argument("-mz", type=int, metavar="MZ", default=4, help=hs)
-hs = "number of time steps (default=5)"
-parser.add_argument("-N", type=int, metavar="N", default=5, help=hs)
 hs = "turn off edge stabilization"
 parser.add_argument("-noedge", action="store_true", default=False, help=hs)
 hs = "turn off extrapolated-load (FSSA-type) stabilization"
@@ -43,6 +48,8 @@ hs = "output filename for movie; setting this name turns it on"
 parser.add_argument("-omovie", metavar="FILE.pvd", default=None, help=hs)
 hs = "print help for solve.py options and stop"
 parser.add_argument("-solvehelp", action="store_true", default=False, help=hs)
+hs = "end of run time in years (default=5.0)"
+parser.add_argument("-T", type=float, metavar="T", default=5.0, help=hs)
 hs = "put in no-tangential-traction walls so s>b everywhere"
 parser.add_argument("-walls", action="store_true", default=False, help=hs)
 args, passthroughoptions = parser.parse_known_args()
@@ -75,7 +82,6 @@ n = 3.0
 A3 = 3.1689e-24  # Pa-3 s-1;  EISMINT I value of ice softness
 B3 = A3 ** (-1.0 / 3.0)  # Pa s(1/3);  ice hardness
 Dtyp = 1.0 / secpera  # s-1;  strain rate scale
-dtsec = args.dt * secpera
 
 
 def set_halfar_profile(x, s, R0=10000.0, H0=args.H0):
@@ -183,13 +189,15 @@ def bcs_stokes(Z):
     return bcs
 
 
-# function spaces for surface kinematical equation
+# functions for surface kinematical equation
 snew = Function(P1base)
 omega = TestFunction(P1base)
 VP2base = VectorFunctionSpace(basemesh, "CG", 2, dim=2)
 uwsurf = Function(VP2base)
+lb = Function(P1base).interpolate(Constant(0.0))
+ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
-def form_ske(s, snew, dt):
+def form_ske(s, snew, dt=None):
     """weak form for surface kinematical equation"""
     ns = as_vector([-s.dx(0), Constant(1.0)])
     Fske = ((snew - s) / dt - dot(uwsurf, ns) - a) * omega * dx
@@ -202,15 +210,6 @@ def form_ske(s, snew, dt):
         gamma = 0.5 * h ** 2 * velmag
         Fske += gamma * jump(grad(snew), nbase) * jump(grad(omega), nbase) * dS
     return Fske
-
-# set up surface kinematical equation solver, a variational inequality
-Fske = form_ske(s, snew, dtsec)
-probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
-solverske = NonlinearVariationalSolver(
-    probske, solver_parameters=vipar, options_prefix="ske"
-)
-lb = Function(P1base).interpolate(Constant(0.0))
-ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
 
 def report_shape(t, s, stol=1.0):
@@ -227,16 +226,17 @@ def report_shape(t, s, stol=1.0):
 
 # time stepping loop
 deltax = 2.0 * L / args.mx
-printpar(
-    f"solving {args.N} steps (dt={args.dt:.3f}) on {args.mx} x {args.mz} mesh (dx = {deltax:.3f} m) ..."
-)
+printpar(f"solving on {args.mx} x {args.mz} mesh (dx = {deltax:.3f} m) ...")
 n_u, n_p = V.dim(), W.dim()
 printpar(f"  sizes: n_u = {n_u}, n_p = {n_p}")
 if args.omovie is not None:
     printpar(f"opening {args.omovie} for writing u,p at each time step ...")
     movie = VTKFile(args.omovie)
 t = 0.0
-for k in range(args.N):
+dtsec = None
+for k in range(args.maxN):
+    if t >= args.T * secpera:
+        break
     printpar(f"t={t / secpera:.3f} a (k={k}):")
     report_shape(t, s)
 
@@ -246,7 +246,12 @@ for k in range(args.N):
         # update s, a in R space (for stabilization)
         sR.dat.data[:] = s.dat.data_ro[:]
         aR.dat.data[:] = a.dat.data_ro[:]
-    F = form_stokes(mesh, up, loadstab=(not args.noload), dt=dtsec)
+    # FIXME at first step, the -noload stabilization needs dtsec to be set,
+    #       presumably by CFL after a Stokes solve w/o the -noload mechanism
+    if dtsec is None:
+        F = form_stokes(mesh, up, loadstab=False)
+    else:
+        F = form_stokes(mesh, up, loadstab=(not args.noload), dt=dtsec)
     bcs = bcs_stokes(Z)  # why has to be re-set? (must use current s immediately?)
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
     u, p = up.subfunctions
@@ -269,9 +274,19 @@ for k in range(args.N):
         f"  ice speed (m a-1) at t={t / secpera:.3f} a: av = {umagav * secpera:.3f}, max = {umagmax * secpera:.3f}"
     )
 
-    # solve SKE for one semi-implicit Euler time-step
+    # determine dt from CFL on umagmax (and -maxdt, -T options)
+    dtsec = args.cfl * deltax / umagmax
+    dtsec = np.array([dtsec, args.maxdt * secpera, args.T * secpera - t]).min()
+    printpar(f"  dt = {dtsec / secpera:.3f} a")
+
+    # solve SKE for one semi-implicit Euler time-step, a variational inequality
     trace_to_vector_p2base(basemesh, mesh, u, uwsurf)
     snew.interpolate(s)  # initial condition
+    Fske = form_ske(s, snew, dt=dtsec)
+    probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
+    solverske = NonlinearVariationalSolver(
+        probske, solver_parameters=vipar, options_prefix="ske"
+    )
     solverske.solve(bounds=(lb, ub))
     s.interpolate(snew)  # update surface elevation
 
