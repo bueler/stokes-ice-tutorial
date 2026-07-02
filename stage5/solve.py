@@ -38,6 +38,8 @@ hs = "subintervals in coarse mesh (default=50)"
 parser.add_argument("-mx", type=int, metavar="MX", default=50, help=hs)
 hs = "vertical layers in coarse mesh (default=4)"
 parser.add_argument("-mz", type=int, metavar="MZ", default=4, help=hs)
+hs = "turn off CFL determination of time step (instead use options -maxdt, -T for time axis)"
+parser.add_argument("-nocfl", action="store_true", default=False, help=hs)
 hs = "turn off edge stabilization"
 parser.add_argument("-noedge", action="store_true", default=False, help=hs)
 hs = "turn off extrapolated-load (FSSA-type) stabilization"
@@ -212,6 +214,15 @@ def form_ske(s, snew, dt=None):
     return Fske
 
 
+def get_dt(t, dx, umagmax):
+    """Determine dt from CFL and options."""
+    if not args.nocfl:
+        dtcfl = args.cfl * dx / umagmax
+    else:
+        dtcfl = PETSc.INFINITY
+    return np.array([dtcfl, args.maxdt * secpera, args.T * secpera - t]).min()
+
+
 def report_shape(t, s, stol=1.0):
     with s.dat.vec_ro as ss:
         smax = ss.max()[1]
@@ -274,9 +285,7 @@ for k in range(args.maxN):
         f"  ice speed (m a-1) at t={t / secpera:.3f} a: av = {umagav * secpera:.3f}, max = {umagmax * secpera:.3f}"
     )
 
-    # determine dt from CFL on umagmax (and -maxdt, -T options)
-    dtsec = args.cfl * deltax / umagmax
-    dtsec = np.array([dtsec, args.maxdt * secpera, args.T * secpera - t]).min()
+    dtsec = get_dt(t, deltax, umagmax)
     printpar(f"  dt = {dtsec / secpera:.3f} a")
 
     # solve SKE for one semi-implicit Euler time-step, a variational inequality
