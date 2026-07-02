@@ -6,16 +6,15 @@
 
 # FIXME what does Tominec et al say about CFL?  seems to me one can exceed CFL=1 *if* all stabilizations are on
 
-# FIXME also for doc
-# to make these work, there needs to be an option to turn off CFL time stepping
+# FIXME for doc
 # demonstrates need for CFL:
-#   ./solve.py -omovie movie.pvd -mx 400    # with turn-off and dt=1 a
-# easily destabilizes without load stabilization:
-#   python3 solve.py -walls -noload
-#   python3 solve.py -walls -noload -N 1   # visualize early slosh
+#   python3 solve.py -nocfl -mx 100 -omovie movie.pvd   # with CFL turned off (and dt=1 a)
+# easily destabilizes without load stabilization; visualize slosh
+#   python3 solve.py -walls -noload -maxN 1         # mild slosh is already wrong
+#   python3 solve.py -walls -noload -maxN 1 -nocfl  # severe slosh without CFL
 # harder to catch wiggles which happen without edge stabilization:
-#   python3 solve.py -mx 400 -dt 0.01 -N 100          # reasonable dome shape at t=1a
-#   python3 solve.py -mx 400 -dt 0.01 -N 100 -noedge  # not reasonable; wiggles at edge
+#   python3 solve.py -mx 400 -T 1          # reasonable dome shape
+#   python3 solve.py -mx 400 -T 1 -noedge  # not reasonable; wiggles at edge
 
 import argparse
 import sys
