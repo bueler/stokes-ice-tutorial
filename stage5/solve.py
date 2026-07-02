@@ -4,17 +4,20 @@
 # stable default run, *with* mass conservation:
 #   python3 solve.py -walls
 
-# FIXME what does Tominec et al say about CFL?  seems to me one can exceed CFL=1 *if* all stabilizations are on
-
 # FIXME for doc
-# demonstrates need for CFL:
-#   python3 solve.py -nocfl -mx 100 -omovie movie.pvd   # with CFL turned off (and dt=1 a)
 # easily destabilizes without load stabilization; visualize slosh
 #   python3 solve.py -walls -noload -maxN 1         # mild slosh is already wrong
 #   python3 solve.py -walls -noload -maxN 1 -nocfl  # severe slosh without CFL
-# harder to catch wiggles which happen without edge stabilization:
+# margin wiggles which happen without edge stabilization:
 #   python3 solve.py -mx 400 -T 1          # reasonable dome shape
 #   python3 solve.py -mx 400 -T 1 -noedge  # not reasonable; wiggles at edge
+
+# FIXME Tominec et al says nothing about CFL; this run demonstrates need for CFL,
+# in the sense that the solution is wrong (not downsloping); this is partly about
+# advancing the margin at most one cell per time step
+#   python3 solve.py -nocfl -mx 100 -omovie movie.pvd   # with CFL turned off (and dt=1 a)
+
+# FIXME assess accuracy against Halfar solution, for eps << 1
 
 import argparse
 import sys
