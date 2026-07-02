@@ -20,7 +20,7 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage5/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order mostly-explicit time-stepping based on the two Swedish stabilizations.  Initial shape is from the Halfar solution.""",
+    description="""stage5/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order mostly-explicit time-stepping based on the two Swedish stabilizations and a CFL criterion for the time step.  Initial shape is from the Halfar solution.""",
     add_help=False,
 )
 hs = "coefficient to use in CFL scheme for time-stepping (default=0.5)"
@@ -155,7 +155,9 @@ def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
 
-def form_stokes(mesh, up, loadstab=False, dt=None):
+dt_loadstab = Constant(0.0)
+
+def form_stokes(loadstab=False):
     """Weak form for the Stokes problem on the geometry stored in the current
     mesh.  This must be called every time the geometry is re-set."""
     u, p = split(up)
@@ -168,7 +170,7 @@ def form_stokes(mesh, up, loadstab=False, dt=None):
         # apply load (FSSA-type) coupling stabilization, (4.28) in Tominec et al 2026
         nn = FacetNormal(mesh)
         nsR = as_vector([-sR.dx(0), Constant(1.0)])
-        F += rho * g * dt * (0.5 * inner(u, nsR) + aR) * inner(v, nn) * ds_t
+        F += rho * g * dt_loadstab * (0.5 * inner(u, nsR) + aR) * inner(v, nn) * ds_t
     return F
 
 
@@ -198,10 +200,12 @@ uwsurf = Function(VP2base)
 lb = Function(P1base).interpolate(Constant(0.0))
 ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
-def form_ske(s, snew, dt=None):
+dt_ske = Constant(0.0)
+
+def form_ske():
     """weak form for surface kinematical equation"""
     ns = as_vector([-s.dx(0), Constant(1.0)])
-    Fske = ((snew - s) / dt - dot(uwsurf, ns) - a) * omega * dx
+    Fske = ((snew - s) / dt_ske - dot(uwsurf, ns) - a) * omega * dx
     if not args.noedge:
         # implicit edge stabilization, formula (4.3) in Tominec et al 2026
         hbase = CellDiameter(basemesh)
@@ -234,6 +238,14 @@ def report_shape(t, s, stol=1.0):
     )
 
 
+# set up SKE solver
+Fske = form_ske()
+probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
+solverske = NonlinearVariationalSolver(
+    probske, solver_parameters=vipar, options_prefix="ske"
+)
+
+
 # time stepping loop
 deltax = 2.0 * L / args.mx
 printpar(f"solving on {args.mx} x {args.mz} mesh (dx = {deltax:.3f} m) ...")
@@ -259,10 +271,12 @@ for k in range(args.maxN):
     # FIXME at first step, the -noload stabilization needs dtsec to be set,
     #       presumably by CFL after a Stokes solve w/o the -noload mechanism
     if dtsec is None:
-        F = form_stokes(mesh, up, loadstab=False)
+        F = form_stokes(loadstab=False)
     else:
-        F = form_stokes(mesh, up, loadstab=(not args.noload), dt=dtsec)
-    bcs = bcs_stokes(Z)  # why has to be re-set? (must use current s immediately?)
+        dt_loadstab.assign(dtsec)
+        if k < 2:
+            F = form_stokes(loadstab=(not args.noload))
+    bcs = bcs_stokes(Z)  # has to be re-set because PinchColumnX uses current s
     solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
     u, p = up.subfunctions
 
@@ -290,11 +304,7 @@ for k in range(args.maxN):
     # solve SKE for one semi-implicit Euler time-step, a variational inequality
     trace_to_vector_p2base(basemesh, mesh, u, uwsurf)
     snew.interpolate(s)  # initial condition
-    Fske = form_ske(s, snew, dt=dtsec)
-    probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
-    solverske = NonlinearVariationalSolver(
-        probske, solver_parameters=vipar, options_prefix="ske"
-    )
+    dt_ske.assign(dtsec)
     solverske.solve(bounds=(lb, ub))
     s.interpolate(snew)  # update surface elevation
 
