@@ -150,10 +150,9 @@
 
 \section{stage 0 \hspace{9.3mm} the glacier dynamics problem}
 
-\begin{frame}{glacier dynamics using the Stokes model}
+\begin{frame}{glacier dynamics using the Stokes model: the high-level view}
 
 \begin{itemize}
-\item before the equations, what is the high-level view of the model? 
 \item we apply conservation principles to glaciers:
     \begin{itemize}
     \item[$\circ$] mass conservation \hfill \cmark
@@ -167,7 +166,7 @@
 \item glaciers are a ``slow flow'' problem because the forces of inertia are tiny
     \begin{itemize}
     \item[$\circ$] momentum conservation is called a ``stress balance''
-    \item[$\circ$] \alert{velocity \& pressure are determined by current geometry \& boundary stress}
+    \item[$\circ$] \alert{velocity \& pressure are instantaneously determined by current geometry \& boundary stresses}
     \end{itemize}
 
 \bigskip
@@ -183,33 +182,32 @@
 \end{frame}
 
 
-\begin{frame}{Glen-Stokes equations}
+\begin{frame}{Glen-Nye-Stokes equations}
 
 \begin{itemize}
-\item notation: $\bu$ is velocity, $p$ is pressure, and $\tau$ is the deviatoric stress tensor
-\item $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain-rate tensor
+\item notation: $\bu$ is velocity, $p$ is pressure, and $\tau$ is deviatoric stress tensor
+\item $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is strain-rate tensor
 \item the main equations:
-
-\begin{columns}
-\begin{column}{0.8\textwidth}
 \begin{align*}
-- \Div \tau + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
+- \Div \tau + \nabla p &= \rho \bg &&\text{\emph{stress balance}} &&\phantom{dlfsj fdasj} \\
 \Div \bu &= 0 &&\text{\emph{incompressibility}} \\
 \tau = B_n &|D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{Glen-Nye flow law}}
 \end{align*}
-\end{column}
 
-\begin{column}{0.2\textwidth}
+\vspace{-25mm}
 
-\vspace{3mm}
 %https://www.bl.uk/voices-of-science/interviewees/john-glen#
-\hfill \includegraphics[width=0.6\textwidth]{figs/people/jglen.png}
+\hfill \includegraphics[width=0.12\textwidth]{figs/people/jglen.png}
+%https://www.igsoc.org/john-f-nye-1923-2019
 
 \hfill {\tiny John Glen}
-\end{column}
-\end{columns}
 
-\smallskip
+\medskip
+\hfill \includegraphics[width=0.12\textwidth]{figs/people/jnye.jpg}
+
+\hfill {\tiny John Nye}
+
+\vspace{-10mm}
 
 \item constants (\emph{with default values in demos}):
     \begin{itemize}
@@ -229,7 +227,7 @@
 \item however, the viscosity formula $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ yields unbounded values as $D\bu\to 0$ (vanishing strain rates)
 \item so we also regularize with \alert{$\eps>0$} to generate bounded viscosity
 
-\begin{block}{Glen-Stokes equations with regularized viscosity}
+\begin{block}{Glen-Nye-Stokes equations with regularized viscosity}
 
 \begin{align*}
 - \Div \left(2 \alert{\nu_\eps} D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
@@ -326,9 +324,9 @@
     $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 with $\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}$
 
-\bigskip
+\smallskip
 \item we write this using the \emph{Unified Form Language} (UFL) from Firedrake
-\item it cleanly translates:
+\item the residual function translates cleanly:
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
@@ -414,7 +412,7 @@ since $(-\Div)^\top = \grad$, conceptually-speaking
 \end{column}
 
 \begin{column}{0.4\textwidth}
-\hfill \includegraphics[width=0.4\textwidth]{figs/people/gstokes.jpg}
+\hfill \includegraphics[width=0.35\textwidth]{figs/people/gstokes.jpg}
 
 \hfill {\tiny George Stokes}
 
@@ -517,7 +515,7 @@ $ paraview domain.pvd            # view the solution
 \end{frame}
 
 
-\section{\texttt{stage2/} \qquad Glen-Stokes for glacier ice}
+\section{\texttt{stage2/} \qquad Glen-Nye-Stokes for glacier ice}
 
 \begin{frame}{Newton's method}
 
@@ -585,7 +583,7 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \section{\texttt{stage3/} \qquad extruded meshes and bells \& whistles}
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage3/} \qquad bells and whistles}
+\frametitle{\texttt{stage3/} \qquad an extruded mesh, and more}
 
 \begin{itemize}
 \item \emph{purpose:} additional robust and/or useful features
@@ -856,14 +854,18 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
     \begin{itemize}
     \item[$\circ$] the method everyone tries first is to solve Stokes for the current geometry, then advance the surface, and repeat
     \item[$\circ$] this is a \emph{split} and \emph{explicit} approach to the coupled problem
+    \item[$\circ$] the result is \alert{limited performance because of poorly-understood time-step restrictions}
     \end{itemize}
-\item result: limited performance because of time-step restrictions
 
 \bigskip
 \item challenges in designing better schemes:
     \begin{itemize}
-    \item[$\circ$] the coupled problem mixes advective and diffusive aspects, so the precise restriction remains unclear (Bueler (2023), and references therein)
     \item[$\circ$] coupling aspect II, that $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved, ties the surface $s$ to the mesh used for the $\bu,p$ solver; this makes a monolithic or implicit implementation difficult
+    \item[$\circ$] the coupled problem mixes advective and diffusive aspects
+        \begin{itemize}
+        \item the precise time-step restriction, and expected scaling, remains unclear
+        \item see Bueler (2023), and references therein
+        \end{itemize}
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -909,9 +911,9 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{technique 1: implicit edge stabilization in free-surface equation}
 
 \begin{itemize}
-\item motivated by similar stabilizations used in FE advection solvers
+\item this technique is from Tominec et al (2026)
     \begin{itemize}
-    \item[$\circ$] see Tominec et al (2026) and references therein
+    \item[$\circ$] it is motivated by similar stabilizations used in FE advection solvers
     \end{itemize}
 \item add FE \alert{edge stabilization}, applied \alert{implicitly}:
     $$\int_{\Omega^h} \left(\frac{\alert{s_{k+1}^h} - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right) r^h\,dx + J(\alert{s_{k+1}^h},r^h) = 0$$
@@ -926,7 +928,7 @@ where
 
 \medskip
 \item surface velocity and slope are evaluated explicitly, at $t_k$
-\item the implicit system to solve for $\alert{s_{k+1}^h}$ is linear
+\item the system to solve for $\alert{s_{k+1}^h}$ is \emph{linear}
 \end{itemize}
 \end{frame}
 
@@ -934,8 +936,9 @@ where
 \begin{frame}{technique 2: semi-implicit coupling heuristic in stress balance}
 
 \begin{itemize}
-\item from Tominec et al (2026), based on L\"ofgren et al (2022)
-\item the stress balance is modifed by adding an extrapolated (and symmetrized) load on the upper surface as a coupling stabilization:
+\item also from Tominec et al (2026), but based on L\"ofgren et al (2022)
+\item the stress balance is modified to stabilize the coupling
+\item we \alert{add an extrapolated (and symmetrized) load on the upper surface}:
 {\small
 \begin{align*}
 \int_{\Lambda(t_k)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rho \mathbf{g} \cdot \bv\,dx \qquad& \\
@@ -945,11 +948,12 @@ where
     \begin{itemize}
     \item[$\circ$] the Stokes domain $\Lambda(t_k)$ is defined by the current surface elevation $s_k$
     \item[$\circ$] $\Gamma_s(t_k)$ is the upper surface of $\Lambda(t_k)$
-    \item[$\circ$] $\bn$ is the outward \emph{unit} normal on $\Gamma_s(t_k)$, while $\bn_{s_k}=\left<-\grad s_k,1\right>$
+    \item[$\circ$] $\bn_{s_k}=\left<-\grad s_k,1\right>$ is an outward normal on $\Gamma_s(t_k)$
+    \item[$\circ$] $\bn=\bn_{s_k}/|\bn_{s_k}|$ is the outward \emph{unit} normal 
     \end{itemize}
 }
 \item L\"ofgren et al (2022) use Reynold's transport theorem to motivate this type of stabilization of the coupled system
-\item Tominec et al (2026) \alert{prove} that techniques 1 \& 2 together stabilize the $L^2$ norm of the evolving surface, and that mass is conserved when $s>b$
+\item Tominec et al (2026) \alert{prove} that techniques 1 \& 2 together stabilize the $L^2$ norm of the evolving surface
 \end{itemize}
 \end{frame}
 
@@ -986,15 +990,14 @@ $ paraview dome.pvd
 \begin{frame}{time-stepping stability (and need for technique 2)}
 
 \begin{itemize}
-\item for runs using both techniques \alert{$\Delta t=1$ a was stable} at all tested resolutions
-
-\medskip
 \item without technique 2, time steps are significantly restricted
-\item runs w/o technique 2 produce ``sloshing'' (L\"ofgren et al (2022)), and then Stokes solver failures
+    \begin{itemize}
+    \item[$\circ$] without it, runs produce ``sloshing'' (L\"ofgren et al 2022), and then Stokes solver failures
+    \end{itemize}
 \item for each resolution in this table we start with $\Delta t=1$ a, and reduce $\Delta t$ by a factor of two until the $5$ a run completes without a solver failure
 
 % typical run:
-%   ./solve.py -walls -noload -mx 50 -dt 0.25 -N 20   % for dx = 320
+%   ./solve.py -walls -noload -mx 50 -nocfl -maxdt 0.25 -N 20   % for dx = 320
 \medskip
 \begin{center}
 \small
@@ -1010,27 +1013,26 @@ $40$ & $0.125$
 \end{center}
 
 \medskip
-\item see Tominec et al (2026) and L\"ofgren et al (2022) for more experimentation
+\item see Tominec et al (2026) for more experimentation
 \item next we consider a free-boundary glacier
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}{technique 3: variational inequality for free surface}
+\begin{frame}{variational inequality for free surface}
 
 \begin{itemize}
-\item to state the obvious, \alert{glacier surface elevation must be above the bed}
+\item however, the \alert{surface elevation must be above the bed}
     \begin{itemize}
-    \item[$\circ$] enforcing this fact provides the (lateral) free-boundary condition
-    \item[$\circ$] at the free boundary the ice thickness and ice flux are both zero
+    \item[$\circ$] enforcing this obvious fact provides the (lateral) free-boundary condition for real glaciers, the \emph{glacier margin condition}, at which the thickness and flux are both zero
     \end{itemize}
 
-\medskip
+\smallskip
 \item suppose a (time-independent) bed elevation function $b(x,y)$
     \begin{itemize}
     \item[$\circ$] the meshed $\text{CG}_1$ bed is denoted $b^h$
     \end{itemize}
-\item define the FE \alert{admissible set $\cK^h = \left\{r^h \in \text{CG}_1 \,:\, r^h\ge b^h\right\}$} for surfaces
+\item define the FE \alert{admissible set $\cK^h = \left\{r^h \in \text{CG}_1 \,:\, r^h\ge b^h\right\}$}1
 \item the weak-form free-surface ``equation'' is actually a \alert{variational inequality}:
     $$\int_\Omega \left(\frac{s_{k+1}^h - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right)\, (r^h-s_{k+1}^h)\,dx + J(s_{k+1}^h,r^h-s_{k+1}^h) \ge 0$$
 for all $r^h$ in $\cK^h$
@@ -1040,9 +1042,9 @@ for all $r^h$ in $\cK^h$
 
 $s_{k+1}^h \in \cK^h$ solving this weak-form
     \begin{itemize}
-    \item[$\circ$] the computed \alert{glacier margin} is where
+    \item[$\circ$] the computed \alert{glacier margin} is
 
-$s_{k+1}^h$ meets $b^h$
+where $s_{k+1}^h$ meets $b^h$
     \end{itemize}
 
 \vspace{-27mm}
