@@ -23,15 +23,17 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage5/  Solve the coupled surface kinematical (free-surface) equation and Glen-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order mostly-explicit time-stepping based on the two Swedish stabilizations and a CFL criterion for the time step.  Initial shape is from the Halfar solution.""",
+    description="""stage5/  Solve the coupled surface kinematical (free-surface) equation and Glen-Nye-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order mostly-explicit time-stepping based on 2 Swedish stabilizations.  Applies a CFL criterion to determine the time step.  Initial shape is from the Halfar solution.""",
     add_help=False,
 )
 hs = "coefficient to use in CFL scheme for time-stepping (default=0.5)"
 parser.add_argument("-cfl", type=float, metavar="CFL", default=0.5, help=hs)
-hs = "regularization used in viscosity (default=10^{-4})"
+hs = "regularization used in viscosity (default=1.0e-4)"
 parser.add_argument("-eps", type=float, metavar="EPS", default=1.0e-4, help=hs)
-hs = "initial ice thickness in center (default=1000 m)"
+hs = "initial ice thickness in center of dome (default=1000 m)"
 parser.add_argument("-H0", type=float, metavar="H0", default=1000.0, help=hs)
+hs = "half-width of computational domain (default=15000 m)"
+parser.add_argument("-L", type=float, metavar="L", default=15000.0, help=hs)
 hs = "maximum number of time steps (default=10000)"
 parser.add_argument("-maxN", type=int, metavar="N", default=10000, help=hs)
 hs = "maximum time step in years (default=1.0)"
@@ -48,8 +50,10 @@ hs = "turn off extrapolated-load (FSSA-type) stabilization"
 parser.add_argument("-noload", action="store_true", default=False, help=hs)
 hs = "output filename (default=dome.pvd)"
 parser.add_argument("-o", metavar="FILE.pvd", default="dome.pvd", help=hs)
-hs = "output filename for movie; setting this name turns it on"
+hs = "output filename for movie; provide .pvd name to turn movie on"
 parser.add_argument("-omovie", metavar="FILE.pvd", default=None, help=hs)
+hs = "initial half-width of dome (default=10000 m)"
+parser.add_argument("-R0", type=float, metavar="R0", default=10000.0, help=hs)
 hs = "print help for solve.py options and stop"
 parser.add_argument("-solvehelp", action="store_true", default=False, help=hs)
 hs = "end of run time in years (default=5.0)"
@@ -88,7 +92,7 @@ B3 = A3 ** (-1.0 / 3.0)  # Pa s(1/3);  ice hardness
 Dtyp = 1.0 / secpera  # s-1;  strain rate scale
 
 
-def set_halfar_profile(x, s, R0=10000.0, H0=args.H0):
+def set_halfar_profile(x, s, R0=args.R0, H0=args.H0):
     # Set surface geometry from t = t0 Halfar time-dependent SIA geometry solution,
     # a dome with zero SMB.  The surface is zero outside of (-R0,R0).  Reference:
     #   * P. Halfar (1981), On the dynamics of the ice sheets, J. Geophys. Res. 86 (C11), 11065--11072
@@ -99,11 +103,7 @@ def set_halfar_profile(x, s, R0=10000.0, H0=args.H0):
 
 
 # create 1D base mesh
-if args.walls:
-    L = 8000.0  # here s>b initially (and later too) because L < R0
-else:
-    L = 15000.0  # initial margin locations at +-R0 in Halfar profile
-basemesh = IntervalMesh(args.mx, -L, L)
+basemesh = IntervalMesh(args.mx, -args.L, args.L)
 xbase = SpatialCoordinate(basemesh)
 P1base = FunctionSpace(basemesh, "Lagrange", 1)
 
@@ -230,9 +230,9 @@ def get_dt(t, dx, umagmax):
 
 
 def report_shape(t, s, stol=1.0):
+    # FIXME not correct in parallel; also fails if one process has no ice
     with s.dat.vec_ro as ss:
         smax = ss.max()[1]
-    # following not parallel
     xx = basemesh.coordinates.dat.data_ro
     width = xx[s.dat.data_ro > stol].max() - xx[s.dat.data_ro > stol].min()
     area = assemble(s * dx)
@@ -250,7 +250,7 @@ solverske = NonlinearVariationalSolver(
 
 
 # time stepping loop
-deltax = 2.0 * L / args.mx
+deltax = 2.0 * args.L / args.mx
 printpar(f"solving on {args.mx} x {args.mz} mesh (dx = {deltax:.3f} m) ...")
 n_u, n_p = V.dim(), W.dim()
 printpar(f"  sizes: n_u = {n_u}, n_p = {n_p}")
