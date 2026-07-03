@@ -858,16 +858,16 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
     \end{itemize}
 
 \bigskip
-\item challenges in designing better schemes:
-    \begin{itemize}
-    \item[$\circ$] coupling aspect II, that $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved, ties the surface $s$ to the mesh used for the $\bu,p$ solver; this makes a monolithic or implicit implementation difficult
-    \item[$\circ$] the coupled problem mixes advective and diffusive aspects
-        \begin{itemize}
-        \item the precise time-step restriction, and expected scaling, remains unclear
-        \item see Bueler (2023), and references therein
-        \end{itemize}
-    \end{itemize}
+\item what are the challenges in designing better schemes?  here are two
 \end{itemize}
+
+\begin{enumerate}
+\item Recall that $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved.  Therefore each time the surface $s$ changes the FE mesh used for the $\bu,p$ solver also changes.  This makes a monolithic or implicit implementations difficult.
+\item The coupled problem mixes advective and diffusive aspects to a degree that depends on the particular boundary conditions.
+    \begin{itemize}
+    \item the precise time-step restriction, and thus the expected performance scaling, remains unclear; see Bueler (2023), and references therein
+    \end{itemize}
+\end{enumerate}
 \end{frame}
 
 
@@ -882,18 +882,16 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \medskip
 \item it is based on these choices:
     \begin{enumerate}
-    \item[1.] use first-order and mostly explicit time-stepping
+    \item[1.] we use first-order, and mostly explicit, time-stepping
         \begin{itemize}
-        \item[$\circ$] $\frac{\partial s}{\partial t} \approx \frac{s_{k+1}-s_k}{\Delta t}$
-
-\smallskip
-        \item[$\circ$] but add an implicit free-surface \alert{stabilization}
+        \item[$\circ$] we add an implicit free-surface \alert{stabilization}
+        \item[$\circ$] we determine the time step by a CFL condition
         \end{itemize}
-    \item[2.] split the coupled system, alternating free-surface and Stokes solves
+    \item[2.] we split the coupled system, alternating free-surface and Stokes solves
         \begin{itemize}
-        \item[$\circ$] but add a \alert{stabilizing} semi-implicit heuristic to the Stokes solver
+        \item[$\circ$] we add a \alert{stabilizing} semi-implicit load heuristic to the Stokes solver
         \end{itemize}
-    \item[3.] use $P_1$ elements for $s$, and \alert{stable} $P_2\times P_1$ elements (\emph{as before}) for $\bu,p$
+    \item[3.] we use $P_1$ elements for $s$, and \alert{stable} $P_2\times P_1$ elements (\emph{as before}) for $\bu,p$
         \begin{itemize}
         \item[$\circ$] note that $s\in P_1$ means $\Lambda(t)$ is polygonal
         \end{itemize}
@@ -958,6 +956,14 @@ where
 \end{frame}
 
 
+\begin{frame}{technique 3: CFL determination of time step}
+
+\begin{itemize}
+\item FIXME
+\end{itemize}
+\end{frame}
+
+
 \begin{frame}[fragile]
 \frametitle{\texttt{stage5/}(a) \qquad slumping in a box}
 
@@ -970,7 +976,7 @@ where
 \bigskip
 \begin{Verbatim}
 $ cd stage5/
-$ python3 solve.py -walls
+$ python3 solve.py -walls -L 8000
 $ paraview dome.pvd
 \end{Verbatim}
 %$
@@ -987,17 +993,16 @@ $ paraview dome.pvd
 \end{frame}
 
 
-\begin{frame}{time-stepping stability (and need for technique 2)}
+\begin{frame}[fragile]
+\frametitle{time-stepping stability (and need for technique 2)}
 
 \begin{itemize}
-\item without technique 2, time steps are significantly restricted
+\item without technique 2, the maximum size of the stable time step is significantly restricted
     \begin{itemize}
-    \item[$\circ$] without it, runs produce ``sloshing'' (L\"ofgren et al 2022), and then Stokes solver failures
+    \item[$\circ$] runs produce ``sloshing'' (L\"ofgren et al 2022) and Stokes solver failures
     \end{itemize}
 \item for each resolution in this table we start with $\Delta t=1$ a, and reduce $\Delta t$ by a factor of two until the $5$ a run completes without a solver failure
 
-% typical run:
-%   ./solve.py -walls -noload -mx 50 -nocfl -maxdt 0.25 -N 20   % for dx = 320
 \medskip
 \begin{center}
 \small
@@ -1012,43 +1017,66 @@ $40$ & $0.125$
 \normalsize
 \end{center}
 
+\smallskip
+    \begin{itemize}
+    \item[$\circ$] runs to produce table:
+\begin{Verbatim}[fontsize=\footnotesize,xleftmargin=-2mm]
+$ python3 solve.py -walls -L 8000 -noload -nocfl -mx MX -maxdt DT
+\end{Verbatim}
+%$
+    \item[$\circ$] use \texttt{MX}$=25,50,100,200,400$
+    \end{itemize}
+
 \medskip
-\item see Tominec et al (2026) for more experimentation
-\item next we consider a free-boundary glacier
+\item see Tominec et al (2026) for more experimentation of this type
+\item our scheme using all techniques has no such time-step restrictions
 \end{itemize}
+\end{frame}
+
+
+\begin{frame}{glaciers have margins}
+
+\begin{itemize}
+\item however, the \alert{surface elevation must be above the bed}
+\item enforcing this obvious fact provides the (lateral) free-boundary condition for a land-based glacier
+\item solving the coupled problem subject to this condition determines the location of the \alert{glacier margin}
+    \begin{itemize}
+    \item[$\circ$] the thickness and flux are both zero at the margin
+    \end{itemize}
+\end{itemize}
+
+\bigskip
+\centering
+\includegraphics[width=0.6\textwidth]{figs/domain-margin.png}
 \end{frame}
 
 
 \begin{frame}{variational inequality for free surface}
 
 \begin{itemize}
-\item however, the \alert{surface elevation must be above the bed}
-    \begin{itemize}
-    \item[$\circ$] enforcing this obvious fact provides the (lateral) free-boundary condition for real glaciers, the \emph{glacier margin condition}, at which the thickness and flux are both zero
-    \end{itemize}
-
-\smallskip
 \item suppose a (time-independent) bed elevation function $b(x,y)$
     \begin{itemize}
     \item[$\circ$] the meshed $\text{CG}_1$ bed is denoted $b^h$
     \end{itemize}
-\item define the FE \alert{admissible set $\cK^h = \left\{r^h \in \text{CG}_1 \,:\, r^h\ge b^h\right\}$}1
-\item the weak-form free-surface ``equation'' is actually a \alert{variational inequality}:
+\item define the FE \alert{admissible set $\cK^h = \left\{r^h \in \text{CG}_1 \,:\, r^h\ge b^h\right\}$}
+\item the weak form solved by the FE free surface \alert{$s_{k+1}^h \in \cK^h$} is a \alert{variational inequality}:
     $$\int_\Omega \left(\frac{s_{k+1}^h - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right)\, (r^h-s_{k+1}^h)\,dx + J(s_{k+1}^h,r^h-s_{k+1}^h) \ge 0$$
 for all $r^h$ in $\cK^h$
 
-\bigskip
-\item we seek an admissible new surface
-
-$s_{k+1}^h \in \cK^h$ solving this weak-form
     \begin{itemize}
-    \item[$\circ$] the computed \alert{glacier margin} is
+    \item[$\circ$] this includes the edge
 
-where $s_{k+1}^h$ meets $b^h$
+stabilization
     \end{itemize}
 
-\vspace{-27mm}
-\hfill \includegraphics[width=0.4\textwidth]{figs/domain-margin.png}
+\item the computed margin
+
+location is where
+
+$s_{k+1}^h$ meets $b^h$
+
+\vspace{-24mm}
+\hfill \includegraphics[width=0.5\textwidth]{figs/domain-margin.png}
 \end{itemize}
 \end{frame}
 
@@ -1056,11 +1084,29 @@ where $s_{k+1}^h$ meets $b^h$
 \begin{frame}[fragile]
 \frametitle{\texttt{stage5/}(b) \qquad a dome flowing outward}
 
-xx FIXME
+\begin{itemize}
+\item \emph{purpose:} evolving free surface with a moving margin, exhibiting numerical stability
+\item \emph{source files:} \texttt{geometry.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
+\item \emph{generated file:} \texttt{movie.pvd}
+\end{itemize}
+
+\bigskip
+\begin{Verbatim}[fontsize=\small]
+$ python3 solve.py -mx 200 -mz 10 -T 100 -L 20000 -omovie mov.pvd
+$ paraview mov.pvd
+\end{Verbatim}
+
+\bigskip
+
+\mbox{\hspace{-12mm} \includegraphics[width=0.51\textwidth]{figs/stage5movingstart.png} $\to$ \quad \includegraphics[width=0.51\textwidth]{figs/stage5movingend.png}}
+
+\mbox{\hspace{15mm} \footnotesize $t=0$ a} \hspace{59mm} {\footnotesize $t=100$ a}
+
+\centerline{\footnotesize 10$\times$ vertical exaggeration, $\log(|\bu|)$ coloring}
 \end{frame}
 
 
-\begin{frame}{need for technique 1 when using technique 3}
+\begin{frame}{need for technique 1}
 
 FIXME runs with \texttt{-walls} do not show much need for technique 1
 
