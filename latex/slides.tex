@@ -89,9 +89,9 @@
 \newcommand{\surl}[2]{\,{\scriptsize \href{#1}{#2}}}
 
 
-\title{Stokes glacier models using Firedrake}
+\title{Stokes Glacier Models Using Firedrake}
 
-\subtitle{A finite element tutorial for ice dynamics}
+\subtitle{a finite element tutorial}
 
 \author{Ed Bueler}
 
@@ -150,7 +150,7 @@
 
 \section{stage 0 \hspace{9.3mm} the glacier dynamics problem}
 
-\begin{frame}{glacier dynamics using the Stokes model: the high-level view}
+\begin{frame}{glacier dynamics using a Stokes model: the high-level view}
 
 \begin{itemize}
 \item we apply conservation principles to glaciers:
@@ -166,19 +166,17 @@
 \item glaciers are a ``slow flow'' problem because the forces of inertia are tiny
     \begin{itemize}
     \item[$\circ$] momentum conservation is called a ``stress balance''
-    \item[$\circ$] \alert{velocity \& pressure are instantaneously determined by current geometry \& boundary stresses}
+    \item[$\circ$] velocity \& pressure are \alert{instantaneously determined} by current geometry \& boundary stresses
     \end{itemize}
+\item \alert{Stokes equations $=$ stress balance $+$ incompressibility}
+\end{itemize}
 
-\bigskip
+\bigskip\bigskip
+
 {\scriptsize velocity} \hfill \includegraphics[width=0.8\textwidth]{figs/speed.png}
 
 \medskip
 {\scriptsize pressure} \hfill \includegraphics[width=0.8\textwidth]{figs/pressure.png}
-
-\bigskip
-
-\item \alert{Stokes equations $=$ stress balance $+$ incompressibility}
-\end{itemize}
 \end{frame}
 
 
@@ -487,7 +485,7 @@ $ git clone https://github.com/bueler/stokes-ice-tutorial.git
 \item \emph{purpose:} solve linear Stokes on a trapezoidal ``glacier''
 
     \begin{itemize}
-    \item[$\circ$] simplified weak form
+    \item[$\circ$] weak form:
     \end{itemize}
 {\small
     $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_0\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
@@ -679,12 +677,8 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
 \medskip
 \begin{Verbatim}[fontsize=\footnotesize,xleftmargin=-4mm]
 $ python3 solve.py -mx 800 -refine 2               # 38 secs run time
-  ...
-  ice speed (m a-1): av = 1758.861, max = 3190.043
 
 $ mpiexec -n 4 python3 solve.py -mx 800 -refine 2  # 20 secs run time
-  ...
-  ice speed (m a-1): av = 1758.861, max = 3190.043
 \end{Verbatim}
 %$
 
@@ -764,13 +758,17 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \medskip
 \item[Q.] how do glaciers change shape?
 
-\item[A.] via the \alert{free-surface equation} (or kinematical equation):
+\item[A.] via the \alert{free-surface equation} (or surface kinematical equation):
    $$\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s = a$$
 
     \begin{itemize}
     \item[$\circ$] $z=s(t,x,y)$ is the surface elevation of the glacier
-    \item[$\circ$] $a(t,x,y)$ is the surface mass balance
+
+\smallskip
+    \item[$\circ$] $a(t,x,y)$ is the surface mass balance \strut
     \item[$\circ$] $\bn_s=\left<-\frac{\partial s}{\partial x},-\frac{\partial s}{\partial y},1\right>$ is a normal vector to the surface
+
+\smallskip
     \item[$\circ$] $\bu|_s$ is the surface value (\emph{trace}) of the Stokes solution velocity
     \end{itemize}
 
@@ -779,7 +777,6 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
     \begin{itemize}
     \item[$\circ$] $\Omega \subset \RR^d$ is a fixed map-plane region \hfill {\footnotesize \emph{$d=2$ in reality, $d=1$ for planar}}
     \end{itemize}
-\item the \emph{mass continuity} equation is an alternative to the free-surface equation
 \end{itemize}
 \end{frame}
 
@@ -790,8 +787,8 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \item so we have a \alert{coupled} system of simultaneous equations:
 \begin{align*}
 \frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
-- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
-\Div \bu &= 0 &&\text{\emph{incompressibility}}
+- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \phantom{\int}  \\
+\phantom{\int} \Div \bu &= 0 &&\text{\emph{incompressibility}}
 \end{align*}
 \end{itemize}
 
@@ -816,7 +813,8 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{weak form of coupled system of equations}
 
 \begin{itemize}
-\item get the weak form of the coupled system in the usual way, namely multiply by test functions and integrate by parts:
+\item get the weak form of the coupled system in the usual way \dots
+\item multiply by test functions and integrate by parts:
 {\small
 \begin{align*}
 \int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r\,dx &=0  &&\forall r \\
@@ -832,7 +830,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \item we need to make high-level choices about this coupled system:
     \begin{enumerate}
     \item[1.] time-stepping: explicit or implicit?
-    \item[2.] solve it together (\emph{monolithic}) or split?
+    \item[2.] solved together (\emph{monolithic}) or split?
     \item[3.] spaces and elements for $s,\bu,p$?
     \end{enumerate}
 \end{itemize}
@@ -840,8 +838,8 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{column}{0.45\textwidth}
 \phantom{foo}
 
-\vspace{2mm}
-\hfill \includegraphics[width=0.9\textwidth]{figs/domain.png}
+%\vspace{2mm}
+\hfill \includegraphics[width=\textwidth]{figs/domain.png}
 \end{column}
 \end{columns}
 \end{frame}
@@ -853,25 +851,25 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \item early/naive approaches to solving this coupled problem have been fragile
     \begin{itemize}
     \item[$\circ$] the method everyone tries first is to solve Stokes for the current geometry, then advance the surface, and repeat
-    \item[$\circ$] this is a \emph{split} and \emph{explicit} approach to the coupled problem
-    \item[$\circ$] the result is \alert{limited performance because of poorly-understood time-step restrictions}
+    \item[$\circ$] namely, a \emph{split} and \emph{explicit} approach to the coupled problem
+    \item[$\circ$] the result is \alert{limited performance} because of poorly-understood time-step restrictions
     \end{itemize}
 
 \bigskip
-\item what are the challenges in designing better schemes?  here are two
+\item what are the challenges in designing better schemes?  here are two:
 \end{itemize}
 
 \begin{enumerate}
-\item Recall that $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved.  Therefore each time the surface $s$ changes the FE mesh used for the $\bu,p$ solver also changes.  This makes a monolithic or implicit implementations difficult.
-\item The coupled problem mixes advective and diffusive aspects to a degree that depends on the particular boundary conditions.
+\item The surface elevation $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved.  Each time $s$ changes the mesh used for the $\bu,p$ solver also changes.  This makes a monolithic or implicit implementations difficult.
+\item The coupled problem mixes advective and diffusive aspects.  The proportions depend on the particular boundary conditions.
     \begin{itemize}
-    \item the precise time-step restriction, and thus the expected performance scaling, remains unclear; see Bueler (2023), and references therein
+    \item The precise time-step restriction, and the expected performance scaling, remains unclear (Bueler 2023 and references therein).
     \end{itemize}
 \end{enumerate}
 \end{frame}
 
 
-\begin{frame}{making choices}
+\begin{frame}{choices for \texttt{stage5/}}
 
 \begin{itemize}
 \item we will demonstrate a solver which is \alert{semi-implicit}, \alert{split}, and \alert{stabilized}
@@ -881,24 +879,31 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 
 \medskip
 \item it is based on these choices:
+
+\smallskip
     \begin{enumerate}
     \item[1.] we use first-order, and mostly explicit, time-stepping
         \begin{itemize}
-        \item[$\circ$] we add an implicit free-surface \alert{stabilization}
-        \item[$\circ$] we determine the time step by a CFL condition
+        \item[$\circ$] but we add implicit \alert{edge stabilization} in the free-surface equation
+        \item[$\circ$] and we determine the time step by a CFL condition
         \end{itemize}
+
+\smallskip
     \item[2.] we split the coupled system, alternating free-surface and Stokes solves
         \begin{itemize}
-        \item[$\circ$] we add a \alert{stabilizing} semi-implicit load heuristic to the Stokes solver
+        \item[$\circ$] but we add \alert{load stabilization} coupling to the Stokes solver
         \end{itemize}
-    \item[3.] we use $P_1$ elements for $s$, and \alert{stable} $P_2\times P_1$ elements (\emph{as before}) for $\bu,p$
+
+\smallskip
+    \item[3.] we use $P_1$ elements for $s$, and (inf-sup stable) $P_2\times P_1$ elements for $\bu,p$
         \begin{itemize}
         \item[$\circ$] note that $s\in P_1$ means $\Lambda(t)$ is polygonal
+        \item[$\circ$] elements for $\bu,p$ are the same as previous stages
         \end{itemize}
     \end{enumerate}
 
 \medskip
-\item the next slides give more detail on techniques \dots
+\item the next slides give more detail on these techniques \dots
 \end{itemize}
 \end{frame}
 
@@ -919,13 +924,14 @@ where
     $$J(s,r) = \sum_{e\in E^h} \int_e \tfrac{1}{2} h_e^2 \left|\bu|_{s_k^h}\right| \jump{\grad s} \jump{\grad r}\,dS$$
 
     \begin{itemize}
+    \item[$\circ$] $s_k^h$ is the FE approximation of surface elevation at time $t_k$
     \item[$\circ$] $E^h$ is the set of interior edges in the triangulation $\Omega^h$
     \item[$\circ$] $\jump{\bv} = \bv_+ \cdot \bn_+ - \bv_- \cdot \bn_-$ is the jump of a vector field along an edge
     \item[$\circ$] $h_e$ is the average of the diameters of the two cells which meet $e$
+    \item[$\circ$] note surface velocity and slope are evaluated explicitly, at $t_k$
     \end{itemize}
 
 \medskip
-\item surface velocity and slope are evaluated explicitly, at $t_k$
 \item the system to solve for $\alert{s_{k+1}^h}$ is \emph{linear}
 \end{itemize}
 \end{frame}
@@ -935,8 +941,7 @@ where
 
 \begin{itemize}
 \item also from Tominec et al (2026), but based on L\"ofgren et al (2022)
-\item the stress balance is modified to stabilize the coupling
-\item we \alert{add an extrapolated (and symmetrized) load on the upper surface}:
+\item we \alert{add an extrapolated surface mass balance load on the upper surface}:
 {\small
 \begin{align*}
 \int_{\Lambda(t_k)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rho \mathbf{g} \cdot \bv\,dx \qquad& \\
@@ -944,14 +949,20 @@ where
 \end{align*}
 
     \begin{itemize}
-    \item[$\circ$] the Stokes domain $\Lambda(t_k)$ is defined by the current surface elevation $s_k$
+    \item[$\circ$] $\Lambda(t_k)$ is the Stokes domain defined by the current surface elevation $s_k$
     \item[$\circ$] $\Gamma_s(t_k)$ is the upper surface of $\Lambda(t_k)$
     \item[$\circ$] $\bn_{s_k}=\left<-\grad s_k,1\right>$ is an outward normal on $\Gamma_s(t_k)$
     \item[$\circ$] $\bn=\bn_{s_k}/|\bn_{s_k}|$ is the outward \emph{unit} normal 
     \end{itemize}
 }
-\item L\"ofgren et al (2022) use Reynold's transport theorem to motivate this type of stabilization of the coupled system
-\item Tominec et al (2026) \alert{prove} that techniques 1 \& 2 together stabilize the $L^2$ norm of the evolving surface
+
+\medskip
+\item concept: the stress balance is modified so as to stabilize the coupling
+    \begin{itemize}
+    \item[$\circ$] L\"ofgren et al (2022) use Reynold's transport theorem to motivate this type of stabilization of the coupled system
+    \item[$\circ$] the above form is symmetrized relative to the L\"ofgren et al (2022) version
+    \item[$\circ$] Tominec et al (2026) \alert{prove} that techniques 1 \& 2 together stabilize the $L^2$ norm of the evolving surface
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
