@@ -5,9 +5,6 @@
 #   python3 solve.py -walls
 
 # FIXME for doc
-# easily destabilizes without load stabilization; visualize slosh
-#   python3 solve.py -walls -noload -maxN 1         # mild slosh is already wrong
-#   python3 solve.py -walls -noload -maxN 1 -nocfl  # severe slosh without CFL
 # margin wiggles which happen without edge stabilization:
 #   python3 solve.py -mx 400 -T 1          # reasonable dome shape
 #   python3 solve.py -mx 400 -T 1 -noedge  # not reasonable; wiggles at edge
@@ -26,8 +23,8 @@ parser = argparse.ArgumentParser(
     description="""stage5/  Solve the coupled surface kinematical (free-surface) equation and Glen-Nye-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order mostly-explicit time-stepping based on 2 Swedish stabilizations.  Applies a CFL criterion to determine the time step.  Initial shape is from the Halfar solution.""",
     add_help=False,
 )
-hs = "coefficient to use in CFL scheme for time-stepping (default=0.5)"
-parser.add_argument("-cfl", type=float, metavar="CFL", default=0.5, help=hs)
+hs = "coefficient to use in CFL scheme for time-stepping (default=0.25)"
+parser.add_argument("-cfl", type=float, metavar="CFL", default=0.25, help=hs)
 hs = "regularization used in viscosity (default=1.0e-4)"
 parser.add_argument("-eps", type=float, metavar="EPS", default=1.0e-4, help=hs)
 hs = "initial ice thickness in center of dome (default=1000 m)"
