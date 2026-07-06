@@ -1022,7 +1022,7 @@ $ paraview dome.pvd
 
 
 \begin{frame}[fragile]
-\frametitle{time-stepping stability (and need for technique 2)}
+\frametitle{instability showing need for stabilization technique 2}
 
 \begin{itemize}
 \item without technique 2, the maximum size of the stable time step is significantly restricted
@@ -1116,8 +1116,8 @@ is where $s_{k+1}^h$ meets $b^h$
 \medskip
 \begin{Verbatim}[fontsize=\small,xleftmargin=5mm]
 $ python3 solve.py -mx 200 -mz 10 -T 100 -L 20000 \
-    -omovie mov.pvd
-$ paraview mov.pvd
+    -omovie movie.pvd
+$ paraview movie.pvd
 \end{Verbatim}
 
 \bigskip
@@ -1130,19 +1130,50 @@ $ paraview mov.pvd
 \end{frame}
 
 
-\begin{frame}{need for technique 1}
+\begin{frame}[fragile]
+\frametitle{instability showing need for stabilization technique 1}
 
-FIXME runs with \texttt{-walls} do not show much need for technique 1
+\begin{itemize}
+\item especially near the glacier margin, edge stabilization (technique 1A) is clearly needed
+    \begin{itemize}
+    \item[$\circ$] runs with \texttt{-walls} do not show the need
+    \end{itemize}
+\item compare these runs:
+\begin{Verbatim}[fontsize=\small,xleftmargin=5mm]
+$ python3 solve.py -mx 200 -T 1
+\end{Verbatim}
+%$
 
-FIXME see runs at start of \texttt{stage5/solve.py}
+\hfill \includegraphics[width=0.7\textwidth]{figs/marginusual.png}
+
+\begin{Verbatim}[fontsize=\small,xleftmargin=5mm]
+$ python3 solve.py -mx 200 -T 1 -noedge
+\end{Verbatim}
+%$
+
+\hfill \includegraphics[width=0.7\textwidth]{figs/marginnoedge.png}
+
+\medskip
+\item the need to use CFL for time-step length (technique 1B) is more subtle
+    \begin{itemize}
+    \item[$\circ$] compare the margin shape at the end of these two runs:
+
+\begin{Verbatim}[fontsize=\small,xleftmargin=10mm]
+$ python3 solve.py -mx 100
+$ python3 solve.py -mx 100 -nocfl -maxdt 1.0
+\end{Verbatim}
+    \item[$\circ$] the first run, using CFL, had time steps varying from $0.02$ a to $0.25$ a
+    \item[$\circ$] the margin shape in the second run is clearly wrong, but not wildly unstable either (\emph{not shown})
+    \end{itemize}
+\end{itemize}
 \end{frame}
 
 
-\begin{frame}{difficulties with free boundaries}
+\begin{frame}{mass conservation errors with free boundaries}
 
-FIXME time-step control needed for reasonable margin shape with free boundary? (to avoid advance by more than one cell in dt)
+FIXME mass conservation approximate; needs resolution
 
-FIXME mass conservation approximate (B 2021); needs resolution
+FIXME issue in B (2021) is different; here we should conserve
 \end{frame}
 
 

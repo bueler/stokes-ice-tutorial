@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
 
-# FIXME for doc
-# stable default run, *with* mass conservation:
-#   python3 solve.py -walls
-
-# FIXME for doc
-# margin wiggles which happen without edge stabilization:
-#   python3 solve.py -mx 400 -T 1          # reasonable dome shape
-#   python3 solve.py -mx 400 -T 1 -noedge  # not reasonable; wiggles at edge
-
-# FIXME Tominec et al says nothing about CFL; this run demonstrates need for CFL,
-# in the sense that the solution is wrong (not downsloping); this is partly about
-# advancing the margin at most one cell per time step
-#   python3 solve.py -nocfl -mx 100 -omovie movie.pvd   # with CFL turned off (and dt=1 a)
-
 # FIXME assess accuracy against Halfar solution, for eps << 1
 
 import argparse
