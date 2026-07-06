@@ -85,11 +85,11 @@
 
 \newcommand{\ds}{\displaystyle}
 
-\newcommand{\sdoi}[1]{\,{\scriptsize \href{https://doi.org/#1}{doi:#1}}}
-\newcommand{\surl}[2]{\,{\scriptsize \href{#1}{#2}}}
+\newcommand{\sdoi}[1]{\,{\tiny \href{https://doi.org/#1}{doi:#1}}}
+\newcommand{\surl}[2]{\,{\tiny \href{#1}{#2}}}
 
 
-\title{Stokes Glacier Models Using Firedrake}
+\title[Stokes models with Firedrake]{Stokes glacier models, with Firedrake}
 
 \subtitle{a finite element tutorial}
 
@@ -732,7 +732,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \item \emph{limiting factor:} the \alert{direct solver} for each Newton step linear system uses too much memory when generating the LU factors
     \begin{itemize}
     \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D, and they are slow
-    \item[$\circ$] see Bueler (2021, 2023)
+    \item[$\circ$] see B (2021, 2023)
     \end{itemize}
 \item for higher resolution we need a scalable solver
 \item solver composition: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
@@ -784,27 +784,30 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{coupled system of equations}
 
 \begin{itemize}
-\item so we have a \alert{coupled} system of simultaneous equations:
+\item so we have a \alert{coupled} system of simultaneous equations
+
+\begin{block}{coupled free-surface \& Stokes equations}
 \begin{align*}
 \frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
-- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \phantom{\int}  \\
-\phantom{\int} \Div \bu &= 0 &&\text{\emph{incompressibility}}
+- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \strut \\
+\Div \bu &= 0 &&\text{\emph{incompressibility}} \phantom{\int}
 \end{align*}
+\end{block}
 \end{itemize}
 
 \medskip
 \begin{columns}
-\begin{column}{0.47\textwidth}
+\begin{column}{0.5\textwidth}
 \begin{itemize}
 \item the coupling has two aspects:
 \end{itemize}
 \begin{enumerate}
 \item[I.] the free-surface equation has $\bu|_s$ as a coefficient
-\item[II.] $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved
+\item[II.] $s$ determines the \alert{evolving domain $\Lambda(t)$} on which the Stokes problem is solved
 \end{enumerate}
 \end{column}
-\begin{column}{0.53\textwidth}
-\quad \includegraphics[width=\textwidth]{figs/domain.png}
+\begin{column}{0.5\textwidth}
+\mbox{\, \includegraphics[width=0.95\textwidth]{figs/domain.png}}
 \end{column}
 \end{columns}
 \end{frame}
@@ -850,20 +853,20 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{itemize}
 \item early/naive approaches to solving this coupled problem have been fragile
     \begin{itemize}
-    \item[$\circ$] the method everyone tries first is to solve Stokes for the current geometry, then advance the surface, and repeat
-    \item[$\circ$] namely, a \emph{split} and \emph{explicit} approach to the coupled problem
-    \item[$\circ$] the result is \alert{limited performance} because of poorly-understood time-step restrictions
+    \item[$\circ$] The method everyone tries first is to solve Stokes for the current geometry, then advance the surface, and repeat.
+    \item[$\circ$] This represents a \emph{split} and \emph{explicit} approach to the coupled problem.
+    \item[$\circ$] The result is \alert{limited and uncertain performance}.
     \end{itemize}
 
 \bigskip
-\item what are the challenges in designing better schemes?  here are two:
+\item<2> what are the challenges in designing better schemes?  here are two:
 \end{itemize}
 
 \begin{enumerate}
-\item The surface elevation $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved.  Each time $s$ changes the mesh used for the $\bu,p$ solver also changes.  This makes a monolithic or implicit implementations difficult.
-\item The coupled problem mixes advective and diffusive aspects.  The proportions depend on the particular boundary conditions.
+\item<2> The surface elevation $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved.  The mesh used for the $\bu,p$ solver therefore changes at every time step.  This makes a monolithic or implicit implementations difficult.
+\item<2> The coupled problem mixes advective and diffusive aspects.  The proportions depend on the particular boundary conditions.
     \begin{itemize}
-    \item The precise time-step restriction, and the expected performance scaling, remains unclear (Bueler 2023 and references therein).
+    \item Precise time-step restriction and expected performance scaling remain unclear (B 2023 and references therein).
     \end{itemize}
 \end{enumerate}
 \end{frame}
@@ -872,9 +875,11 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \begin{frame}{choices for \texttt{stage5/}}
 
 \begin{itemize}
-\item we will demonstrate a solver which is \alert{semi-implicit}, \alert{split}, and \alert{stabilized}
+\item we will demonstrate a solver which is \alert{semi-implicit}, \alert{split}, \alert{stabilized}, and \alert{free margin}
     \begin{itemize}
     \item[$\circ$] warning: ``stabilize'' means several things here
+    \item[$\circ$] we use $P_1$ elements for $s$; thus \alert{$\Lambda(t)$ is polygonal}
+    \item[$\circ$] as before, we use inf-sup stable $P_2\times P_1$ elements for $\bu,p$
     \end{itemize}
 
 \medskip
@@ -882,28 +887,27 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 
 \smallskip
     \begin{enumerate}
-    \item[1.] we use first-order, and mostly explicit, time-stepping
+    \item[1.] first-order, and mostly explicit, time-stepping
         \begin{itemize}
-        \item[$\circ$] but we add implicit \alert{edge stabilization} in the free-surface equation
-        \item[$\circ$] and we determine the time step by a CFL condition
+        \item[A.] but we add an implicit \alert{edge stabilization} in the free-surface equation
+        \item[B.] and we determine the time step by a CFL condition
         \end{itemize}
 
 \smallskip
-    \item[2.] we split the coupled system, alternating free-surface and Stokes solves
+    \item[2.] the coupled system is split, with alternating free-surface and Stokes solves
         \begin{itemize}
-        \item[$\circ$] but we add \alert{load stabilization} coupling to the Stokes solver
+        \item[$\circ$] but we add a \alert{load stabilization} coupling to the Stokes solver
         \end{itemize}
 
 \smallskip
-    \item[3.] we use $P_1$ elements for $s$, and (inf-sup stable) $P_2\times P_1$ elements for $\bu,p$
+    \item[3.] the problem is solved as a \alert{variational inequality} which determines the glacier extent and margin
         \begin{itemize}
-        \item[$\circ$] note that $s\in P_1$ means $\Lambda(t)$ is polygonal
-        \item[$\circ$] elements for $\bu,p$ are the same as previous stages
+        \item[$\circ$] a bounds-respecting Newton method is used for $s$
         \end{itemize}
     \end{enumerate}
 
 \medskip
-\item the next slides give more detail on these techniques \dots
+\item the next slides give more detail on techniques 1, 2, 3
 \end{itemize}
 \end{frame}
 
@@ -911,16 +915,16 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \newcommand{\jump}[1]{\llbracket #1 \rrbracket}
 
 
-\begin{frame}{technique 1: implicit edge stabilization in free-surface equation}
+\begin{frame}{technique 1A: implicit edge stabilization in free-surface equation}
 
 \begin{itemize}
 \item this technique is from Tominec et al (2026)
     \begin{itemize}
-    \item[$\circ$] it is motivated by similar stabilizations used in FE advection solvers
+    \item[$\circ$] from Burman \& Hansbro (2004), Ern \& Guermond (2013)
     \end{itemize}
 \item add FE \alert{edge stabilization}, applied \alert{implicitly}:
     $$\int_{\Omega^h} \left(\frac{\alert{s_{k+1}^h} - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right) r^h\,dx + J(\alert{s_{k+1}^h},r^h) = 0$$
-where
+for all test functions $r^h$, where
     $$J(s,r) = \sum_{e\in E^h} \int_e \tfrac{1}{2} h_e^2 \left|\bu|_{s_k^h}\right| \jump{\grad s} \jump{\grad r}\,dS$$
 
     \begin{itemize}
@@ -929,10 +933,31 @@ where
     \item[$\circ$] $\jump{\bv} = \bv_+ \cdot \bn_+ - \bv_- \cdot \bn_-$ is the jump of a vector field along an edge
     \item[$\circ$] $h_e$ is the average of the diameters of the two cells which meet $e$
     \item[$\circ$] note surface velocity and slope are evaluated explicitly, at $t_k$
+    \item[$\circ$] the system to solve for $\alert{s_{k+1}^h}$ is \emph{linear}
     \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{technique 1B: CFL determination of time step}
+
+\begin{itemize}
+\item the edge stabilization technique applies semi-implicitly only, with \alert{velocity evaluated explicitly}
+
+\item our application has an advancing glacier margin, which is not considered in the proof of stability in Tominec et al (2026)
 
 \medskip
-\item the system to solve for $\alert{s_{k+1}^h}$ is \emph{linear}
+\item it appears the time step $\Delta t$ must still be limited by a CFL\footnote{$=$ Courant-Friedrichs-Lewy} criterion:
+    $$\alert{\Delta t = C_{\text{CFL}} \frac{\min h}{\max \big|\bu\big|}}$$
+
+    \begin{itemize}
+    \item[$\circ$] thus ice motion per step ($|\bu| \Delta t$) is at most base-mesh element diameter ($h$)
+    \item[$\circ$] we get reasonable results with $C_{\text{CFL}}=0.5$ \strut
+        \begin{itemize}
+        \item Ern \& Guermond (2013) use $C_{\text{CFL}}=0.2$ or $0.25$ with weighted edge stabilization and SSP3, RK4 schemes
+        %\item contrast the steady-state analysis in Burman \& Hansbro (2004)
+        \end{itemize}
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -941,7 +966,7 @@ where
 
 \begin{itemize}
 \item also from Tominec et al (2026), but based on L\"ofgren et al (2022)
-\item we \alert{add an extrapolated surface mass balance load on the upper surface}:
+\item add \alert{extrapolated surface mass balance load} to the Stokes form:
 {\small
 \begin{align*}
 \int_{\Lambda(t_k)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rho \mathbf{g} \cdot \bv\,dx \qquad& \\
@@ -957,26 +982,18 @@ where
 }
 
 \medskip
-\item concept: the stress balance is modified so as to stabilize the coupling
+\item concept: a modified stress balance stabilizes the coupling
     \begin{itemize}
-    \item[$\circ$] L\"ofgren et al (2022) use Reynold's transport theorem to motivate this type of stabilization of the coupled system
-    \item[$\circ$] the above form is symmetrized relative to the L\"ofgren et al (2022) version
-    \item[$\circ$] Tominec et al (2026) \alert{prove} that techniques 1 \& 2 together stabilize the $L^2$ norm of the evolving surface
+    \item[$\circ$] L\"ofgren et al (2022) use Reynold's transport theorem to motivate this
+    \item[$\circ$] \dots but the above form is symmetrized relative to their version
+    \item[$\circ$] Tominec et al (2026) \alert{prove} that techniques 1 \& 2 together stabilize the $L^2$ norm of the evolving surface type of stabilization of the coupled system
     \end{itemize}
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}{technique 3: CFL determination of time step}
-
-\begin{itemize}
-\item FIXME
-\end{itemize}
-\end{frame}
-
-
 \begin{frame}[fragile]
-\frametitle{\texttt{stage5/}(a) \qquad slumping in a box}
+\frametitle{\texttt{stage5/} \qquad slumping in a box}
 
 \begin{itemize}
 \item \emph{purpose:} evolving surface between walls, exhibiting numerical stability and exact mass conservation
@@ -1030,17 +1047,11 @@ $40$ & $0.125$
 
 \smallskip
     \begin{itemize}
-    \item[$\circ$] runs to produce table:
-\begin{Verbatim}[fontsize=\footnotesize,xleftmargin=-2mm]
-$ python3 solve.py -walls -L 8000 -noload -nocfl -mx MX -maxdt DT
-\end{Verbatim}
-%$
-    \item[$\circ$] use \texttt{MX}$=25,50,100,200,400$
-    \end{itemize}
+    \item[$\circ$] to produce table:  \verb|$ python3 solve.py -walls -L 8000| \verb|                -noload -nocfl -mx MX -maxdt DT|
 
-\medskip
-\item see Tominec et al (2026) for more experimentation of this type
-\item our scheme using all techniques has no such time-step restrictions
+with \texttt{MX}$=25,50,100,200,400$
+    \item[$\circ$] Tominec et al (2026) does more experimentation
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -1050,6 +1061,9 @@ $ python3 solve.py -walls -L 8000 -noload -nocfl -mx MX -maxdt DT
 \begin{itemize}
 \item however, the \alert{surface elevation must be above the bed}
 \item enforcing this obvious fact provides the (lateral) free-boundary condition for a land-based glacier
+    \begin{itemize}
+    \item[$\circ$] a \alert{variational inequality} (B 2021, Chapter 12) enforces it \dots next slide
+    \end{itemize}
 \item solving the coupled problem subject to this condition determines the location of the \alert{glacier margin}
     \begin{itemize}
     \item[$\circ$] the thickness and flux are both zero at the margin
@@ -1069,8 +1083,8 @@ $ python3 solve.py -walls -L 8000 -noload -nocfl -mx MX -maxdt DT
     \begin{itemize}
     \item[$\circ$] the meshed $\text{CG}_1$ bed is denoted $b^h$
     \end{itemize}
-\item define the FE \alert{admissible set $\cK^h = \left\{r^h \in \text{CG}_1 \,:\, r^h\ge b^h\right\}$}
-\item the weak form solved by the FE free surface \alert{$s_{k+1}^h \in \cK^h$} is a \alert{variational inequality}:
+\item define the FE \alert{admissible set} $\cK^h = \left\{r^h \in \text{CG}_1 \,:\, r^h\ge b^h\right\}$
+\item updated surface \alert{$s_{k+1}^h \in \cK^h$} solves this variational inequality weak form:
     $$\int_\Omega \left(\frac{s_{k+1}^h - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right)\, (r^h-s_{k+1}^h)\,dx + J(s_{k+1}^h,r^h-s_{k+1}^h) \ge 0$$
 for all $r^h$ in $\cK^h$
 
@@ -1080,11 +1094,9 @@ for all $r^h$ in $\cK^h$
 stabilization
     \end{itemize}
 
-\item the computed margin
+\item computed margin location
 
-location is where
-
-$s_{k+1}^h$ meets $b^h$
+is where $s_{k+1}^h$ meets $b^h$
 
 \vspace{-24mm}
 \hfill \includegraphics[width=0.5\textwidth]{figs/domain-margin.png}
@@ -1093,7 +1105,7 @@ $s_{k+1}^h$ meets $b^h$
 
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage5/}(b) \qquad a dome flowing outward}
+\frametitle{\texttt{stage5/} continued \qquad a dome flowing outward}
 
 \begin{itemize}
 \item \emph{purpose:} evolving free surface with a moving margin, exhibiting numerical stability
@@ -1101,9 +1113,10 @@ $s_{k+1}^h$ meets $b^h$
 \item \emph{generated file:} \texttt{movie.pvd}
 \end{itemize}
 
-\bigskip
-\begin{Verbatim}[fontsize=\small]
-$ python3 solve.py -mx 200 -mz 10 -T 100 -L 20000 -omovie mov.pvd
+\medskip
+\begin{Verbatim}[fontsize=\small,xleftmargin=5mm]
+$ python3 solve.py -mx 200 -mz 10 -T 100 -L 20000 \
+    -omovie mov.pvd
 $ paraview mov.pvd
 \end{Verbatim}
 
@@ -1129,7 +1142,7 @@ FIXME see runs at start of \texttt{stage5/solve.py}
 
 FIXME time-step control needed for reasonable margin shape with free boundary? (to avoid advance by more than one cell in dt)
 
-FIXME mass conservation approximate (Bueler (2021)); needs resolution
+FIXME mass conservation approximate (B 2021); needs resolution
 \end{frame}
 
 
@@ -1154,12 +1167,12 @@ FIXME compare Halfar
 \item Firedrake: \href{https://www.firedrakeproject.org/}{\texttt{firedrakeproject.org}}
 \item PETSc: \href{https://petsc.org}{\texttt{petsc.org}}
 
-\bigskip
+\vspace{15mm}
 \item for Glen-Stokes eqns, see Ch.~1 by Hewitt:  Fowler \& Ng (2021)
 
-\item for finite elements and linear Stokes:  Elman, Silvester, \& Wathen (2014)
+\item for finite elements and Stokes:  Elman, Silvester, \& Wathen (2014)
 
-\item for PETSc, Firedrake, and Stokes (Ch.~14):  Bueler (2021)
+\item for PETSc, Firedrake, and Stokes:  Bueler (2021)
 \end{itemize}
 \end{column}
 
@@ -1171,7 +1184,7 @@ FIXME compare Halfar
 \bigskip
 \hfill \href{https://www.mcs.anl.gov/petsc/}{\includegraphics[width=0.6\textwidth]{figs/petscbanner.png}}
 
-\vspace{15mm}
+\vspace{10mm}
 \includegraphics[width=0.31\textwidth]{figs/covers/karthaus.png} \hfill
 \includegraphics[width=0.31\textwidth]{figs/covers/elman.jpg} \hfill
 \href{https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137}{\includegraphics[width=0.32\textwidth]{figs/covers/bueler.jpg}}
