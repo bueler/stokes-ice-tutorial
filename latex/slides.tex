@@ -323,8 +323,7 @@
 with $\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}$
 
 \smallskip
-\item we write this using the \emph{Unified Form Language} (UFL) from Firedrake
-\item the residual function translates cleanly:
+\item we write this using the \emph{Unified Form Language} (UFL) in Firedrake:
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
@@ -346,14 +345,14 @@ F = ( inner(2.0 * nu * D(u), D(v)) \
 \frametitle{mixed finite elements for fluid problems}
 
 \begin{itemize}
-\item the other details we need to know about:
+\item other details we need to know about:
     \begin{itemize}
-    \item[{\color{black} 1.}] choose \alert{separate function spaces for the velocity and the pressure}
+    \item[{\color{black} 1.}] choose \alert{separate function spaces} for the velocity and the pressure
     \item[{\color{black} 2.}] choose finite element spaces that (the experts say) are \alert{stable}
     \end{itemize}
 
 \bigskip
-\item Firedrake makes choosing such mixed elements easy:
+\item Firedrake makes choosing such \alert{mixed elements} easy:
 
 \medskip
 \begin{Verbatim}[fontsize=\small]
@@ -405,7 +404,7 @@ v, q = TestFunctions(Z)
 \end{align*}
 \item which has symmetric block structure:
   $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
-since $(-\Div)^\top = \grad$, conceptually-speaking
+since $(-\Div)^\top = \grad$ under integration-by-parts
 \end{itemize}
 \end{column}
 
@@ -463,7 +462,7 @@ $ source ~/venv-firedrake/bin/activate
 \medskip
 \item clone this tutorial ($=$ codes and slides):
 
-\medskip
+\bigskip
 \begin{Verbatim}[fontsize=\small]
 $ git clone https://github.com/bueler/stokes-ice-tutorial.git
 \end{Verbatim}
@@ -525,7 +524,7 @@ $ paraview domain.pvd            # view the solution
     \begin{itemize}
     \item[$\circ$] default solver: Firedrake $\to$ PETSc KSP $\to$ MUMPS
     \end{itemize}
-\item but for Glen-Stokes the residual function is nonlinear in $\bu$:
+\item but for Glen-Stokes the residual function is \alert{nonlinear in $\bu$}:
 \small
 $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 \normalsize
