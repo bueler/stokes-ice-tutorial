@@ -3,15 +3,17 @@
 import argparse
 import sys
 parser = argparse.ArgumentParser(description=
-'''stage3/  Solve the Glen-Stokes momentum equations for a 2D ice sheet using
-an extruded mesh, rescaled equations, vertical grid sequencing, and
-diagnostic computation of viscosity and stresses.''', add_help=False)
-parser.add_argument('-eps', type=float, metavar='X', default=1.0e-4,
+'''stage3/  Solve the Glen-Stokes momentum equations for a 2D or 3D ice sheet. Generates an extruded mesh with optional bumpy bed. Adds: rescaled equations, vertical grid sequencing, and diagnostic computation of viscosity and stresses. Demonstrates (mostly) dimension-indpendent programming in Firedrake and UFL.''', add_help=False)
+parser.add_argument('-b0', type=float, metavar='B0', default=0.0,
+    help='scale of bed bumpiness (default=0 m)')
+parser.add_argument('-baserefine', type=int, metavar='X', default=2,
+    help='3D only: refinement levels in generating disk base mesh (default=2)')
+parser.add_argument('-dim', type=int, metavar='DIM', default=2,
+    help='spatial dimension of glacier (default=2; allowed: 2,3)')
+parser.add_argument('-eps', type=float, metavar='EPS', default=1.0e-4,
     help='regularization used in viscosity (default=10^{-4})')
-parser.add_argument('-marginheight', type=float, metavar='X', default=1.0,
-    help='height of degeneration point at margin (default=1 m)')
 parser.add_argument('-mx', type=int, metavar='MX', default=50,
-    help='subintervals in coarse mesh (default=50)')
+    help='2D only: subintervals in coarse base mesh (default=50)')
 parser.add_argument('-mz', type=int, metavar='MZ', default=2,
     help='vertical layers in coarse mesh (default=2)')
 parser.add_argument('-o', metavar='FILE.pvd', type=str, default='dome.pvd',
@@ -23,7 +25,7 @@ parser.add_argument('-refinefactor', type=int, metavar='X', default=4,
 parser.add_argument('-solvehelp', action='store_true', default=False,
     help='print help for solve.py options and stop')
 args, passthroughoptions = parser.parse_known_args()
-if args.solvehelp:
+if args.solvehelp or args.dim not in [2, 3]:
     parser.print_help()
     sys.exit(0)
 
@@ -32,75 +34,141 @@ petsc4py.init(passthroughoptions)
 import numpy as np
 from firedrake import *
 from firedrake.petsc import PETSc
+printpar = PETSc.Sys.Print  # print once even in parallel
 
-def profile(x, R, H):
-    '''Exact SIA solution for surface elevation, with half-length (radius) R
-    and maximum height H, on interval [0,L] = [0,2R], centered at x=R.
-    See van der Veen (2013) equation (5.50).'''
-    n = 3.0                       # glen exponent
-    p1 = n / (2.0 * n + 2.0)      # = 3/8
-    q1 = 1.0 + 1.0 / n            # = 4/3
-    Z = H / (n - 1.0)**p1         # outer constant
-    X = (x - R) / R               # rescaled coord
-    Xin = abs(X[abs(X) < 1.0])    # rescaled distance from center
-    Yin = 1.0 - Xin
-    s = np.zeros(np.shape(x))
-    s[abs(X) < 1.0] = Z * ( (n + 1.0) * Xin - 1.0 \
-                            + n * Yin**q1 - n * Xin**q1 )**p1
-    s[s < 1.0] = args.marginheight # needed so that prolong() can find nodes
-    return s
-
-# level-independent information
+# physics information
 secpera = 31556926.0    # seconds per year
 g = 9.81                # m s-2
 rho = 910.0             # kg m-3
 n = 3.0
 A3 = 3.1689e-24         # Pa-3 s-1;  EISMINT I value of ice softness
 B3 = A3**(-1.0/3.0)     # Pa s(1/3);  ice hardness
-Dtyp = 1.0 / secpera    # s-1
+Dtyp = 1.0 / secpera    # 1 a-1 in s-1
 sc = 1.0e-7             # velocity scale constant for symmetric equation scaling
-fbody = Constant((0.0, - rho * g))
+
+# constants used in profiles
+p1 = n / (2.0 * n + 2.0)      # = 3/8
+q1 = 1.0 + 1.0 / n            # = 4/3
+R0 = 10000.0
+H0 = 1000.0
+
+def profile2d(x):
+    '''Exact SIA solution for surface elevation, with half-length R0
+    and maximum height H0, on interval [0,L] = [0,2R0], centered at x=R0.
+    See van der Veen (2013) equation (5.50).'''
+    Z = H0 / (n - 1.0)**p1        # outer constant
+    X = (x - R0) / R0             # rescaled coord
+    Xin = abs(X[abs(X) < 1.0])    # rescaled distance from center
+    Yin = 1.0 - Xin
+    s = np.zeros(np.shape(x))
+    s[abs(X) < 1.0] = Z * ( (n + 1.0) * Xin - 1.0 \
+                            + n * Yin**q1 - n * Xin**q1 )**p1
+    s[s < 1.0] = 1.0
+    return s
+
+def profile3d(x, y):
+    '''Exact SIA solution with radius R0 and maximum height H0, on
+    disk of radius R centered at (x,y)=(0,0).  See Bueler et al 2005,
+    and look at "Test D".  This is the H_s shape.'''
+    r = np.sqrt(x * x + y * y)
+    xi = r / R0
+    lamhat = q1 * xi - (1.0 / n) + (1.0 - xi)**q1 - xi**q1
+    s = (H0 / (1.0 - 1.0 / n)**p1) * lamhat**p1
+    return s
+
+def bed2d(x, b0):
+    '''A smooth, bumpy bed of magnitude b0, with b=0 at margin.'''
+    xx = (x - R0) * (x - R0) / (R0 * R0)
+    return b0 * np.sin(4.0 * np.pi * (x - R0) / R0) * (1.0 - xx)
+
+def bed3d(x, y, b0):
+    '''A smooth, bumpy bed of magnitude b0, with b=0 at margin.  Skewed to the x,y axes.'''
+    rr = (x * x + y * y) / (R0 * R0)
+    return b0 * np.sin(4.0 * np.pi * (x + y) / R0) * (1.0 - rr)
+
+# generate base mesh
+if args.dim == 2:
+    basemesh = IntervalMesh(args.mx, length_or_left=0.0, right=2.0*R0)
+    xbase = basemesh.coordinates.dat.data_ro
+else:
+    printpar('generating disk mesh in base (2D map-plane) by %d refinements ...' \
+            % args.baserefine)
+    basemesh = UnitDiskMesh(refinement_level=args.baserefine)
+    basemesh.coordinates.dat.data[:] *= R0 * (1.0 - 1.0e-10) # avoid degeneracy
+    belements, bnodes = basemesh.num_cells(), basemesh.num_vertices()
+    printpar('  %s2D base mesh has %d triangle elements and %d nodes' \
+            % ('on rank 0: ' if basemesh.comm.size > 1 else '',
+                belements, bnodes))
+    xbase = basemesh.coordinates.dat.data_ro[:,0]
+    ybase = basemesh.coordinates.dat.data_ro[:,1]
+
+# base mesh functions
+P1base = FunctionSpace(basemesh, 'CG', 1)
+sbase = Function(P1base)
+bbase = Function(P1base)
+if args.dim == 2:
+    sbase.dat.data[:] = profile2d(xbase)
+    bbase.dat.data[:] = bed2d(xbase, args.b0)
+else:
+    sbase.dat.data[:] = profile3d(xbase, ybase)
+    bbase.dat.data[:] = bed3d(xbase, ybase, args.b0)
+
+# generate vertical refinement hierarchy, and put geometry on each level
+printpar(f'generating {args.refine + 1}-level {args.dim}D mesh hierarchy ...')
+hierarchy = SemiCoarsenedExtrudedHierarchy(basemesh, 1.0, base_layer=args.mz,
+                    refinement_ratio=args.refinefactor, nref=args.refine)
+for j in range(args.refine + 1):
+    Q1R = FunctionSpace(hierarchy[j], 'CG', 1, vfamily='R', vdegree=0)
+    s = Function(Q1R)
+    s.dat.data[:] = sbase.dat.data_ro[:]
+    b = Function(Q1R)
+    b.dat.data[:] = bbase.dat.data_ro[:]
+    Vcoord = hierarchy[j].coordinates.function_space()
+    if args.dim == 2:
+        x, z = SpatialCoordinate(hierarchy[j])
+        XZ = Function(Vcoord).interpolate(as_vector([x, (s - b) * z + b]))
+        hierarchy[j].coordinates.assign(XZ)
+    else:
+        x, y, z = SpatialCoordinate(hierarchy[j])
+        XYZ = Function(Vcoord).interpolate(as_vector([x, y, (s - b) * z + b]))
+        hierarchy[j].coordinates.assign(XYZ)
+
+# extra reporting for 3D mesh
+if args.dim == 3:
+    fmz = args.mz * args.refinefactor**args.refine
+    printpar('  %sfine-level 3D mesh has %d prism elements and %d nodes' \
+            % ('on rank 0: ' if basemesh.comm.size > 1 else '',
+                belements * fmz, bnodes * (fmz + 1)))
+
+# setting dimension-dependent constant vectors
+if args.dim == 2:
+    fbody = Constant((0.0, - rho * g))
+    uzero = Constant((0.0, 0.0))
+else:
+    fbody = Constant((0.0, 0.0, - rho * g))
+    uzero = Constant((0.0, 0.0, 0.0))
+
+def D(w):  # strain-rate tensor
+    return 0.5 * (grad(w) + grad(w).T)
+
+# solver options
 par = {'snes_converged_reason': None,
-       #'snes_monitor': None,
+       #'snes_monitor': None,   # turn on to monitor solver progress
        'snes_linesearch_type': 'bt',
        'ksp_type': 'preonly',
        'pc_type': 'lu',
        'pc_factor_shift_type': 'inblocks',
        'pc_factor_mat_solver_type': 'mumps'}
-printpar = PETSc.Sys.Print  # print once even in parallel
-
-def D(w):  # strain-rate tensor
-    return 0.5 * (grad(w) + grad(w).T)
-
-printpar('generating %d-level mesh hierarchy ...' % (args.refine + 1))
-R = 10000.0
-H = 1000.0
-basemesh = IntervalMesh(args.mx, length_or_left=0.0, right=2.0*R)
-xbase = basemesh.coordinates.dat.data_ro
-P1base = FunctionSpace(basemesh,'P',1)
-sbase = Function(P1base)
-sbase.dat.data[:] = profile(xbase, R, H)
-
-hierarchy = SemiCoarsenedExtrudedHierarchy( \
-                basemesh, 1.0, base_layer=args.mz,
-                refinement_ratio=args.refinefactor, nref=args.refine)
-for j in range(args.refine + 1):
-    Q1R = FunctionSpace(hierarchy[j], 'P', 1, vfamily='R', vdegree=0)
-    s = Function(Q1R)
-    s.dat.data[:] = sbase.dat.data_ro[:]
-    Vcoord = hierarchy[j].coordinates.function_space()
-    x, z = SpatialCoordinate(hierarchy[j])
-    XZ = Function(Vcoord).interpolate(as_vector([x, s * z]))
-    hierarchy[j].coordinates.assign(XZ)
 
 # solve the problem for each level in the hierarchy
 upcoarse = None
 levels = args.refine + 1
 jrange = range(levels)
 for j in jrange:
+    # function spaces on this level
     mesh = hierarchy[j]
-    V = VectorFunctionSpace(mesh, 'Lagrange', 2)
-    W = FunctionSpace(mesh, 'Lagrange', 1)
+    V = VectorFunctionSpace(mesh, 'CG', 2)
+    W = FunctionSpace(mesh, 'CG', 1)
     Z = V * W
     up = Function(Z)
     scu, p = split(up)             # scaled velocity, unscaled pressure
@@ -118,16 +186,20 @@ for j in jrange:
     F = ( sc*sc * inner(2.0 * nu * D(scu), D(v)) \
           - sc * p * div(v) - sc * q * div(scu) \
           - sc * inner(fbody, v) ) * dx(degree=3)
-
-    # base label is 'bottom'
-    bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), 'bottom'), ]
+    bcs = [ DirichletBC(Z.sub(0), uzero, 'bottom'), ]
 
     # get initial condition by coarsening previous level
     if upcoarse is not None:
         up.interpolate(upcoarse)  # cross-mesh interpolation
 
-    printpar('solving on level %d (%d x %d mesh) ...' \
-             % (j, args.mx, args.mz * (args.refinefactor)**j))
+    # actually solve problem
+    if args.dim == 2:
+        printpar('solving on level %d (%d x %d mesh) ...' \
+                 % (j, args.mx, args.mz * (args.refinefactor)**j))
+    else:
+        printpar('solving on level %d with %d vertical layers ...' \
+                 % (j, args.mz * args.refinefactor**j))
+
     n_u, n_p = V.dim(), W.dim()
     printpar('  sizes: n_u = %d, n_p = %d' % (n_u,n_p))
     solve(F == 0, up, bcs=bcs, options_prefix='s', solver_parameters=par)
@@ -137,7 +209,7 @@ for j in jrange:
     # integrate 1 to get area of domain
     R = FunctionSpace(mesh, 'R', 0)
     one = Function(R).assign(1.0)
-    area = assemble(dot(one,one) * dx)
+    area = assemble(dot(one, one) * dx)
 
     # print average and maximum velocity
     scu = up.subfunctions[0]
@@ -163,17 +235,19 @@ def stresses(mesh, u):
     tau.rename('tau (bar)')
     return tau, nu
 
-printpar('saving u,p,tau,nu,rank to %s ...' % args.o)
-u = up.subfunctions[0]
-p = up.subfunctions[1]
+printpar('saving u,p,tau,nu to %s ...' % args.o)
+u, p = up.subfunctions
 u *= sc
 tau, nu = stresses(hierarchy[-1], u)
 u *= secpera
 p /= 1.0e5
 u.rename('velocity (m/a)')
 p.rename('pressure (bar)')
-# integer-valued element-wise process rank
-rank = Function(FunctionSpace(mesh,'DG',0))
-rank.dat.data[:] = mesh.comm.rank
-rank.rename('rank')
-VTKFile(args.o).write(scu, p, tau, nu, rank)
+if mesh.comm.size > 1:
+    # add integer-valued element-wise process rank to output
+    rank = Function(FunctionSpace(mesh, 'DG', 0))
+    rank.dat.data[:] = mesh.comm.rank
+    rank.rename('rank')
+    VTKFile(args.o).write(scu, p, tau, nu, rank)
+else:
+    VTKFile(args.o).write(scu, p, tau, nu)
