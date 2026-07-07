@@ -21,8 +21,6 @@ parser.add_argument('-refine', type=int, metavar='X', default=1,
     help='vertical refinements for 3D mesh (default=1)')
 parser.add_argument('-refinefactor', type=int, metavar='X', default=4,
     help='refinement factor when generating mesh hierarchy (default=4)')
-parser.add_argument('-single', action='store_true', default=False,
-    help='solve only on the finest level, without grid sequencing')
 parser.add_argument('-solvehelp', action='store_true', default=False,
     help='print help for solve.py options and stop')
 args, passthroughoptions = parser.parse_known_args()
@@ -118,8 +116,7 @@ printpar('  %sfine-level 3D mesh has %d prism elements and %d nodes' \
 # (essentially dimension-independent, and nearly same as stage4/)
 upcoarse = None
 levels = args.refine + 1
-jrange = [levels - 1,] if args.single else range(levels)
-for j in jrange:
+for j in range(levels):
     mesh = hierarchy[j]
     V = VectorFunctionSpace(mesh, 'Lagrange', 2)
     W = FunctionSpace(mesh, 'Lagrange', 1)
@@ -129,7 +126,7 @@ for j in jrange:
     v, q = TestFunctions(Z)
 
     # use a more generous eps except when we get to the finest level
-    if args.single or j == levels - 1:
+    if j == levels - 1:
         eps = args.eps
     else:
         eps = 100.0 * args.eps
