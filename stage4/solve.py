@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+# run to compare: mpiexec -n 6 python3 solve.py -o finest.pvd -refine 2 -baserefine 3 -s_snes_atol 1.0e-2
+
 import argparse
 import sys
 parser = argparse.ArgumentParser(description=
-'''stage5/  Solve the Glen-Stokes momentum equations for a 3D ice sheet using
-an extruded mesh and an optional bumpy bed.''', add_help=False)
+'''stage4/  Solve the Glen-Stokes momentum equations for a 3D ice sheet using
+an extruded mesh and a bumpy bed.''', add_help=False)
 parser.add_argument('-b0', type=float, metavar='X', default=500.0,
     help='scale of bed bumpiness (default=500 m)')
 parser.add_argument('-baserefine', type=int, metavar='X', default=2,
@@ -66,7 +68,7 @@ Dtyp = 1.0 / secpera    # s-1
 sc = 1.0e-7             # velocity scale constant for symmetric equation scaling
 fbody = Constant((0.0, 0.0, - rho * g))
 par = {'snes_converged_reason': None,
-       'snes_monitor': None,
+       #'snes_monitor': None,
        'snes_linesearch_type': 'bt',
        'ksp_type': 'preonly',
        'pc_type': 'lu',
