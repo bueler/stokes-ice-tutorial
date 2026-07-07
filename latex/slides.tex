@@ -161,7 +161,7 @@
     \end{itemize}
 \item incompressibility is one aspect of mass conservation
     \begin{itemize}
-    \item[$\circ$] another is the free-surface equation; deferred to \texttt{stage5/}
+    \item[$\circ$] another is the free-surface equation; deferred to \texttt{stage4/}
     \end{itemize}
 \item glaciers are a ``slow flow'' problem because the forces of inertia are tiny
     \begin{itemize}
@@ -577,10 +577,14 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \end{frame}
 
 
-\section{\texttt{stage3/} \qquad extruded meshes and bells \& whistles}
+\section{\texttt{stage3/} \qquad extruded meshes and 3D glaciers}
 
 \begin{frame}[fragile]
 \frametitle{\texttt{stage3/} \qquad an extruded mesh, and more}
+
+FIXME separate main features onto intro slide
+
+FIXME default to bumpy bed; it is more interesting
 
 \begin{itemize}
 \item \emph{purpose:} additional robust and/or useful features
@@ -616,7 +620,7 @@ $ paraview dome.pvd
 
 
 \begin{frame}[fragile]
-\frametitle{convergence?}
+\frametitle{evidence of convergence}
 
 \begin{itemize}
 \item our \texttt{stage3/} code \texttt{solve.py} permits adjusting resolution at runtime
@@ -687,10 +691,10 @@ $ mpiexec -n 4 python3 solve.py -mx 800 -refine 2  # 20 secs run time
 \end{frame}
 
 
-\section{\texttt{stage4/} \qquad 3D glaciers and scalability limitations}
-
 \begin{frame}[fragile]
-\frametitle{\texttt{stage4/} \qquad 3D glaciers in parallel}
+\frametitle{\texttt{stage3/} continued \qquad 3D glaciers}
+
+FIXME make the graphic more interesting \dots using vertical exageration and slice in Paraview
 
 \begin{itemize}
 \item \emph{purpose:} Firedrake allows easy extension to 3D ice sheet; add a bumpy bed
@@ -700,14 +704,13 @@ $ mpiexec -n 4 python3 solve.py -mx 800 -refine 2  # 20 secs run time
 
 \medskip
 \begin{Verbatim}
-$ cd stage4/
-$ mpiexec -n 4 python3 solve.py
+$ mpiexec -n 4 python3 solve.py -dim 3 -b0 500
 $ paraview dome.pvd              # "rank" field below
 \end{Verbatim}
 %$
 
 \bigskip
-\hfill \includegraphics[width=0.4\textwidth]{figs/stage4.png} \hspace{10mm}
+\hfill \includegraphics[width=0.4\textwidth]{figs/stage3rank3d.png} \hspace{10mm}
 \end{frame}
 
 
@@ -718,7 +721,7 @@ $ paraview dome.pvd              # "rank" field below
 \item this run is about as far as I can refine on my machine:
 
 \begin{Verbatim}[fontsize=\small]
-$ mpiexec -n 12 python3 solve.py -o finest.pvd \
+$ mpiexec -n 12 python3 solve.py -dim 3 -b0 500 -o finest.pvd \
     -refine 2 -baserefine 4 -s_snes_atol 1.0e-2
 \end{Verbatim}
 %$
@@ -743,7 +746,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \end{frame}
 
 
-\section{\texttt{stage5/} \qquad evolving glaciers: coupling the free-surface equation}
+\section{\texttt{stage4/} \qquad evolving glaciers: coupling the free-surface equation}
 
 \begin{frame}{but don't glaciers actually change with the climate?}
 
@@ -871,7 +874,7 @@ $ mpiexec -n 12 python3 solve.py -o finest.pvd \
 \end{frame}
 
 
-\begin{frame}{choices for \texttt{stage5/}}
+\begin{frame}{choices for \texttt{stage4/}}
 
 \begin{itemize}
 \item we will demonstrate a solver which is \alert{semi-implicit}, \alert{split}, \alert{stabilized}, and \alert{free margin}
@@ -992,7 +995,7 @@ for all test functions $r^h$, where
 
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage5/} \qquad slumping in a box}
+\frametitle{\texttt{stage4/} \qquad slumping in a box}
 
 \begin{itemize}
 \item \emph{purpose:} evolving surface between walls, exhibiting numerical stability and exact mass conservation
@@ -1002,7 +1005,7 @@ for all test functions $r^h$, where
 
 \bigskip
 \begin{Verbatim}
-$ cd stage5/
+$ cd stage4/
 $ python3 solve.py -walls -L 8000
 $ paraview dome.pvd
 \end{Verbatim}
@@ -1011,12 +1014,12 @@ $ paraview dome.pvd
 
 \bigskip
 
-{\footnotesize $t=0$ a:}\, \includegraphics[width=0.8\textwidth]{figs/stage5wallsstart.png}
+{\footnotesize $t=0$ a:}\, \includegraphics[width=0.8\textwidth]{figs/stage4wallsstart.png}
 
 \centerline{$\to$}
 
 \medskip
-\hfill {\footnotesize $t=5$ a:}\, \includegraphics[width=0.8\textwidth]{figs/stage5wallsend.png}
+\hfill {\footnotesize $t=5$ a:}\, \includegraphics[width=0.8\textwidth]{figs/stage4wallsend.png}
 \end{frame}
 
 
@@ -1103,8 +1106,14 @@ is where $s_{k+1}^h$ meets $b^h$
 \end{frame}
 
 
+\begin{frame}{handling extruded meshes with free boundaries}
+
+FIXME document PinchColumnXX
+\end{frame}
+
+
 \begin{frame}[fragile]
-\frametitle{\texttt{stage5/} continued \qquad a dome flowing outward}
+\frametitle{\texttt{stage4/} continued \qquad a dome flowing outward}
 
 \begin{itemize}
 \item \emph{purpose:} evolving free surface with a moving margin, exhibiting numerical stability
@@ -1121,7 +1130,7 @@ $ paraview movie.pvd
 
 \bigskip
 
-\mbox{\hspace{-12mm} \includegraphics[width=0.51\textwidth]{figs/stage5movingstart.png} $\to$ \quad \includegraphics[width=0.51\textwidth]{figs/stage5movingend.png}}
+\mbox{\hspace{-12mm} \includegraphics[width=0.51\textwidth]{figs/stage4movingstart.png} $\to$ \quad \includegraphics[width=0.51\textwidth]{figs/stage4movingend.png}}
 
 \mbox{\hspace{15mm} \footnotesize $t=0$ a} \hspace{59mm} {\footnotesize $t=100$ a}
 

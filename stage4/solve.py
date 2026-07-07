@@ -6,7 +6,7 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage5/  Solve the coupled surface kinematical (free-surface) equation and Glen-Nye-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order mostly-explicit time-stepping based on 2 Swedish stabilizations.  Applies a CFL criterion to determine the time step.  Initial shape is from the Halfar solution.""",
+    description="""stage4/  Solve the coupled surface kinematical (free-surface) equation and Glen-Nye-Stokes momentum equations for a 2D ice sheet using an extruded mesh.  Uses first-order mostly-explicit time-stepping based on 2 Swedish stabilizations.  Applies a CFL criterion to determine the time step.  Initial shape is from the Halfar solution.""",
     add_help=False,
 )
 hs = "coefficient to use in CFL scheme for time-stepping (default=0.25)"

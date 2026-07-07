@@ -1,4 +1,4 @@
-# Geometry-management tools for an evolving glacier model which solves
+# Geometry-management tools for an evolving 2D glacier model which solves
 # the Stokes equations and the surface kinematical (free-surface)
 # equation on an extruded mesh.
 #
