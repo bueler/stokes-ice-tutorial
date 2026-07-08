@@ -4,8 +4,8 @@ import argparse
 import sys
 parser = argparse.ArgumentParser(description=
 '''stage3/  Solve the Glen-Stokes momentum equations for a 2D or 3D ice sheet. Generates an extruded mesh with optional bumpy bed. Adds: rescaled equations, vertical grid sequencing, and diagnostic computation of viscosity and stresses. Demonstrates (mostly) dimension-indpendent programming in Firedrake and UFL.''', add_help=False)
-parser.add_argument('-b0', type=float, metavar='B0', default=0.0,
-    help='scale of bed bumpiness (default=0 m)')
+parser.add_argument('-b0', type=float, metavar='B0', default=200.0,
+    help='scale of bed bumpiness (default=200 m)')
 parser.add_argument('-baserefine', type=int, metavar='X', default=2,
     help='3D only: refinement levels in generating disk base mesh (default=2)')
 parser.add_argument('-dim', type=int, metavar='DIM', default=2,
