@@ -116,17 +116,16 @@
 \begin{frame}{making this presentation effective}
 
 \begin{itemize}
-\item these slides are the primary documentation for some Python codes
-\item \alert{please try the codes}, and give me your feedback?  thanks!
-
-\bigskip
 \item \alert{please ask questions}
-
-\item \alert{send comments \& questions, now and in the future:}
+\item or send questions or comments, now and in the future:
   \begin{itemize}
   \item[$\circ$] by email to \href{mailto:elbueler@alaska.edu}{\texttt{elbueler@alaska.edu}}
   \item[$\circ$] or by using \href{https://github.com/bueler/stokes-ice-tutorial/issues}{issues at \texttt{github.com/bueler/stokes-ice-tutorial/}}
   \end{itemize}
+
+\bigskip
+\item these slides are the primary documentation for some Python codes
+\item \alert{please try the codes}, and give me your feedback?  thanks!
 \end{itemize}
 \end{frame}
 
@@ -268,7 +267,7 @@
 \begin{frame}{finite elements \dots with no details}
 
 \begin{itemize}
-\item exact solution of the Stokes model is impossible for most geometries
+\item by-hand solution of the Stokes model is impossible for most geometries
     \begin{itemize}
     \item[$\circ$] \emph{exercise.}  solve slab-on-a-slope, which is an exception
     \end{itemize}
@@ -282,9 +281,9 @@
 \hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
 
 \bigskip
-\item the whole point of Firedrake is \alert{suppress the details of FE}
+\item the whole point of Firedrake is \alert{suppress the details} of FE
     \begin{itemize}
-    \item[$\circ$] try Elman, Sylvester \& Wathen (2014) for self-study on FE?
+    \item[$\circ$] but try Elman, Sylvester \& Wathen (2014) for self-study?
     \end{itemize}
 \item however, one needs to know a key step:\, \alert{write a weak form}
 \end{itemize}
@@ -303,7 +302,8 @@
     $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 
     \begin{itemize}
-    \item[$\circ$] $\Lambda$ is the domain of ice, and ``$dx$'' $=dx\,dz$ in the planar case
+    \item[$\circ$] $\Lambda$ is the domain of ice
+    \item[$\circ$] ``$dx$'' $=dx\,dy\,dz$ in 3D, and ``$dx$'' $=dx\,dz$ in the planar case
     \end{itemize}
 
 \medskip
@@ -453,14 +453,14 @@ $ source ~/venv-firedrake/bin/activate
 %$
 
 \medskip
-\item other tools we will need:
+\item other tools you will need:
     \begin{itemize}
     \item[$\circ$] Gmsh \quad \href{https://gmsh.info/}{\texttt{gmsh.info}}
     \item[$\circ$] Paraview \quad \href{https://www.paraview.org/}{\texttt{paraview.org}}
     \end{itemize}
 
 \medskip
-\item clone this tutorial ($=$ codes and slides):
+\item clone this tutorial, both for the codes and these slides:
 
 \bigskip
 \begin{Verbatim}[fontsize=\small]
@@ -580,24 +580,45 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \section{\texttt{stage3/} \qquad extruded meshes and 3D glaciers}
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage3/} \qquad an extruded mesh, and more}
+\frametitle{a more practical and powerful solver}
 
-FIXME separate main features onto intro slide
+\begin{itemize}
+\item the goal of this stage is to make a more practical and powerful glacier-modeling tool
+\item we switch to an \alert{extruded mesh}, avoiding Gmsh in the toolchain
+    \begin{itemize}
+    \item[$\circ$] also we allow a bumpy bed (below)
+    \end{itemize}
+\item we demonstrate (mostly) \alert{dimension-independent programming}
+    \begin{itemize}
+    \item[$\circ$] code for 2D and 3D glacier geometry is nearly the same
+    \end{itemize}
+\item additional bells \& whistles include rescaling the equations, vertical grid sequencing, over-regularization on coarse meshes when sequencing, and additional diagnostic fields in the output \texttt{.pvd} file
+\end{itemize}
 
-FIXME default to bumpy bed; it is more interesting
+\bigskip
+
+\noindent {\footnotesize solution speed $|\bu|$ for default run:}
+
+\medskip
+\includegraphics[width=\textwidth]{figs/stage3speed.png}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{\texttt{stage3/} \qquad extruded mesh and more}
 
 \begin{itemize}
 \item \emph{purpose:} additional robust and/or useful features
     \begin{itemize}
-    \item[$\circ$] construct 2D mesh by vertically \alert{extruding} a base mesh  \hfill \emph{allows refinement}
+    \item[$\circ$] construct mesh by vertically extruding a base mesh  \hfill \emph{allows refinement}
     \item[$\circ$] rescale the equations  \hfill \emph{better conditioning}
     \item[$\circ$] vertical grid sequencing  \hfill \emph{better initial iterates}
     \item[$\circ$] $100\eps$ on coarse meshes in sequencing  \hfill \emph{better initial iterates}
-    \item[$\circ$] generate deviatoric stress tensor $\tau$ from solution  \hfill \emph{diagnostic}
-    \item[$\circ$] generate effective viscosity $\nu_\eps$ from solution  \hfill \emph{diagnostic}
+    \item[$\circ$] write $\nu_\eps$ and $\tau$ from solution  \hfill \emph{diagnostic}
     \end{itemize}
 \item \emph{source file:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this}
 \item \emph{generated file:} \texttt{dome.pvd}
+\end{itemize}
 
 \smallskip
 \begin{Verbatim}[fontsize=\small]
@@ -608,13 +629,14 @@ $ paraview dome.pvd
 \end{Verbatim}
 %$
 
-\smallskip
-\item solution speed $|\bu|$ and deviatoric stress magnitude $|\tau|$ below:
-\end{itemize}
+\bigskip
 
+\noindent {\footnotesize effective viscosity $\nu_\eps$ and deviatoric stress magnitude $|\tau|$:}
+
+\medskip
 \begin{center}
-\includegraphics<1>[height=0.09\textwidth]{figs/stage3speed.png}
-\includegraphics<2>[height=0.09\textwidth]{figs/stage3tau.png}
+\includegraphics[width=0.8\textwidth]{figs/stage3nu.png}
+\includegraphics[width=0.8\textwidth]{figs/stage3tau.png}
 \end{center}
 \end{frame}
 
@@ -623,23 +645,25 @@ $ paraview dome.pvd
 \frametitle{evidence of convergence}
 
 \begin{itemize}
-\item our \texttt{stage3/} code \texttt{solve.py} permits adjusting resolution at runtime
+\item our \texttt{stage3/} code permits adjusting resolution at runtime
 \item for example:
 \begin{Verbatim}
-$ ./solve.py -mx 400 -mz 4 -refine 2
+$ python3 solve.py -b0 0 -mx 400 -mz 4 -refine 2
 \end{Verbatim}
 %$
     \begin{itemize}
-    \item[$\circ$] refine the vertical twice, by factors of four, from the initial 4 levels, to generate a $400$ by $64$ mesh
+    \item[$\circ$] using flat bed (\texttt{-b0 0}); compare results to \texttt{stage2/}
+    \item[$\circ$] initial mesh has 400 elements in horizontal and 4 in vertical
+    \item[$\circ$] refine the vertical twice (by factors of four), to generate a $400\times 64$ mesh
     \end{itemize}
 \item velocity results, in meters per year, from a refinement study:
 
 \medskip
-% -mx 50 -mz 2 -refine 1     50 x 8      400m x 125m
-% -mx 100 -mz 4 -refine 1    100 x 16    200m x 63m
-% -mx 200 -mz 2 -refine 2    200 x 32    100m x 31m
-% -mx 400 -mz 4 -refine 2    400 x 64    50m x 16m
-% -mx 800 -mz 2 -refine 3    800 x 128   25m x 8m
+% -b0 0 -mx 50 -mz 2 -refine 1     50 x 8      400m x 125m
+% -b0 0 -mx 100 -mz 4 -refine 1    100 x 16    200m x 63m
+% -b0 0 -mx 200 -mz 2 -refine 2    200 x 32    100m x 31m
+% -b0 0 -mx 400 -mz 4 -refine 2    400 x 64    50m x 16m
+% -b0 0 -mx 800 -mz 2 -refine 3    800 x 128   25m x 8m
 \begin{center}
 \small
 \begin{tabular}{c|rrr}
@@ -668,9 +692,10 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
 \item as usual with Firedrake, everything works in parallel
     \begin{itemize}
     \item[$\circ$] extruded mesh gets partitioned following base mesh partition
-    \item[$\circ$] see \texttt{rank} field in \texttt{.pvd} output
+    \item[$\circ$] see \texttt{rank} field in \texttt{.pvd} output, for example with 4 processes:
     \end{itemize}
 
+\smallskip
 \qquad \includegraphics[width=0.85\textwidth]{figs/stage3rank.png}
 
 \medskip
