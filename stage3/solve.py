@@ -114,7 +114,7 @@ else:
     bbase.dat.data[:] = bed3d(xbase, ybase, args.b0)
 
 # generate vertical refinement hierarchy, and put geometry on each level
-printpar(f'generating {args.refine + 1}-level {args.dim}D mesh hierarchy ...')
+printpar(f'generating {args.dim}D mesh hierarchy by {args.refine} refinements ...')
 hierarchy = SemiCoarsenedExtrudedHierarchy(basemesh, 1.0, base_layer=args.mz,
                     refinement_ratio=args.refinefactor, nref=args.refine)
 for j in range(args.refine + 1):
