@@ -147,7 +147,7 @@
 \end{frame}
 
 
-\section{stage 0 \hspace{9.3mm} the glacier dynamics problem}
+\section{stage 0 \hspace{9.3mm} equations for the glacier dynamics problem}
 
 \begin{frame}{glacier dynamics using a Stokes model: the high-level view}
 
@@ -162,9 +162,9 @@
     \begin{itemize}
     \item[$\circ$] another is the free-surface equation; deferred to \texttt{stage4/}
     \end{itemize}
-\item glaciers are a ``slow flow'' problem because the forces of inertia are tiny
+\item glaciers are a ``slow flow'' problem because inertial forces are tiny
     \begin{itemize}
-    \item[$\circ$] momentum conservation is called a ``stress balance''
+    \item[$\circ$] momentum conservation is therefore called a ``stress balance''
     \item[$\circ$] velocity \& pressure are \alert{instantaneously determined} by current geometry \& boundary stresses
     \end{itemize}
 \item \alert{Stokes equations $=$ stress balance $+$ incompressibility}
@@ -182,8 +182,7 @@
 \begin{frame}{Glen-Nye-Stokes equations}
 
 \begin{itemize}
-\item notation: $\bu$ is velocity, $p$ is pressure, and $\tau$ is deviatoric stress tensor
-\item $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is strain-rate tensor
+\item the canonical glacier dynamics equations are from Glen, Nye, and Stokes
 \item the main equations:
 \begin{align*}
 - \Div \tau + \nabla p &= \rho \bg &&\text{\emph{stress balance}} &&\phantom{dlfsj fdasj} \\
@@ -191,7 +190,13 @@
 \tau = B_n &|D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{Glen-Nye flow law}}
 \end{align*}
 
-\vspace{-25mm}
+    \begin{itemize}
+    \item[$\circ$] notation: $\bu$ is velocity, $p$ is pressure, and $\tau$ is the deviatoric
+
+stress tensor, and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain-rate tensor
+    \end{itemize}
+
+\vspace{-33mm}
 
 %https://www.bl.uk/voices-of-science/interviewees/john-glen#
 \hfill \includegraphics[width=0.12\textwidth]{figs/people/jglen.png}
@@ -217,19 +222,19 @@
 \end{frame}
 
 
-\begin{frame}{avoiding unbounded viscosity}
+\begin{frame}{viscosity (and avoiding unbounded viscosity)}
 
 \begin{itemize}
 \item the classical viscosity relationship $\tau=2\nu D\bu$ eliminates $\tau$ from the equations, giving a system for $\bu,p$
-\item however, the viscosity formula $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ yields unbounded values as $D\bu\to 0$ (vanishing strain rates)
+\item however, the unmodified Glen-Nye viscosity formula $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ yields unbounded values as $D\bu\to 0$, i.e.~for vanishing strain rates
 \item so we also regularize with \alert{$\eps>0$} to generate bounded viscosity
 
 \begin{block}{Glen-Nye-Stokes equations with regularized viscosity}
 
 \begin{align*}
-- \Div \left(2 \alert{\nu_\eps} D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
-\Div \bu &= 0 &&\text{\emph{incompressibility}} \\
-\alert{\nu_\eps} = \nu_\eps(|D\bu|) &= \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}
+- \Div \left(2 \alert{\nu_\eps(|D\bu|)} D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
+\phantom{\int} \Div \bu &= 0 &&\text{\emph{incompressibility}} \\
+\alert{\nu_\eps(|D\bu|)} &= \tfrac{1}{2} B_n \left(|D\bu|^2 + (\eps\, D_0)^2\right)^{((1/n) - 1)/2} &&\text{\emph{flow law}}
 \end{align*}
 
 \smallskip
@@ -243,24 +248,32 @@
 \begin{frame}{boundary conditions, as simple as possible}
 
 \begin{itemize}
-\item note that $\sigma = 2 \nu_\eps D\bu - pI$ is the (Cauchy) stress tensor
+\item note that $\sigma = 2 \nu_\eps D\bu - pI$ is the \alert{Cauchy stress tensor}
 \item stress-free top:
 \begin{equation*}
 \sigma \bn = \left(2 \nu_\eps D\bu - pI\right) \bn = \bzero
 \end{equation*}
 
-\bigskip
-\includegraphics[width=0.9\textwidth]{figs/speed.png}
-
-\bigskip
+    \begin{itemize}
+    \item[$\circ$] atmospheric pressure could be applied at surface \dots no interesting effect
+    \end{itemize}
 \item no-slip base:
 \begin{equation*}
 \bu = \bzero
 \end{equation*}
+
     \begin{itemize}
     \item[$\circ$] \alert{no attempt in these slides to model sliding}
     \end{itemize}
 \end{itemize}
+
+\bigskip
+
+\begin{center}
+\includegraphics[width=0.9\textwidth]{figs/speed.png}
+
+{\tiny speed $|\bu|$}
+\end{center}
 \end{frame}
 
 
@@ -290,7 +303,7 @@
 \end{frame}
 
 
-\begin{frame}{weak form}
+\begin{frame}{the weak form}
 
 \begin{itemize}
 \item start from the equations, also called the \emph{strong form}:
@@ -320,7 +333,7 @@
 \begin{itemize}
 \item the nonlinear residual function:
     $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
-with $\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + \eps\, D_0^2\right)^{((1/n) - 1)/2}$
+with $\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + (\eps\, D_0)^2\right)^{((1/n) - 1)/2}$
 
 \smallskip
 \item we write this using the \emph{Unified Form Language} (UFL) in Firedrake:
@@ -383,7 +396,7 @@ v, q = TestFunctions(Z)
   \end{frame}
 }
 
-\section{\texttt{stage1/} \qquad linear Stokes as a first demo}
+\section{\texttt{stage1/} \qquad first demo: linear Stokes}
 
 
 \begin{frame}{the linear Stokes equations}
@@ -404,7 +417,7 @@ v, q = TestFunctions(Z)
 \end{align*}
 \item which has symmetric block structure:
   $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
-since $(-\Div)^\top = \grad$ under integration-by-parts
+with $A\ge 0$, and because $(-\Div)^\top = \grad$ under integration-by-parts
 \end{itemize}
 \end{column}
 
@@ -442,7 +455,7 @@ since $(-\Div)^\top = \grad$ under integration-by-parts
 \item install Firedrake following these directions:
 
 \begin{center}
-\href{https://www.firedrakeproject.org/download.html}{\texttt{firedrakeproject.org/download.html}}
+\href{https://www.firedrakeproject.org/install.html}{\texttt{firedrakeproject.org/install.html}}
 \end{center}
 \item activate the Python virtual environment every time you use Firedrake:
 
@@ -519,16 +532,17 @@ $ paraview domain.pvd            # view the solution
 \begin{columns}
 \begin{column}{0.8\textwidth}
 \begin{itemize}
-\item linear Stokes \small (\texttt{stage1/}) \normalsize needs only a single linear system:
+\item linear Stokes \small (\texttt{stage1/}) \normalsize solves a single linear system:
   $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
+
     \begin{itemize}
     \item[$\circ$] default solver: Firedrake $\to$ PETSc KSP $\to$ MUMPS
     \end{itemize}
-\item but for Glen-Stokes the residual function is \alert{nonlinear in $\bu$}:
+\item but Glen-Nye-Stokes residual function is \alert{nonlinear in $\bu$}:
 \small
 $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 \normalsize
-\item Firedrake applies Newton's method by default if we write the problem as\, \texttt{solve(F == 0,\dots)}
+\item fortunately, Firedrake applies Newton's method by default if we write the problem as\, \texttt{solve(F == 0,\dots)}
 \item what you need to know about Newton's iteration:
     \begin{itemize}
     \item[$\circ$] it does linearization around each iterate
@@ -563,7 +577,7 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
   $ cd stage2/
   $ python3 domain.py       # generate the domain outline
   $ gmsh -2 dome.geo        # mesh the domain
-  $ python3 solve.py        # solve glacier Stokes
+  $ python3 solve.py        # solve Glen-Nye-Stokes
   $ paraview dome.pvd       # view the solution
 \end{Verbatim}
 %$
@@ -577,22 +591,28 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \end{frame}
 
 
-\section{\texttt{stage3/} \qquad extruded meshes and 3D glaciers}
+\section{\texttt{stage3/} \qquad more power: extruded meshes and 3D glaciers}
 
 \begin{frame}[fragile]
 \frametitle{a more practical and powerful solver}
 
 \begin{itemize}
-\item the goal of this stage is to make a more practical and powerful glacier-modeling tool
+\item the goal of this stage is to advance toward a practical and powerful glacier-modeling tool
 \item we switch to an \alert{extruded mesh}, avoiding Gmsh in the toolchain
     \begin{itemize}
     \item[$\circ$] also we allow a bumpy bed (below)
+    \item[$\circ$] now the elements are quadrilaterals ($Q_2\times Q_1$ mixed method) in the planar case, versus triangles in \texttt{stage2/}
     \end{itemize}
 \item we demonstrate (mostly) \alert{dimension-independent programming}
     \begin{itemize}
     \item[$\circ$] code for 2D and 3D glacier geometry is nearly the same
     \end{itemize}
-\item additional bells \& whistles include rescaling the equations, vertical grid sequencing, over-regularization on coarse meshes when sequencing, and additional diagnostic fields in the output \texttt{.pvd} file
+\item additional bells \& whistles:
+    \begin{itemize}
+    \item[$\circ$] rescaling the equations
+    \item[$\circ$] vertical grid sequencing, with over-regularization on coarse meshes
+    \item[$\circ$] additional diagnostic fields in the output \texttt{.pvd} file
+    \end{itemize}
 \end{itemize}
 
 \bigskip
@@ -608,12 +628,11 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \frametitle{\texttt{stage3/} \qquad extruded mesh and more}
 
 \begin{itemize}
-\item \emph{purpose:} additional robust and/or useful features
+\item \emph{purpose:} a practical and robust solver
     \begin{itemize}
-    \item[$\circ$] construct mesh by vertically extruding a base mesh  \hfill \emph{allows refinement}
+    \item[$\circ$] construct mesh by vertically extruding a base mesh  \hfill \emph{refinement framework}
     \item[$\circ$] rescale the equations  \hfill \emph{better conditioning}
     \item[$\circ$] vertical grid sequencing  \hfill \emph{better initial iterates}
-    \item[$\circ$] $100\eps$ on coarse meshes in sequencing  \hfill \emph{better initial iterates}
     \item[$\circ$] write $\nu_\eps$ and $\tau$ from solution  \hfill \emph{diagnostic}
     \end{itemize}
 \item \emph{source file:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this}
@@ -624,7 +643,7 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \begin{Verbatim}[fontsize=\small]
 $ cd stage3/
 $ python3 solve.py                    # default resolution
-$ python3 solve.py -mx 400 -refine 2  # high resolution
+$ python3 solve.py -mx 400 -refine 2  # higher resolution
 $ paraview dome.pvd
 \end{Verbatim}
 %$
@@ -636,6 +655,8 @@ $ paraview dome.pvd
 \medskip
 \begin{center}
 \includegraphics[width=0.8\textwidth]{figs/stage3nu.png}
+
+\smallskip
 \includegraphics[width=0.8\textwidth]{figs/stage3tau.png}
 \end{center}
 \end{frame}
@@ -645,7 +666,7 @@ $ paraview dome.pvd
 \frametitle{evidence of convergence}
 
 \begin{itemize}
-\item our \texttt{stage3/} code permits adjusting resolution at runtime
+\item our \texttt{stage3/} code sets resolution at runtime
 \item for example:
 \begin{Verbatim}
 $ python3 solve.py -b0 0 -mx 400 -mz 4 -refine 2
@@ -679,7 +700,7 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
 
     \begin{itemize}
     \item[$\circ$] velocities are apparently converging
-    \item[$\circ$] however, we do not know the exact solution; not verification here
+    \item[$\circ$] however, we do not know the exact solution \dots this is not verification
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -693,13 +714,13 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
     \begin{itemize}
     \item[$\circ$] extruded mesh gets partitioned following base mesh partition
     \item[$\circ$] see \texttt{rank} field in \texttt{.pvd} output, for example with 4 processes:
-    \end{itemize}
 
 \smallskip
 \qquad \includegraphics[width=0.85\textwidth]{figs/stage3rank.png}
 
 \medskip
-\item using the default direct solver (Mumps), solution values are essentially independent of number of processes
+    \item[$\circ$] using the default direct solver (Mumps), solution values are essentially independent of number of processes
+    \end{itemize}
 \item however, speed-up is sublinear because of significant serial workloads
 
 \medskip
@@ -717,25 +738,26 @@ $ mpiexec -n 4 python3 solve.py -mx 800 -refine 2  # 20 secs run time
 
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage3/} continued \qquad 3D glaciers}
-
-FIXME make the graphic more interesting \dots using vertical exageration and slice in Paraview
+\frametitle{\texttt{stage3/} continued \qquad a 3D glacier}
 
 \begin{itemize}
-\item \emph{purpose:} Firedrake allows easy extension to 3D ice sheet; add a bumpy bed
+\item \emph{purpose:} demonstrate a (mostly) dimension-independent Firedrake code which permits a 3D glacier
 \item \emph{source file:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this}
 \item \emph{generated file:} \texttt{dome.pvd}
 \end{itemize}
 
 \medskip
 \begin{Verbatim}
-$ mpiexec -n 4 python3 solve.py -dim 3 -b0 500
-$ paraview dome.pvd              # "rank" field below
+$ python3 solve.py -dim 3 -baserefine 3 -refine 1
+$ paraview dome.pvd
 \end{Verbatim}
-%$
+
+\begin{center}
+\includegraphics[width=0.6\textwidth]{figs/stage3speed3d.png}
 
 \bigskip
-\hfill \includegraphics[width=0.4\textwidth]{figs/stage3rank3d.png} \hspace{10mm}
+\scriptsize 3$\times$ vertical exaggeration, coloring by speed $|\bu|$
+\end{center}
 \end{frame}
 
 
@@ -743,23 +765,23 @@ $ paraview dome.pvd              # "rank" field below
 \frametitle{solver performance limitations}
 
 \begin{itemize}
-\item this run is about as far as I can refine on my machine:
+\item this run is about as far as I can refine on my office desktop:
 
 \begin{Verbatim}[fontsize=\small]
-$ mpiexec -n 12 python3 solve.py -dim 3 -b0 500 -o finest.pvd \
-    -refine 2 -baserefine 4 -s_snes_atol 1.0e-2
+$ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
+    -refine 2 -s_snes_atol 1.0e-2 -o finest.pvd
 \end{Verbatim}
 %$
 
     \begin{itemize}
-    \item[$\circ$] 100 GB ram, plenty of cores, 38 minutes run time
+    \item[$\circ$] 100 GB ram, plenty of cores, half hour run time
     \end{itemize}
 
 \bigskip
 \item \emph{limiting factor:} the \alert{direct solver} for each Newton step linear system uses too much memory when generating the LU factors
     \begin{itemize}
     \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D, and they are slow
-    \item[$\circ$] see B (2021, 2023)
+    \item[$\circ$] see B (2021b, 2023)
     \end{itemize}
 \item for higher resolution we need a scalable solver
 \item solver composition: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
@@ -779,13 +801,13 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -b0 500 -o finest.pvd \
 \item we do not yet have a ``real'' glacier model
     \begin{itemize}
     \item[$\circ$] the climate (e.g.~surface mass balance) has not appeared as an input
-    \item[$\circ$] time derivatives have not appeared either
+    \item[$\circ$] time derivatives have not appeared either!
     \end{itemize}
 
 \medskip
 \item[Q.] how do glaciers change shape?
 
-\item[A.] via the \alert{free-surface equation} (or surface kinematical equation):
+\item[A.] via the \alert{free-surface equation} (surface kinematical equation):
    $$\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s = a$$
 
     \begin{itemize}
@@ -881,16 +903,16 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -b0 500 -o finest.pvd \
 \item early/naive approaches to solving this coupled problem have been fragile
     \begin{itemize}
     \item[$\circ$] The method everyone tries first is to solve Stokes for the current geometry, then advance the surface, and repeat.
-    \item[$\circ$] This represents a \emph{split} and \emph{explicit} approach to the coupled problem.
+    \item[$\circ$] This is a \emph{split} and \emph{explicit} approach to the coupled problem.
     \item[$\circ$] The result is \alert{limited and uncertain performance}.
     \end{itemize}
 
 \bigskip
-\item<2> what are the challenges in designing better schemes?  here are two:
+\item<2> what are the underlying challenges in designing better schemes?
 \end{itemize}
 
 \begin{enumerate}
-\item<2> The surface elevation $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved.  The mesh used for the $\bu,p$ solver therefore changes at every time step.  This makes a monolithic or implicit implementations difficult.
+\item<2> The surface elevation $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved.  The mesh used for the $\bu,p$ solver therefore changes at every time step.  This makes monolithic and/or implicit implementations difficult.
 \item<2> The coupled problem mixes advective and diffusive aspects.  The proportions depend on the particular boundary conditions.
     \begin{itemize}
     \item Precise time-step restriction and expected performance scaling remain unclear (B 2023 and references therein).
@@ -902,15 +924,15 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -b0 500 -o finest.pvd \
 \begin{frame}{choices for \texttt{stage4/}}
 
 \begin{itemize}
-\item we will demonstrate a solver which is \alert{semi-implicit}, \alert{split}, \alert{stabilized}, and \alert{free margin}
+\item we will demonstrate and test a solver which is \alert{semi-implicit}, \alert{split}, \alert{stabilized}, and \alert{free margin}
     \begin{itemize}
-    \item[$\circ$] warning: ``stabilize'' means several things here
-    \item[$\circ$] we use $P_1$ elements for $s$; thus \alert{$\Lambda(t)$ is polygonal}
-    \item[$\circ$] as before, we use inf-sup stable $P_2\times P_1$ elements for $\bu,p$
+    \item[$\circ$] warning: ``stabilized'' means several things here
+    \item[$\circ$] we use $Q_1$ elements for $s$ in the planar case; thus \alert{$\Lambda(t)$ is polygonal}
+    \item[$\circ$] as before, we use an extruded mesh with inf-sup stable $Q_2\times Q_1$ elements for $\bu,p$
     \end{itemize}
 
-\medskip
-\item it is based on these choices:
+\smallskip
+\item our solver is based on these non-trivial choices:
 
 \smallskip
     \begin{enumerate}
@@ -929,12 +951,13 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -b0 500 -o finest.pvd \
 \smallskip
     \item[3.] the problem is solved as a \alert{variational inequality} which determines the glacier extent and margin
         \begin{itemize}
-        \item[$\circ$] a bounds-respecting Newton method is used for $s$
+        \item[A.] a bounds-respecting Newton method is used for $s$
+        \item[B.] we allow variable ice extent on the extruded mesh
         \end{itemize}
     \end{enumerate}
 
 \medskip
-\item the next slides give more detail on techniques 1, 2, 3
+\item the next slides give citations and details on techniques 1, 2, 3
 \end{itemize}
 \end{frame}
 
@@ -1083,15 +1106,15 @@ with \texttt{MX}$=25,50,100,200,400$
 \end{frame}
 
 
-\begin{frame}{glaciers have margins}
+\begin{frame}{glaciers have moving margins}
 
 \begin{itemize}
 \item however, the \alert{surface elevation must be above the bed}
 \item enforcing this obvious fact provides the (lateral) free-boundary condition for a land-based glacier
     \begin{itemize}
-    \item[$\circ$] a \alert{variational inequality} (B 2021, Chapter 12) enforces it \dots next slide
+    \item[$\circ$] a \alert{variational inequality} (B 2021b, Chapter 12) enforces it \dots next slide
     \end{itemize}
-\item solving the coupled problem subject to this condition determines the location of the \alert{glacier margin}
+\item solving the coupled problem subject to this condition determines the location of the moving \alert{glacier margin}
     \begin{itemize}
     \item[$\circ$] the thickness and flux are both zero at the margin
     \end{itemize}
@@ -1103,7 +1126,7 @@ with \texttt{MX}$=25,50,100,200,400$
 \end{frame}
 
 
-\begin{frame}{variational inequality for free surface}
+\begin{frame}{technique 3A: variational inequality for free surface}
 
 \begin{itemize}
 \item suppose a (time-independent) bed elevation function $b(x,y)$
@@ -1116,22 +1139,26 @@ with \texttt{MX}$=25,50,100,200,400$
 for all $r^h$ in $\cK^h$
 
     \begin{itemize}
-    \item[$\circ$] this includes the edge
-
-stabilization
+    \item[$\circ$] includes edge stabilization
     \end{itemize}
 
-\item computed margin location
+\item the computed margin location
 
 is where $s_{k+1}^h$ meets $b^h$
 
-\vspace{-24mm}
+\item we apply the \texttt{vinewtonrsls}
+
+bounds-respecting Newton
+
+solver from PETSc (B 2021b)
+
+\vspace{-34mm}
 \hfill \includegraphics[width=0.5\textwidth]{figs/domain-margin.png}
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}{handling extruded meshes with free boundaries}
+\begin{frame}{technique 3B: extruded mesh with variable ice extent}
 
 FIXME document PinchColumnXX
 \end{frame}
@@ -1206,7 +1233,7 @@ $ python3 solve.py -mx 100 -nocfl -maxdt 1.0
 
 FIXME mass conservation approximate; needs resolution
 
-FIXME issue in B (2021) is different; here we should conserve
+FIXME issue in B (2021a) is different; here we should conserve
 \end{frame}
 
 
@@ -1236,7 +1263,7 @@ FIXME compare Halfar
 
 \item for finite elements and Stokes:  Elman, Silvester, \& Wathen (2014)
 
-\item for PETSc, Firedrake, and Stokes:  Bueler (2021)
+\item for PETSc, Firedrake, and Stokes:  Bueler (2021b)
 \end{itemize}
 \end{column}
 
