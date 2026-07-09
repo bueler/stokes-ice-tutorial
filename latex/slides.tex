@@ -949,9 +949,9 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
         \end{itemize}
 
 \smallskip
-    \item[3.] the problem is solved as a \alert{variational inequality} which determines the glacier extent and margin
+    \item[3.] the coupled free-surface problem is solved as a \alert{variational inequality} which determines the glacier extent and margin
         \begin{itemize}
-        \item[A.] a bounds-respecting Newton method is used for $s$
+        \item[A.] we apply a bounds-respecting Newton method
         \item[B.] we allow variable ice extent on the extruded mesh
         \end{itemize}
     \end{enumerate}
@@ -1046,7 +1046,10 @@ for all test functions $r^h$, where
 \frametitle{\texttt{stage4/} \qquad slumping in a box}
 
 \begin{itemize}
-\item \emph{purpose:} evolving surface between walls, exhibiting numerical stability and exact mass conservation
+\item \emph{purpose:} evolving surface between lubricated walls, exhibiting \alert{numerical stability} and \alert{exact mass conservation}
+    \begin{itemize}
+    \item[$\circ$] these boundary conditions are considered by L\"ofgren et al (2022) and Tominec et al (2026)
+    \end{itemize}
 \item \emph{source files:} \texttt{geometry.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated file:} \texttt{dome.pvd}
 \end{itemize}
@@ -1106,23 +1109,24 @@ with \texttt{MX}$=25,50,100,200,400$
 \end{frame}
 
 
-\begin{frame}{glaciers have moving margins}
+\begin{frame}{but glaciers have moving margins!}
 
 \begin{itemize}
 \item however, the \alert{surface elevation must be above the bed}
 \item enforcing this obvious fact provides the (lateral) free-boundary condition for a land-based glacier
     \begin{itemize}
     \item[$\circ$] a \alert{variational inequality} (B 2021b, Chapter 12) enforces it \dots next slide
+    \item[$\circ$] the thickness and flux are both zero at the free boundary
     \end{itemize}
 \item solving the coupled problem subject to this condition determines the location of the moving \alert{glacier margin}
     \begin{itemize}
-    \item[$\circ$] the thickness and flux are both zero at the margin
+    \item[$\circ$] ``free boundary'' and ``glacier margin'' are synonyms here
     \end{itemize}
 \end{itemize}
 
 \bigskip
 \centering
-\includegraphics[width=0.6\textwidth]{figs/domain-margin.png}
+\includegraphics[width=0.55\textwidth]{figs/domain-margin.png}
 \end{frame}
 
 
@@ -1160,7 +1164,25 @@ solver from PETSc (B 2021b)
 
 \begin{frame}{technique 3B: extruded mesh with variable ice extent}
 
-FIXME document PinchColumnXX
+\begin{itemize}
+\item at each time step the current surface $s^h_k$ defines the ice domain $\Lambda(t_k)$
+
+\smallskip
+\item on the other hand, our extruded mesh covers the entire map-plane region $\Omega$ with a fixed number \texttt{mz} of levels in the vertical
+    \begin{itemize}
+    \item[$\circ$] the \alert{base mesh} covers $\Omega$
+    \item[$\circ$] $\bu,p$ are defined at each node of the extruded mesh
+    \item[$\circ$] all of our meshes and fields have \alert{constant memory footprint} as we time-step
+    \end{itemize}
+
+\medskip
+\item if $s^h_k=b^h$ for some base mesh node then there is no ice in that column of the extruded mesh, and so \dots
+\item \alert{in extruded mesh columns with no ice we lock $\bu,p$ values to zero}
+    \begin{itemize}
+    \item[$\circ$] implemented in classes \texttt{PinchColumnPressure} and \texttt{PinchColumnVelocity} in \texttt{stage4/geometry.py}
+    \item[$\circ$] \texttt{PinchColumnX} are sub-classes of Firedrake's \texttt{DirichletBC}
+    \end{itemize}
+\end{itemize}
 \end{frame}
 
 
@@ -1259,7 +1281,7 @@ FIXME compare Halfar
 \item PETSc: \href{https://petsc.org}{\texttt{petsc.org}}
 
 \vspace{15mm}
-\item for Glen-Stokes eqns, see Ch.~1 by Hewitt:  Fowler \& Ng (2021)
+\item for Glen-Nye-Stokes eqns, see Ch.~1 by Hewitt:  Fowler \& Ng (2021)
 
 \item for finite elements and Stokes:  Elman, Silvester, \& Wathen (2014)
 
