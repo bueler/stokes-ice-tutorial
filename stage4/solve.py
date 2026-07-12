@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 # FIXME assess accuracy against Halfar solution, for eps << 1
+# possible run to do this:
+#  python3 solve.py -H0 500 -T 40 -mx 400 -omovie movie.pvd
 
 import argparse
 import sys
@@ -55,6 +57,20 @@ petsc4py.init(passthroughoptions)
 import numpy as np
 from firedrake import *
 from firedrake.petsc import PETSc
+
+printpar = PETSc.Sys.Print  # print once even in parallel
+
+from halfar import (
+    secpera,
+    g,
+    rho,
+    n,
+    A3,
+    B3,
+    get_halfar_characteristic_time,
+    set_halfar_from_time,
+    set_halfar_from_lengths,
+)
 from geometry import (
     PinchColumnPressure,
     PinchColumnVelocity,
@@ -63,36 +79,20 @@ from geometry import (
     extend_from_p1base,
 )
 
-printpar = PETSc.Sys.Print  # print once even in parallel
-
-# physical constants
-secpera = 31556926.0  # seconds per year
-g = 9.81  # m s-2
-rho = 910.0  # kg m-3
-n = 3.0
-A3 = 3.1689e-24  # Pa-3 s-1;  EISMINT I value of ice softness
-B3 = A3 ** (-1.0 / 3.0)  # Pa s(1/3);  ice hardness
-Dtyp = 1.0 / secpera  # s-1;  strain rate scale
-
-
-def set_halfar_profile(x, s, R0=args.R0, H0=args.H0):
-    # Set surface geometry from t = t0 Halfar time-dependent SIA geometry solution,
-    # a dome with zero SMB.  The surface is zero outside of (-R0,R0).  Reference:
-    #   * P. Halfar (1981), On the dynamics of the ice sheets, J. Geophys. Res. 86 (C11), 11065--11072
-    pp = 1.0 + 1.0 / n
-    rr = n / (2.0 * n + 1.0)
-    xi = conditional(abs(x) < R0, 1.0 - abs(x / R0) ** pp, 0.0)
-    s.interpolate(H0 * xi ** rr)
-
-
 # create 1D base mesh
+if args.walls:
+    assert args.L < args.R0, "initial shape must contact walls at locations |x|=L"
 basemesh = IntervalMesh(args.mx, -args.L, args.L)
 xbase = SpatialCoordinate(basemesh)
 P1base = FunctionSpace(basemesh, "Lagrange", 1)
 
 # set initial 2D mesh geometry, but store flat coordinates
+t0 = get_halfar_characteristic_time(R0=args.R0, H0=args.H0)
+printpar(
+    f"initializing from Halfar profile (t0 = {t0 / secpera:.3f} a, R0 = {args.R0 / 1000.0:.0f} km, H0 = {args.H0:.0f} m) ..."
+)
 s = Function(P1base)
-set_halfar_profile(xbase[0], s)
+set_halfar_from_lengths(xbase[0], s, R0=args.R0, H0=args.H0)
 mesh = ExtrudedMesh(basemesh, layers=args.mz, layer_height=1.0 / args.mz)
 xzflat = set_mesh_geometry(mesh, s)
 if not args.noload:
@@ -141,7 +141,10 @@ def D(w):
     return 0.5 * (grad(w) + grad(w).T)
 
 
+Dtyp = 1.0 / secpera  # s-1;  strain rate scale
+
 dt_loadstab = Constant(0.0)
+
 
 def form_stokes(loadstab=False):
     """Weak form for the Stokes problem on the geometry stored in the current
@@ -187,6 +190,7 @@ lb = Function(P1base).interpolate(Constant(0.0))
 ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
 dt_ske = Constant(0.0)
+
 
 def form_ske():
     """weak form for surface kinematical equation"""
@@ -234,7 +238,9 @@ solverske = NonlinearVariationalSolver(
 
 # time stepping loop
 deltax = 2.0 * args.L / args.mx
-printpar(f"solving on {args.mx} x {args.mz} mesh (dx = {deltax:.3f} m) ...")
+printpar(
+    f"solving on {args.mx} x {args.mz} mesh (2L = {2*args.L / 1000.0:.0f} km, dx = {deltax:.3f} m) ..."
+)
 n_u, n_p = V.dim(), W.dim()
 printpar(f"  sizes: n_u = {n_u}, n_p = {n_p}")
 if args.omovie is not None:

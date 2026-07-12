@@ -40,7 +40,7 @@ class PinchColumnPressure(fd.DirichletBC):
         assert ctx is not None, f"got None for appctx from {V.mesh()} coordinates DM"
         # return P1 nodes in columns with surface elevation less than htol
         s = fd.Function(V).interpolate(ctx["sR"])
-        #print(np.where(s.dat.data_ro_with_halos < self.htol)[0])
+        # print(np.where(s.dat.data_ro_with_halos < self.htol)[0])
         return np.where(s.dat.data_ro_with_halos < self.htol)[0]
 
 
