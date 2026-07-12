@@ -1,11 +1,20 @@
 # Functions to set surface geometry from the Halfar time-dependent
-# shallow ice approximation (SIA) geometry solution.  This is a spreading
+# shallow ice approximation (SIA) geometry solution.
+#
+# The Halfar solution from
+#   P. Halfar (1981), On the dynamics of the ice sheets,
+#   J. Geophys. Res. 86 (C11), 11065--11072
+# is a similarity solution of the isothermal SIA model.  It is a spreading
 # dome solution with zero surface mass balance everywhere.  The surface
 # has center height H0 and is zero outside of (-R0,R0) at time t0.  The
 # time t0 can be interpreted as the time since creation as a delta mass
-# of ice.  Reference:
-#   P. Halfar (1981), On the dynamics of the ice sheets,
-#   J. Geophys. Res. 86 (C11), 11065--11072
+# of ice.
+#
+# Note that the Halfar solution is *not* an exact solution of the
+# free-surface + Stokes coupled equations.  However, asymptotically for small
+# aspect ratio (eps = [H]/[L]) it is arbitrarily close to an solution of
+# of the coupled problem.
+#
 # This module is also the source of the physical constants.
 
 from firedrake import *
