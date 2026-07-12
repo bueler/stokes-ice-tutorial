@@ -42,6 +42,13 @@ def get_halfar_characteristic_time(R0=None, H0=None):
     return t0
 
 
+def get_halfar_dimensions_from_time(t, R0=None, H0=None):
+    t0 = get_halfar_characteristic_time(R0, H0)
+    R = (t / t0) ** beta * R0  # margin position at time t
+    H = (t / t0) ** (-alpha) * H0  # center height at time t
+    return R, H
+
+
 def set_halfar_from_time(x, s, t=None, R0=10000.0, H0=1000.0):
     t0 = get_halfar_characteristic_time(R0=R0, H0=H0)
     s0 = (t / t0) ** beta * R0  # margin position at time t

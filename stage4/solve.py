@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-# FIXME assess accuracy against Halfar solution, for eps << 1
-# possible run to do this:
-#  python3 solve.py -H0 500 -T 40 -mx 400 -omovie movie.pvd
-
 import argparse
 import sys
 
@@ -68,6 +64,7 @@ from halfar import (
     A3,
     B3,
     get_halfar_characteristic_time,
+    get_halfar_dimensions_from_time,
     set_halfar_from_time,
     set_halfar_from_lengths,
 )
@@ -304,6 +301,9 @@ for k in range(args.maxN):
 
 printpar(f"done ... t={t / secpera:.3f} a")
 report_shape(s)
+Rh, Hh = get_halfar_dimensions_from_time(t + t0, R0=args.R0, H0=args.H0)
+printpar(f"  Halfar values: width = {2 * Rh / 1000.0:.3f} km, max(s) = {Hh:.3f} m")
+
 if args.omovie is not None:
     printpar(f"done with file {args.omovie}")
 
