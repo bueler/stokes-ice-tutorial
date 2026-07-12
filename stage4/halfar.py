@@ -1,3 +1,13 @@
+# Functions to set surface geometry from the Halfar time-dependent
+# shallow ice approximation (SIA) geometry solution.  This is a spreading
+# dome solution with zero surface mass balance everywhere.  The surface
+# has center height H0 and is zero outside of (-R0,R0) at time t0.  The
+# time t0 can be interpreted as the time since creation as a delta mass
+# of ice.  Reference:
+#   P. Halfar (1981), On the dynamics of the ice sheets,
+#   J. Geophys. Res. 86 (C11), 11065--11072
+# This module is also the source of the physical constants.
+
 from firedrake import *
 
 # physical constants
@@ -32,8 +42,5 @@ def set_halfar_from_time(x, s, t=None, R0=10000.0, H0=1000.0):
 
 
 def set_halfar_from_lengths(x, s, R0=None, H0=None):
-    # Set surface geometry from t = t0 Halfar time-dependent SIA geometry solution,
-    # a dome with zero SMB.  The surface is zero outside of (-R0,R0).  Reference:
-    #   * P. Halfar (1981), On the dynamics of the ice sheets, J. Geophys. Res. 86 (C11), 11065--11072
     xi = conditional(abs(x) < R0, 1.0 - abs(x / R0) ** pp, 0.0)
     s.interpolate(H0 * xi ** rr)
