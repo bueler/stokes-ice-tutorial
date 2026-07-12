@@ -77,6 +77,7 @@ from geometry import (
     set_mesh_geometry,
     trace_to_vector_p2base,
     extend_from_p1base,
+    evaluate_shape,
 )
 
 # create 1D base mesh
@@ -216,24 +217,19 @@ def get_dt(t, dx, umagmax):
     return np.array([dtcfl, args.maxdt * secpera, args.T * secpera - t]).min()
 
 
-def report_shape(t, s, stol=1.0):
-    # FIXME not correct in parallel; also fails if one process has no ice
-    with s.dat.vec_ro as ss:
-        smax = ss.max()[1]
-    xx = basemesh.coordinates.dat.data_ro
-    width = xx[s.dat.data_ro > stol].max() - xx[s.dat.data_ro > stol].min()
-    area = assemble(s * dx)
-    printpar(
-        f"  width = {width / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {area / 1e6:.3f} km^2"
-    )
-
-
 # set up SKE solver
 Fske = form_ske()
 probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
 solverske = NonlinearVariationalSolver(
     probske, solver_parameters=vipar, options_prefix="ske"
 )
+
+
+def report_shape(s):
+    lm, rm, smax, iarea = evaluate_shape(basemesh, s)
+    printpar(
+            f"  width = {(rm - lm) / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {iarea / 1e6:.3f} km^2"
+    )
 
 
 # time stepping loop
@@ -251,8 +247,10 @@ dtsec = None
 for k in range(args.maxN):
     if t >= args.T * secpera:
         break
+
+    # report on current geometry
     printpar(f"t={t / secpera:.3f} a (k={k}):")
-    report_shape(t, s)
+    report_shape(s)
 
     # solve Stokes on current geometry (in current mesh), which requires
     # resetting form F and boundary conditions bcs
@@ -305,7 +303,7 @@ for k in range(args.maxN):
     t += dtsec
 
 printpar(f"done ... t={t / secpera:.3f} a")
-report_shape(t, s)
+report_shape(s)
 if args.omovie is not None:
     printpar(f"done with file {args.omovie}")
 

@@ -12,6 +12,8 @@
 #     to a Q1 function in the R space on the extruded mesh
 #   * trace_to_vector_p2base() transfers the trace of a P2 vector field
 #     on the extruded mesh to a vector field on the base mesh
+#   * evaluate_shape() computes the left and right margin position,
+#     maximum surface elevation, and area of a planar glacier shape
 #
 # Known limitation:  These tools currently assume the bed elevation is
 # identically zero.  This can easily be fixed.
@@ -21,8 +23,10 @@
 
 import numpy as np
 from functools import cached_property
+from pyop2.mpi import MPI
 import firedrake as fd
 from firedrake.dmhooks import get_appctx, pop_appctx, push_appctx
+from firedrake.petsc import PETSc
 
 
 class PinchColumnPressure(fd.DirichletBC):
@@ -93,3 +97,18 @@ def trace_to_vector_p2base(basemesh, mesh, u, ubm):
     bc = fd.DirichletBC(P2V, 0.0, "top")
     ubm.dat.data_with_halos[:] = u.dat.data_with_halos[bc.nodes]
     return None
+
+
+def evaluate_shape(basemesh, s, stol=1.0):
+    # note: these methods are correct in parallel
+    xx = basemesh.coordinates.dat.data_ro
+    spos = xx[s.dat.data_ro > stol]
+    myl, myr = PETSc.INFINITY, PETSc.NINFINITY
+    if len(spos) > 0:
+        myl, myr = min(spos), max(spos)
+    lmargin = float(basemesh.comm.allreduce(myl, op=MPI.MIN))
+    rmargin = float(basemesh.comm.allreduce(myr, op=MPI.MAX))
+    with s.dat.vec_ro as ss:
+        smax = ss.max()[1]
+    area = fd.assemble(s * fd.dx)
+    return lmargin, rmargin, smax, area
