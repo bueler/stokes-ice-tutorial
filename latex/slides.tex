@@ -147,7 +147,7 @@
 \end{frame}
 
 
-\section{stage 0 \hspace{9.3mm} equations for the glacier dynamics problem}
+\section{\emph{theory} \hspace{11mm} equations for the glacier dynamics problem}
 
 \begin{frame}{glacier dynamics using a Stokes model: the high-level view}
 
@@ -789,7 +789,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \end{frame}
 
 
-\section{\texttt{stage4/} \qquad evolving glaciers: coupling the free-surface equation}
+\section{\emph{theory} \hspace{11mm} evolving glaciers: free-surface equation coupled to Stokes}
 
 \begin{frame}{but don't glaciers actually change with the climate?}
 
@@ -908,33 +908,59 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \item<2> The coupled problem mixes advective and diffusive aspects.  The proportions depend on the particular boundary conditions.
     \begin{itemize}
     \item Precise time-step restriction and expected performance scaling remain unclear (B 2023 and references therein).
-    \item However, we are about to apply some recent theoretical progress!
+    \item However, \texttt{stage4/} will apply some recent theoretical progress!
     \end{itemize}
 \end{enumerate}
 \end{frame}
 
 
-\begin{frame}{choices for \texttt{stage4/}}
+\begin{frame}{also, glaciers have moving margins!}
+
+\begin{itemize}
+\item however, the \alert{surface elevation must be above the bed}
+\item enforcing this obvious fact provides the (lateral) free-boundary condition for a land-based glacier
+    \begin{itemize}
+    \item[$\circ$] the weak form is a \alert{variational inequality} (B 2021b, Chapter 12)
+    \item[$\circ$] the thickness and flux are both zero at the free boundary
+    \end{itemize}
+\item solving the coupled problem subject to this condition determines the location of the moving \alert{glacier margin} ($=$ free boundary)
+
+\medskip
+\begin{center}
+\includegraphics[width=0.5\textwidth]{figs/domain-margin.png}
+\end{center}
+
+\medskip
+\item \texttt{stage4/} will demonstrate a variational inequality solver
+\end{itemize}
+\end{frame}
+
+
+\section{\texttt{stage4/} \qquad expanding dome solutions}
+
+\begin{frame}{evolving extruded meshes for \texttt{stage4/}}
 
 \begin{itemize}
 \item we will demonstrate and test a solver which is \alert{semi-implicit}, \alert{split}, \alert{stabilized}, and \alert{free margin}
     \begin{itemize}
     \item[$\circ$] \dots as explained on the next few slides
-    \item[$\circ$] but note that ``stabilized'' means several things here
+    \item[$\circ$] note that ``stabilized'' means several things here
     \end{itemize}
 
-\bigskip
-\item \alert{$\Lambda(t)$ is polygonal} because we extrude from $P_1$ elements for $s$ and $b$
+\medskip
+\item it uses an extruded mesh between $P_1$ surfaces $s$ and $b$
     \begin{itemize}
-    \item[$\circ$] ``$P_1$ elements'' here means intervals for planar glaciers ($d=1$) and triangles for 3D glaciers ($d=2$)
-    \item[$\circ$] as before, for $\bu,p$ on $\Lambda(t)$ we use quadrilateral ($Q_2\times Q_1$) elements for planar glaciers and prism elements for 3D glaciers
+    \item[$\circ$] ``$P_1$'' $=$ intervals in planar ($d=1$) and triangles generally ($d=2$)
+    \item[$\circ$] thus the Stokes domain $\Lambda(t)$ is \alert{polygonal} at each $t$
     \end{itemize}
-\end{itemize}
 
 \medskip
 \begin{center}
 \includegraphics[width=0.75\textwidth]{figs/extruded.png}
 \end{center}
+
+\item as before, for $\bu,p$ on $\Lambda(t)$ we use quadrilateral ($Q_2\times Q_1$) elements for planar glaciers and prism elements for 3D glaciers
+\end{itemize}
 \end{frame}
 
 
@@ -942,7 +968,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{frame}{new techniques for \texttt{stage4/}}
 
 \begin{itemize}
-\item our solver is based on three non-trivial new techniques:
+\item our solver is based on three \alert{new techniques} which modify the weak form of the coupled problem:
 \end{itemize}
 
 \begin{enumerate}
@@ -1059,7 +1085,7 @@ for all test functions $r^h$, where
     \begin{itemize}
     \item[$\circ$] this geometry is considered by L\"ofgren et al (2022) and Tominec et al (2026)
     \end{itemize}
-\item \emph{source files:} \texttt{geometry.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
+\item \emph{source files:} \texttt{geometry.py}, \texttt{halfar.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated file:} \texttt{dome.pvd}
 \end{itemize}
 
@@ -1118,27 +1144,6 @@ with \texttt{MX}$=25,50,100,200,400$
 \end{frame}
 
 
-\begin{frame}{but glaciers have moving margins!}
-
-\begin{itemize}
-\item however, the \alert{surface elevation must be above the bed}
-\item enforcing this obvious fact provides the (lateral) free-boundary condition for a land-based glacier
-    \begin{itemize}
-    \item[$\circ$] the weak form is a \alert{variational inequality} (B 2021b, Chapter 12) \dots next slide
-    \item[$\circ$] the thickness and flux are both zero at the free boundary
-    \end{itemize}
-\item solving the coupled problem subject to this condition determines the location of the moving \alert{glacier margin}
-    \begin{itemize}
-    \item[$\circ$] ``free boundary'' and ``glacier margin'' are synonyms here
-    \end{itemize}
-\end{itemize}
-
-\bigskip
-\centering
-\includegraphics[width=0.55\textwidth]{figs/domain-margin.png}
-\end{frame}
-
-
 \begin{frame}{technique 3A: variational inequality for free surface}
 
 \begin{itemize}
@@ -1173,20 +1178,21 @@ solver from PETSc (B 2021b)
 \begin{frame}{technique 3B: extruded mesh with variable ice extent}
 
 \begin{itemize}
-\item our extruded mesh covers the entire map-plane region $\Omega$ with a fixed number \texttt{mz} of levels in the vertical
+\item the base mesh covers all of $\Omega$
+\item \alert{extruded mesh has a fixed number \texttt{mz} of levels in the vertical}
     \begin{itemize}
-    \item[$\circ$] the \alert{base mesh} covers $\Omega$
     \item[$\circ$] $\bu,p$ are defined at each node of the extruded mesh
-    \item[$\circ$] all of our meshes and fields have \alert{constant memory footprint} as we time-step
+    \item[$\circ$] our meshes and fields have \alert{constant memory footprint} as we time-step
     \end{itemize}
 
 \medskip
-\item however, the current surface $s^h_k$ defines the ice domain $\Lambda(t_k)$
 \item concept: if $s^h_k=b^h$ at a base mesh node then there is no ice in that column of the extruded mesh
-\item \alert{in extruded mesh columns with no ice we lock $\bu,p$ values to zero}
     \begin{itemize}
-    \item[$\circ$] classes \texttt{PinchColumnPressure} and \texttt{PinchColumnVelocity}
-    \item[$\circ$] sub-classes of Firedrake's \texttt{DirichletBC}
+    \item[$\circ$] note that $s^h_k$ and $b^h$ define the ice domain $\Lambda(t_k)$
+    \end{itemize}
+\item \alert{in columns with no ice we lock $\bu,p$ values to zero}
+    \begin{itemize}
+    \item[$\circ$] classes \texttt{PinchColumnPressure} and \texttt{PinchColumnVelocity} are sub-classes of \texttt{DirichletBC}
     \item[$\circ$] see \texttt{stage4/geometry.py}
     \end{itemize}
 \end{itemize}
@@ -1202,7 +1208,7 @@ solver from PETSc (B 2021b)
 
 \begin{itemize}
 \item \emph{purpose:} evolving free surface with a moving margin, exhibiting numerical stability
-\item \emph{source files:} \texttt{geometry.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
+\item \emph{source files:} \texttt{geometry.py}, \texttt{halfar.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated file:} \texttt{movie.pvd}
 \end{itemize}
 
@@ -1229,7 +1235,7 @@ $ paraview movie.pvd
 \begin{itemize}
 \item especially near the glacier margin, edge stabilization (technique 1A) is clearly needed
     \begin{itemize}
-    \item[$\circ$] runs with \texttt{-walls} do not show the need
+    \item[$\circ$] runs with \texttt{-walls} generally do not show the need
     \end{itemize}
 \item compare these runs:
 \begin{Verbatim}[fontsize=\small,xleftmargin=5mm]
@@ -1246,7 +1252,8 @@ $ python3 solve.py -mx 200 -T 1 -noedge
 
 \hfill \includegraphics[width=0.7\textwidth]{figs/marginnoedge.png}
 
-\medskip
+% COMMENTED-OUT
+\begin{comment}
 \item need for technique 1B (CFL for time-step length) is more subtle
     \begin{itemize}
     \item[$\circ$] compare the margin shape at the end of these two runs:
@@ -1257,21 +1264,87 @@ $ python3 solve.py -mx 100 -nocfl -maxdt 1.0
 \end{Verbatim}
     \item[$\circ$] margin shape in run 2 is wrong (bulging!), but not wildly unstable (\emph{not shown})
     \end{itemize}
+\end{comment}
+% COMMENTED-OUT
+
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{assessing correctness}
+
+\begin{itemize}
+\item is our time-dependent solver correct?
+\item it is not clear how to build a non-trivial moving-margin exact solution of the coupled equations
+\item however, such exact solutions exist for \alert{shallow ice approximation (SIA)}
+    \begin{itemize}
+    \item[$\circ$] both time-dependent (Halfar) and steady-state exact solutions are known
+    \end{itemize}
+\item SIA exact solutions are \alert{close} to solving the free-surface $+$ Stokes coupled equations \alert{when the aspect ratio $\eps = (\text{height}) / (\text{width})$ is small}
+
+\bigskip
+\item next slide: we compare with the Halfar (1981) exact solution
+\item we use a \alert{shallow initial dome geometry} so SIA is reasonably accurate
+    \begin{itemize}
+    \item[$\circ$] center height 1000 m and width 20 km \quad $\implies$ \quad $\eps = 0.05$
+    \item[$\circ$] Halfar characteristic time $t_0=0.17$ a
+    \end{itemize}
+
+\smallskip
+\begin{center}
+\includegraphics[width=0.8\textwidth]{figs/halfarinitial.png}
+\end{center}
+
+\item result: our time-dependent numerical solutions yield results close to a prediction from the SIA
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{evidence of correctness for a shallow, moving-margin dome}
+
+\begin{itemize}
+\item consider runs of 10 years at different horizontal resolutions:
+
+\verb|    $ python3 solve.py -mz 10 -T 10 -mx MX|
+
+    \begin{itemize}
+    \item[$\circ$] use \texttt{MX}$=25,50,100,200,400,800$, giving $37.5 \le \Delta x \le 1200$ m
+    \item[$\circ$] from 18 (lowest res) to 560 (highest) adaptive-scheme time steps
+    \item[$\circ$] max computed ice speed $4800$ m/a initially; $160$ m/a for final state
+    \end{itemize}
+
+\item compare final computed geometry to Halfar's prediction:
+\smallskip
+\begin{center}
+\small
+\begin{tabular}{c|cc}
+$\Delta x$ (m) & width (km) & center height (m) \\ \hline
+$1200$ & 30.000 & 692.632 \\
+$600$ & 28.800 & 697.433 \\
+$300$ & 28.800 & 696.881 \\
+$150$ & 28.800 & 695.946 \\
+$75$ & 28.800 & 695.538 \\
+$37.5$ & 28.875 & 695.233 \\ \hline
+Halfar & 28.993 & 689.829
+\end{tabular}
+\normalsize
+\end{center}
+
+\medskip
+\item reasonably close \dots
+\item but \emph{not} expected to converge to the Halfar values
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}{mass conservation errors with free boundaries}
 
+FIXME but mass not conserved: on highest resolution run, initial area $=14.954 \, \text{km}^2$, final area = 15.029
+
 FIXME mass conservation approximate; needs resolution
 
 FIXME issue in B (2021a) is different; here we should conserve
-\end{frame}
-
-
-\begin{frame}{evidence of correctness}
-
-FIXME compare Halfar
 \end{frame}
 
 
