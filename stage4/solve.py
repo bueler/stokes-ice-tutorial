@@ -33,6 +33,8 @@ hs = "output filename (default=dome.pvd)"
 parser.add_argument("-o", metavar="FILE.pvd", default="dome.pvd", help=hs)
 hs = "output filename for movie; provide .pvd name to turn movie on"
 parser.add_argument("-omovie", metavar="FILE.pvd", default=None, help=hs)
+hs = "output filename for ice area time series; provide .txt name to turn on"
+parser.add_argument("-ots", metavar="FILE.txt", default=None, help=hs)
 hs = "initial half-width of dome (default=10000 m)"
 parser.add_argument("-R0", type=float, metavar="R0", default=10000.0, help=hs)
 hs = "print help for solve.py options and stop"
@@ -227,7 +229,11 @@ def report_shape(s):
     printpar(
             f"  width = {(rm - lm) / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {iarea / 1e6:.3f} km^2"
     )
+    return iarea
 
+if args.ots is not None:
+    tsfile = open(args.ots, "w")
+    tsfile.write("# (TIME IN YEARS) (ICE AREA IN KM^2)\n")
 
 # time stepping loop
 deltax = 2.0 * args.L / args.mx
@@ -247,7 +253,9 @@ for k in range(args.maxN):
 
     # report on current geometry
     printpar(f"t={t / secpera:.3f} a (k={k}):")
-    report_shape(s)
+    iarea = report_shape(s)
+    if args.ots is not None:
+        tsfile.write(f"{t / secpera:.6f} {iarea / 1.0e6:.6f}\n")
 
     # solve Stokes on current geometry (in current mesh), which requires
     # resetting form F and boundary conditions bcs
@@ -300,7 +308,11 @@ for k in range(args.maxN):
     t += dtsec
 
 printpar(f"done ... t={t / secpera:.3f} a")
-report_shape(s)
+iarea = report_shape(s)
+if args.ots is not None:
+    tsfile.write(f"{t / secpera:.6f} {iarea / 1.0e6:.6f}\n")
+    tsfile.close()
+    printpar(f"done with file {args.ots}")
 Rh, Hh = get_halfar_dimensions_from_time(t + t0, R0=args.R0, H0=args.H0)
 printpar(f"  Halfar values: width = {2 * Rh / 1000.0:.3f} km, max(s) = {Hh:.3f} m")
 
