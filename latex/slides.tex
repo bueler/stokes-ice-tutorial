@@ -564,10 +564,10 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage2/} \qquad Glen-Stokes}
+\frametitle{\texttt{stage2/} \qquad Glen-Nye-Stokes for a glacier}
 
 \begin{itemize}
-\item \emph{purpose:} solve Glen-Stokes on a flat-bed glacier
+\item \emph{purpose:} solve the Glen-Nye-Stokes equations on a domed glacier with a flat bed
 \item \emph{source files:} \texttt{domain.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{dome.geo}, \texttt{dome.msh}, \texttt{dome.pvd}
 \end{itemize}
@@ -929,9 +929,6 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{center}
 \includegraphics[width=0.5\textwidth]{figs/domain-margin.png}
 \end{center}
-
-\medskip
-\item \texttt{stage4/} will demonstrate a variational inequality solver
 \end{itemize}
 \end{frame}
 
@@ -1338,13 +1335,61 @@ Halfar & 28.993 & 689.829
 \end{frame}
 
 
-\begin{frame}{mass conservation errors with free boundaries}
+\begin{frame}{mass conservation errors with moving glacier margins}
 
-FIXME but mass not conserved: on highest resolution run, initial area $=14.954 \, \text{km}^2$, final area = 15.029
+\begin{itemize}
+\item since $a=0$ for this moving margin solution, \alert{continuum mass is exactly conserved}
+\end{itemize}
 
-FIXME mass conservation approximate; needs resolution
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\vspace{-5mm}
 
-FIXME issue in B (2021a) is different; here we should conserve
+\begin{itemize}
+\item unfortunately, our scheme \alert{does not conserve mass} in this case
+\item numerical mass (planar ice area) drifts by about 1\% over 5 years
+    \begin{itemize}
+    \item[$\circ$] curves should be horizontal lines
+    \item[$\circ$] higher spatial resolution gives better mass conservation
+    \end{itemize}
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\mbox{\, \includegraphics[width=0.98\textwidth]{figs/areatimeseries.png}}
+\end{column}
+\end{columns}
+
+\begin{itemize}
+\item this is \alert{only a moving margin effect}
+    \begin{itemize}
+    \item[$\circ$] our scheme conserves mass in \texttt{-walls} cases (Tominec et al 2026)
+    \end{itemize}
+\item the free-boundary mass conservation issues reported by B (2021a) and Jarosch et al (2013) are different from the scheme-dependent issue here
+\end{itemize}
+\end{frame}
+
+
+\section{summary and learning more}
+
+
+\begin{frame}{summary, and remaining challenges}
+
+\begin{itemize}
+\item Firedrake makes the solution of the glacer Stokes problem easy
+    \begin{itemize}
+    \item[$\circ$] the Python codes in this tutorial are short
+    \item[$\circ$] UFL (for weak forms) and PETSc (for nonlinear solvers) are key in the stack
+    \end{itemize}
+\item extruded meshes make sense because glaciers are (generally) thin flows
+
+\bigskip
+\item major remaining challenges:
+    \begin{enumerate}
+    \item make the Stokes solver faster by replacing the direct linear algebra with a \alert{scalable matrix-free solver}
+    \item make the \texttt{stage4/} time-stepping glacier simulation \alert{mass conserving even in free-boundary cases}
+    \item make the \texttt{stage4/} simulation faster by combining the free-surface equation and the Stokes solver in a \alert{monolithic implicit step}
+    \end{enumerate}
+\end{itemize}
 \end{frame}
 
 
