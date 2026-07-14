@@ -31,7 +31,7 @@ Dtyp = 1.0 / secpera    # s-1
 fbody = Constant((0.0, - rho * g))
 Du2 = 0.5 * inner(D(u), D(u)) + (eps * Dtyp)**2.0
 nu = 0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0)
-F = ( inner(2.0 * nu * D(u), D(v)) \
+F = ( 2.0 * nu * inner(D(u), D(v)) \
       - p * div(v) - q * div(u) - inner(fbody, v) ) * dx(degree=3)
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (42,)) ]
 

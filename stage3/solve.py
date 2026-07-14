@@ -183,7 +183,7 @@ for j in jrange:
     # symmetrically rescale the equations for better conditioning
     Du2 = 0.5 * inner(D(scu * sc), D(scu * sc)) + (eps * Dtyp)**2.0
     nu = 0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0)
-    F = ( sc*sc * inner(2.0 * nu * D(scu), D(v)) \
+    F = ( sc*sc * 2.0 * nu * inner(D(scu), D(v)) \
           - sc * p * div(v) - sc * q * div(scu) \
           - sc * inner(fbody, v) ) * dx(degree=3)
     bcs = [ DirichletBC(Z.sub(0), uzero, 'bottom'), ]

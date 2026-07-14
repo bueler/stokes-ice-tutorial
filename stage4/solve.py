@@ -152,7 +152,7 @@ def form_stokes(loadstab=False):
     u, p = split(up)
     Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
     nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
-    F = (inner(2.0 * nu * D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
+    F = (2.0 * nu * inner(D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
     # body force source term
     F -= inner(as_vector([0.0, -rho * g]), v) * dx
     if loadstab:
