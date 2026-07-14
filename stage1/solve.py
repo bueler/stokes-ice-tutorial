@@ -18,7 +18,7 @@ g = 9.81                # m s-2
 rho = 910.0             # kg m-3
 nu0 = 1.0e+12           # Pa s
 fbody = Constant((0.0, - rho * g))
-F = ( nu0 * inner(D(u), D(v)) \
+F = ( 2.0 * nu0 * inner(D(u), D(v)) \
       - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 bcs = [ DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (42,)) ]
 
