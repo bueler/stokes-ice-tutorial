@@ -1,5 +1,11 @@
 # stokes-ice-tutorial
 
+## purpose
+
+Provide an easy-to-modify and well-documented finite element solver for glacier modeling, for planar and 3D glacier geometries, without shallowness assumptions in the equations.
+
+The first version of this tutorial was for glacier dynamics only, i.e. for fixed geometry, but the current version 2.0 includes well-behaved glacial evolution in `stage4/`.
+
 <p align="center">
 <img src="latex/figs/stage3speed.png" alt="ice speed in a glacier" />
 </p>
