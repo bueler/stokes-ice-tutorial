@@ -85,8 +85,8 @@ plotextruded(x, b, s)
 writeout("extruded.png")
 
 # add "pinched"
-plt.text(x[0], b[0] + 0.2, r"$\mathbf{u}=0$, $p=0$", fontsize=bigfsize, color="r")
-plt.plot(x[:3], b[:3], "r", lw=5.0)
-plt.text(x[8], b[8] - 0.5, r"$\mathbf{u}=0$, $p=0$", fontsize=bigfsize, color="r")
-plt.plot(x[8:], b[8:], "r", lw=5.0)
+plt.text(x[0], b[0] + 0.2, r"$\mathbf{u}=0$, $p=0$", fontsize=bigfsize, color="firebrick")
+plt.plot(x[:3], b[:3], "firebrick", lw=5.0)
+plt.text(x[8], b[8] - 0.5, r"$\mathbf{u}=0$, $p=0$", fontsize=bigfsize, color="firebrick")
+plt.plot(x[8:], b[8:], "firebrick", lw=5.0)
 writeout("pinched.png")
