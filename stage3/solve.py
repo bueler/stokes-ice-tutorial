@@ -167,8 +167,8 @@ jrange = range(levels)
 for j in jrange:
     # function spaces on this level
     mesh = hierarchy[j]
-    V = VectorFunctionSpace(mesh, 'CG', 2)
-    W = FunctionSpace(mesh, 'CG', 1)
+    V = VectorFunctionSpace(mesh, 'Q', 2)
+    W = FunctionSpace(mesh, 'Q', 1)
     Z = V * W
     up = Function(Z)
     scu, p = split(up)             # scaled velocity, unscaled pressure
@@ -207,26 +207,28 @@ for j in jrange:
         upcoarse = up.copy()
 
     # integrate 1 to get area of domain
-    R = FunctionSpace(mesh, 'R', 0)
-    one = Function(R).assign(1.0)
+    DG0 = FunctionSpace(mesh, 'DG', 0)
+    one = Function(DG0).assign(1.0)
     area = assemble(dot(one, one) * dx)
 
     # print average and maximum velocity
     scu = up.subfunctions[0]
     u = scu * sc
-    P1 = FunctionSpace(mesh, 'CG', 1)
     umagav = assemble(sqrt(dot(u, u)) * dx) / area
-    umag = Function(P1).interpolate(sqrt(dot(u, u)))
+    umag = Function(W).interpolate(sqrt(dot(u, u)))
     with umag.dat.vec_ro as vumag:
         umagmax = vumag.max()[1]
     printpar('  ice speed (m a-1): av = %.3f, max = %.3f' \
              % (umagav * secpera, umagmax * secpera))
 
+# spaces on the final mesh
+Q1 = FunctionSpace(mesh, 'Q', 1)
+Q1R = FunctionSpace(mesh, 'CG', 1, vfamily="R", vdegree=0)
+
 # generate tensor-valued deviatoric stress tau, and effective viscosity nu,
 #   from the velocity solution
 def stresses(mesh, u):
     Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp)**2.0
-    Q1 = FunctionSpace(mesh,'Q',1)
     TQ1 = TensorFunctionSpace(mesh, 'Q', 1)
     nu = Function(Q1).interpolate(0.5 * B3 * Du2**((1.0 / n - 1.0)/2.0))
     nu.rename('effective viscosity (Pa s)')
