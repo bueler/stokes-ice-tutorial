@@ -237,19 +237,32 @@ def stresses(mesh, u):
     tau.rename('tau (bar)')
     return tau, nu
 
-printpar('saving u,p,tau,nu to %s ...' % args.o)
+def hydrostaticpressure(mesh, s):
+    sR = Function(Q1R)
+    sR.dat.data[:] = s.dat.data_ro[:]
+    if args.dim == 2:
+        _, z = SpatialCoordinate(mesh)
+    else:
+        _, _, z = SpatialCoordinate(mesh)
+    phydro = Function(Q1).interpolate(rho * g * (sR - z))
+    return phydro
+
+printpar('saving u,p,tau,nu,deltap to %s ...' % args.o)
 u, p = up.subfunctions
 u *= sc
 tau, nu = stresses(hierarchy[-1], u)
+deltap = Function(Q1).interpolate(p - hydrostaticpressure(mesh, sbase))
 u *= secpera
 p /= 1.0e5
+deltap /= 1.0e5
 u.rename('velocity (m/a)')
 p.rename('pressure (bar)')
+deltap.rename('deltap (bar)')  # deviation of pressure from hydrostatic
 if mesh.comm.size > 1:
     # add integer-valued element-wise process rank to output
     rank = Function(FunctionSpace(mesh, 'DG', 0))
     rank.dat.data[:] = mesh.comm.rank
     rank.rename('rank')
-    VTKFile(args.o).write(scu, p, tau, nu, rank)
+    VTKFile(args.o).write(scu, p, tau, nu, deltap, rank)
 else:
-    VTKFile(args.o).write(scu, p, tau, nu)
+    VTKFile(args.o).write(scu, p, tau, nu, deltap)
