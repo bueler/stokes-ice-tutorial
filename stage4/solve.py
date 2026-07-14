@@ -220,7 +220,7 @@ def get_dt(t, dx, umagmax):
 Fske = form_ske()
 probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
 solverske = NonlinearVariationalSolver(
-    probske, solver_parameters=vipar, options_prefix="ske"
+    probske, solver_parameters=vipar, options_prefix="surf"
 )
 
 
@@ -241,7 +241,7 @@ printpar(
     f"solving on {args.mx} x {args.mz} mesh (2L = {2*args.L / 1000.0:.0f} km, dx = {deltax:.3f} m) ..."
 )
 n_u, n_p = V.dim(), W.dim()
-printpar(f"  sizes: n_u = {n_u}, n_p = {n_p}")
+printpar(f"  space dimensions: n_u = {n_u}, n_p = {n_p}")
 if args.omovie is not None:
     printpar(f"opening {args.omovie} for writing u,p at each time step ...")
     movie = VTKFile(args.omovie)
@@ -272,7 +272,7 @@ for k in range(args.maxN):
         if k < 2:
             F = form_stokes(loadstab=(not args.noload))
     bcs = bcs_stokes(Z)  # has to be re-set because PinchColumnX uses current s
-    solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=stokespar)
+    solve(F == 0, up, bcs=bcs, options_prefix="stokes", solver_parameters=stokespar)
     u, p = up.subfunctions
 
     if args.omovie is not None:
@@ -289,12 +289,12 @@ for k in range(args.maxN):
     umag = Function(P1).interpolate(sqrt(dot(u, u)))
     with umag.dat.vec_ro as vumag:
         umagmax = vumag.max()[1]
-    printpar(
-        f"  ice speed (m a-1) at t={t / secpera:.3f} a: av = {umagav * secpera:.3f}, max = {umagmax * secpera:.3f}"
-    )
 
+    # report velocity and CFL-determined time step
     dtsec = get_dt(t, deltax, umagmax)
-    printpar(f"  dt = {dtsec / secpera:.3f} a")
+    printpar(
+        f"  speed (m a-1) at t={t / secpera:.3f} a: av = {umagav * secpera:.3f}, max = {umagmax * secpera:.3f} --> dt = {dtsec / secpera:.3f} a"
+    )
 
     # solve SKE for one semi-implicit Euler time-step, a variational inequality
     trace_to_vector_p2base(basemesh, mesh, u, uwsurf)
@@ -307,7 +307,7 @@ for k in range(args.maxN):
     set_mesh_geometry(mesh, s, xzorig=xzflat)
     t += dtsec
 
-printpar(f"done ... t={t / secpera:.3f} a")
+printpar(f"t={t / secpera:.3f} a (done):")
 iarea = report_shape(s)
 if args.ots is not None:
     tsfile.write(f"{t / secpera:.6f} {iarea / 1.0e6:.6f}\n")
