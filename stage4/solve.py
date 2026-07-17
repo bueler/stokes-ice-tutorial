@@ -227,7 +227,7 @@ solverske = NonlinearVariationalSolver(
 def report_shape(s):
     lm, rm, smax, iarea = evaluate_shape(basemesh, s)
     printpar(
-        f"  width = {(rm - lm) / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {iarea / 1e6:.3f} km^2"
+        f"  width = {(rm - lm) / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {iarea / 1e6:.6f} km^2"
     )
     return iarea
 

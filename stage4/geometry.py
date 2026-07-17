@@ -109,6 +109,6 @@ def evaluate_shape(basemesh, s, stol=1.0):
     lmargin = float(basemesh.comm.allreduce(myl, op=MPI.MIN))
     rmargin = float(basemesh.comm.allreduce(myr, op=MPI.MAX))
     with s.dat.vec_ro as ss:
-        smax = ss.max()[1]
+        _, smax = ss.max()  # find all-processes maximum value of a PETSc Vec
     area = fd.assemble(s * fd.dx)
     return lmargin, rmargin, smax, area
