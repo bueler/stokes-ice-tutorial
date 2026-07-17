@@ -35,8 +35,8 @@ def drawclimate(x,s):
 # domain notation figure
 plt.figure(figsize=(10,5.5))
 x, s, b = genbasicfig()
-plt.text(x[400], b[600] + 0.4 * s[600], r"Stokes domain $\Lambda(t)$",
-         fontsize=smallfsize, color='k')
+plt.text(x[450], b[600] + 0.3 * s[600], r"$\Lambda(t)$",
+         fontsize=bigfsize, color='k')
 #plt.text(x[550] - 1.0, b[600] + 0.4 * s[600], r'$\mathbf{u}(t,x,z)$',
 #         fontsize=bigfsize, color='k')
 drawclimate(x,s)
