@@ -84,7 +84,7 @@ if args.walls:
     assert args.L < args.R0, "initial shape must contact walls at locations |x|=L"
 basemesh = IntervalMesh(args.mx, -args.L, args.L)
 xbase = SpatialCoordinate(basemesh)
-P1base = FunctionSpace(basemesh, "Lagrange", 1)
+P1base = FunctionSpace(basemesh, "CG", 1)
 
 # set initial 2D mesh geometry, but store flat coordinates
 t0 = get_halfar_characteristic_time(R0=args.R0, H0=args.H0)
@@ -104,8 +104,8 @@ if not args.noload:
     aR = extend_from_p1base(mesh, a)
 
 # mixed spaces for Stokes
-V = VectorFunctionSpace(mesh, "Lagrange", 2)
-W = FunctionSpace(mesh, "Lagrange", 1)
+V = VectorFunctionSpace(mesh, "CG", 2)
+W = FunctionSpace(mesh, "CG", 1)
 Z = V * W
 up = Function(Z)
 v, q = TestFunctions(Z)
@@ -227,9 +227,10 @@ solverske = NonlinearVariationalSolver(
 def report_shape(s):
     lm, rm, smax, iarea = evaluate_shape(basemesh, s)
     printpar(
-            f"  width = {(rm - lm) / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {iarea / 1e6:.3f} km^2"
+        f"  width = {(rm - lm) / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {iarea / 1e6:.3f} km^2"
     )
     return iarea
+
 
 if args.ots is not None:
     tsfile = open(args.ots, "w")
