@@ -4,11 +4,14 @@
 
 Provide an easy-to-modify and well-documented finite element solver for glacier modeling, for planar and 3D glacier geometries, without shallowness assumptions in the equations.
 
-The first version of this tutorial was for glacier dynamics only, i.e. for fixed geometry, but the current version 2.0 includes well-behaved glacial evolution in `stage4/`.
-
 <p align="center">
 <img src="latex/figs/stage3speed.png" alt="ice speed in a glacier" />
 </p>
+
+## versions
+
+  * **v2.0**  Includes well-behaved glacial evolution in `stage4/`.
+  * **v1.0**  The first version of this tutorial was for glacier dynamics only, for fixed geometry.
 
 ## model equations
 
@@ -30,7 +33,9 @@ This repository contains a practical tutorial on solving these coupled [partial 
 
 The [Python](https://www.python.org/) programs here are relatively-short and only solve idealized problems.  We model 2D and 3D land-based glaciers with moving margins.  The emphasis is on modern and robust solver techniques.
 
-### prerequisites
+The codes are documented by [`slides.pdf`](slides.pdf).
+
+## prerequisites
 
 We use the [Firedrake](https://www.firedrakeproject.org/) library, which calls [PETSc](https://petsc.org/) to solve the equations.  See the [Firedrake install directions](https://www.firedrakeproject.org/install.html) to install both libraries.  Note that each time you start Firedrake you will need to activate the Python virtual environment:
 
@@ -38,9 +43,9 @@ We use the [Firedrake](https://www.firedrakeproject.org/) library, which calls [
 
 You will need [Gmsh](https://gmsh.info/) to generate certain meshes (but only for `stage1/` and `stage2/`).  For all stages [Paraview](https://www.paraview.org/) is recommended to visualize the results.
 
-### tutorial in stages
+## tutorial in stages
 
-To do this tutorial, read `slides.pdf` and follow the stages.  Each stage is essentially self-contained, with increasing sophistication.  
+To do this tutorial, read [`slides.pdf`](slides.pdf) and follow the stages.  Each stage is essentially self-contained, with increasing sophistication.
 
 The first three stages use fixed geometry and address how to solve the Glen-Nye-Stokes equations for the dynamics of ice.
 
@@ -62,7 +67,7 @@ All stages can be run in parallel.
   * In `stage3/` and `stage4/`, reading a `.msh` for the base mesh requires code modifications.
   * In `stage4/`, adding a surface mass balance requires code modifications.
 
-## other glacier-related Firedrake solvers
+## other glacier-related solvers using Firedrake
 
   * I wrote an earlier open-source Stokes solver for glaciology.  It uses the same Firedrake/PETSc/Gmsh/Paraview stack.  See the `py/stokes/` directory [in my McCarthy materials](https://github.com/bueler/mccarthy/tree/master/py/stokes).
 
