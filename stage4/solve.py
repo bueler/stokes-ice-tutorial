@@ -180,6 +180,17 @@ def bcs_stokes(Z):
         ]
     return bcs
 
+def evaluate_speed(mesh, u):
+    """Find average and maximum speed of ice."""
+    R = FunctionSpace(mesh, "R", 0)
+    one = Function(R).assign(1.0)
+    area = assemble(dot(one, one) * dx)  # integrate 1 to get area of domain
+    P1 = FunctionSpace(mesh, "CG", 1)
+    umagav = assemble(sqrt(dot(u, u)) * dx) / area
+    umag = Function(P1).interpolate(sqrt(dot(u, u)))
+    with umag.dat.vec_ro as vumag:
+        umagmax = vumag.max()[1]
+    return umagav, umagmax
 
 # functions for surface kinematical equation
 snew = Function(P1base)
@@ -229,22 +240,22 @@ def report_shape(s):
     return iarea
 
 
+# open files if they are requested
+if args.omovie is not None:
+    printpar(f"opening {args.omovie} for writing u,p at each time step ...")
+    movie = VTKFile(args.omovie)
 if args.ots is not None:
+    printpar(f"opening {args.ots} for writing ice area at each time step ...")
     tsfile = open(args.ots, "w")
     tsfile.write("# (TIME IN YEARS) (ICE AREA IN KM^2)\n")
 
-# time stepping loop
+# main time stepping loop
 deltax = 2.0 * args.L / args.mx
 printpar(
     f"solving on {args.mx} x {args.mz} mesh (2L = {2*args.L / 1000.0:.0f} km, dx = {deltax:.3f} m) ..."
 )
-n_u, n_p = V.dim(), W.dim()
-printpar(f"  space dimensions: n_u = {n_u}, n_p = {n_p}")
-if args.omovie is not None:
-    printpar(f"opening {args.omovie} for writing u,p at each time step ...")
-    movie = VTKFile(args.omovie)
+printpar(f"  space dimensions: n_u = {V.dim()}, n_p = {W.dim()}")
 t = 0.0
-dtsec = None
 for k in range(args.maxN):
     if t >= args.T * secpera:
         break
@@ -255,67 +266,62 @@ for k in range(args.maxN):
     if args.ots is not None:
         tsfile.write(f"{t / secpera:.6f} {iarea / 1.0e6:.6f}\n")
 
-    # solve Stokes on current geometry (in current mesh), which requires
-    # resetting form F and boundary conditions bcs
+    # update s, a in R space, for load stabilization
     if not args.noload:
-        # update s, a in R space (for stabilization)
         sR.dat.data[:] = s.dat.data_ro[:]
         aR.dat.data[:] = a.dat.data_ro[:]
-    # FIXME at first step, the -noload stabilization needs dtsec to be set,
-    #       presumably by CFL after a Stokes solve w/o the -noload mechanism
-    if dtsec is None:
+
+    # at first step, the -noload stabilization needs dtsec to be set,
+    # so do initial Stokes solve w/o the -noload mechanism
+    if k == 0:
         F = form_stokes(loadstab=False)
-    else:
-        dt_loadstab.assign(dtsec)
-        if k < 2:
-            F = form_stokes(loadstab=(not args.noload))
+        bcs = bcs_stokes(Z)
+        solve(F == 0, up, bcs=bcs, options_prefix="stokes", solver_parameters=stokespar)
+        u, _ = up.subfunctions
+        _, umagmax = evaluate_speed(mesh, u)
+        dt = get_dt(t, deltax, umagmax)
+
+    # solving Stokes on current geometry (in current mesh) requires
+    # resetting form and boundary conditions
+    dt_loadstab.assign(dt)
+    F = form_stokes(loadstab=(not args.noload))
     bcs = bcs_stokes(Z)  # has to be re-set because PinchColumnX uses current s
     solve(F == 0, up, bcs=bcs, options_prefix="stokes", solver_parameters=stokespar)
     u, p = up.subfunctions
-
     if args.omovie is not None:
         u.rename("velocity (m/s)")
         p.rename("pressure (Pa)")
         movie.write(u, p, time=t)
 
-    # print average and maximum velocity
-    R = FunctionSpace(mesh, "R", 0)
-    one = Function(R).assign(1.0)
-    area = assemble(dot(one, one) * dx)  # integrate 1 to get area of domain
-    P1 = FunctionSpace(mesh, "CG", 1)
-    umagav = assemble(sqrt(dot(u, u)) * dx) / area
-    umag = Function(P1).interpolate(sqrt(dot(u, u)))
-    with umag.dat.vec_ro as vumag:
-        umagmax = vumag.max()[1]
-
-    # report velocity and CFL-determined time step
-    dtsec = get_dt(t, deltax, umagmax)
+    # find ice speed, and use CFL to determine time step
+    umagav, umagmax = evaluate_speed(mesh, u)
+    dt = get_dt(t, deltax, umagmax)
     printpar(
-        f"  speed (m a-1) at t={t / secpera:.3f} a: av = {umagav * secpera:.3f}, max = {umagmax * secpera:.3f} --> dt = {dtsec / secpera:.3f} a"
+        f"  speed (m a-1) at t={t / secpera:.3f} a: av = {umagav * secpera:.3f}, max = {umagmax * secpera:.3f} --> dt = {dt / secpera:.3f} a"
     )
 
     # solve SKE for one semi-implicit Euler time-step, a variational inequality
     trace_to_vector_p2base(basemesh, mesh, u, uwsurf)
     snew.interpolate(s)  # initial condition
-    dt_ske.assign(dtsec)
+    dt_ske.assign(dt)
     solverske.solve(bounds=(lb, ub))
     s.interpolate(snew)  # update surface elevation
 
     # update mesh geometry (rescaling original geometry) and time
     set_mesh_geometry(mesh, s, xzorig=xzflat)
-    t += dtsec
+    t += dt
 
+# report on final quantities and close open files
 printpar(f"t={t / secpera:.3f} a (done):")
 iarea = report_shape(s)
 if args.ots is not None:
     tsfile.write(f"{t / secpera:.6f} {iarea / 1.0e6:.6f}\n")
     tsfile.close()
     printpar(f"done with file {args.ots}")
-Rh, Hh = get_halfar_dimensions_from_time(t + t0, R0=args.R0, H0=args.H0)
-printpar(f"  Halfar values: width = {2 * Rh / 1000.0:.3f} km, max(s) = {Hh:.3f} m")
-
 if args.omovie is not None:
     printpar(f"done with file {args.omovie}")
+Rh, Hh = get_halfar_dimensions_from_time(t + t0, R0=args.R0, H0=args.H0)
+printpar(f"  Halfar values (exact for SIA): width = {2 * Rh / 1000.0:.3f} km, max(s) = {Hh:.3f} m")
 
 # generate tensor-valued deviatoric stress tau, and effective viscosity nu,
 #   from the velocity solution
@@ -331,6 +337,7 @@ def stresses(mesh, u):
     return tau, nu
 
 
+# write .pvd with results
 printpar(f"saving u,p,tau,nu,rank to {args.o} ...")
 u, p = up.subfunctions
 tau, nu = stresses(mesh, u)
