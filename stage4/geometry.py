@@ -43,7 +43,7 @@ class PinchColumnPressure(fd.DirichletBC):
         ctx = get_appctx(V.mesh().coordinates.function_space().dm)
         assert ctx is not None, f"got None for appctx from {V.mesh()} coordinates DM"
         # return P1 nodes in columns with surface elevation less than htol
-        s = fd.Function(V).interpolate(ctx["sR"])
+        s = fd.Function(V).interpolate(ctx["sR"])  # also need bR if b is not zero
         # print(np.where(s.dat.data_ro_with_halos < self.htol)[0])
         return np.where(s.dat.data_ro_with_halos < self.htol)[0]
 
@@ -62,7 +62,7 @@ class PinchColumnVelocity(fd.DirichletBC):
         ctx = get_appctx(V.mesh().coordinates.function_space().dm)
         assert ctx is not None, f"got None for appctx from {V.mesh()} coordinates DM"
         # return vector P2 nodes in columns with height (thickness) less than htol
-        ss = fd.Function(V).interpolate(fd.as_vector([ctx["sR"], ctx["sR"]]))
+        ss = fd.Function(V).interpolate(fd.as_vector([ctx["sR"], ctx["sR"]]))  # also need bR if b is not zero
         return np.where(ss.dat.data_ro_with_halos < self.htol)[0]
 
 
