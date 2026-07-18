@@ -63,9 +63,9 @@ All stages can be run in parallel.
   * We do not model sliding, nor floating ice.
   * The stages all currently use direct solvers, which limits scalability, especially in 3D.
   * The time-stepping in `stage4/`, though apparently very well-behaved under the applied stabilization and adaptive techniques, remains mostly-explicit and CFL-limited.
-  * In moving-margin cases only, there is a mass-conservation error committed at the free boundary.
-  * In `stage3/` and `stage4/`, reading a `.msh` for the base mesh requires code modifications.
-  * In `stage4/`, adding a surface mass balance requires code modifications.
+  * In the moving-margin cases for `stage4/`, there is a mass-conservation error committed at the free boundary.
+  * In `stage3/` and `stage4/`, reading a `.msh` for the base mesh is easy but it requires code modifications.
+  * In `stage4/`, adding a surface mass balance model is easy but it requires code modifications.
 
 ## other glacier-related solvers using Firedrake
 
