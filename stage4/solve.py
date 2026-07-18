@@ -35,6 +35,8 @@ hs = "output filename for movie; provide .pvd name to turn movie on"
 parser.add_argument("-omovie", metavar="FILE.pvd", default=None, help=hs)
 hs = "output filename for ice area time series; provide .txt name to turn on"
 parser.add_argument("-ots", metavar="FILE.txt", default=None, help=hs)
+hs = "element type to use for pressure: P1|DG0|DQ1"
+parser.add_argument('-pressure', metavar='X', default='P1', help=hs)
 hs = "initial half-width of dome (default=10000 m)"
 parser.add_argument("-R0", type=float, metavar="R0", default=10000.0, help=hs)
 hs = "print help for solve.py options and stop"
@@ -105,7 +107,15 @@ if not args.noload:
 
 # mixed spaces for Stokes
 V = VectorFunctionSpace(mesh, "CG", 2)
-W = FunctionSpace(mesh, "CG", 1)
+if args.pressure == "P1":
+    W = FunctionSpace(mesh, "CG", 1)
+elif args.pressure == "DG0":
+    W = FunctionSpace(mesh, "DG", 0)
+elif args.pressure == "DQ1":
+    W = FunctionSpace(mesh, "DQ", 1)
+else:
+    printpar("ENDING: invalid -pressure element choice (valid: P1|DG0|DQ1)")
+    sys.exit(1)
 Z = V * W
 up = Function(Z)
 v, q = TestFunctions(Z)
