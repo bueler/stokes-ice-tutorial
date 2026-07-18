@@ -207,21 +207,18 @@ def form_ske():
     return Fske
 
 
-def get_dt(t, dx, umagmax):
-    """Determine dt from CFL and options."""
-    if not args.nocfl:
-        dtcfl = args.cfl * dx / umagmax
-    else:
-        dtcfl = PETSc.INFINITY
-    return np.array([dtcfl, args.maxdt * secpera, args.T * secpera - t]).min()
-
-
 # set up SKE solver
 Fske = form_ske()
 probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
 solverske = NonlinearVariationalSolver(
     probske, solver_parameters=vipar, options_prefix="surf"
 )
+
+
+def get_dt(t, dx, umagmax):
+    """Determine dt from CFL and options."""
+    dtcfl = PETSc.INFINITY if args.nocfl else args.cfl * dx / umagmax
+    return np.array([dtcfl, args.maxdt * secpera, args.T * secpera - t]).min()
 
 
 def report_shape(s):
