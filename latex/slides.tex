@@ -97,7 +97,7 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[version 2.0]{version 2.0 (July 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
+\date[version 2.1]{version 2.1 (July 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
 \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 
@@ -116,8 +116,8 @@
 \begin{frame}{making this presentation effective}
 
 \begin{itemize}
-\item \alert{please ask questions}, and thanks for that!
-\item or send questions or comments, now and in the future:
+\item \alert{please ask questions}, thanks!
+\item send questions or comments:
   \begin{itemize}
   \item[$\circ$] by email to \href{mailto:elbueler@alaska.edu}{\texttt{elbueler@alaska.edu}}
   \item[$\circ$] or by using \href{https://github.com/bueler/stokes-ice-tutorial/issues}{issues at \texttt{github.com/bueler/stokes-ice-tutorial/}}
@@ -160,7 +160,7 @@
     \end{itemize}
 \item incompressibility is one aspect of mass conservation
     \begin{itemize}
-    \item[$\circ$] another is the free-surface equation; deferred to \texttt{stage4/}
+    \item[$\circ$] another is the free-surface equation \dots see \texttt{stage4/}
     \end{itemize}
 \item glaciers are a ``slow flow'' problem because inertial forces are tiny
     \begin{itemize}
@@ -191,9 +191,10 @@
 \end{align*}
 
     \begin{itemize}
-    \item[$\circ$] notation: $\bu$ is velocity, $p$ is pressure, and $\tau$ is the deviatoric
+    \item[$\circ$] $\bu$ is velocity, $p$ is pressure, $\tau$ is the deviatoric stress tensor,
 
-stress tensor, and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain-rate tensor
+and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain-rate tensor
+    \item[$\circ$] our model has \emph{constant ice density}; incompressibility follows
     \end{itemize}
 
 \vspace{-33mm}
@@ -222,12 +223,15 @@ stress tensor, and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)
 \end{frame}
 
 
-\begin{frame}{viscosity (and avoiding unbounded viscosity)}
+\begin{frame}{viscosity, and avoiding unbounded values}
 
 \begin{itemize}
 \item the classical viscosity relationship $\tau=2\nu D\bu$ eliminates $\tau$ from the equations, giving a system for $\bu,p$
-\item however, the unmodified Glen-Nye viscosity formula $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ yields unbounded values as $D\bu\to 0$, i.e.~for vanishing strain rates
-\item so we also regularize with \alert{$\eps>0$} to generate bounded viscosity
+\item however, the unmodified Glen-Nye viscosity formula yields unbounded values as $D\bu\to 0$, i.e.~for vanishing strain rates
+    \begin{itemize}
+    \item[$\circ$] note that ``$(1/n) - 1$'' in $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ is a negative power
+    \end{itemize}
+\item so we also regularize with \alert{small $\eps>0$} to generate bounded viscosity
 
 \begin{block}{Glen-Nye-Stokes equations with regularized viscosity}
 
@@ -240,7 +244,9 @@ stress tensor, and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)
 \smallskip
 \end{block}
 
-\item we will use $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$ in the demonstrations
+    \begin{itemize}
+    \item[$\circ$] we use $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$ in the demonstrations
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -294,7 +300,7 @@ stress tensor, and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)
 \hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
 
 \bigskip
-\item for users, the whole point of Firedrake is \alert{suppress the details} of FE
+\item the whole point of Firedrake is \alert{suppress the details} of FE!
     \begin{itemize}
     \item[$\circ$] but try Elman, Sylvester \& Wathen (2014) for self-study?
     \end{itemize}
@@ -315,14 +321,17 @@ stress tensor, and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)
     $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 
     \begin{itemize}
-    \item[$\circ$] $\Lambda$ is the domain of ice
+    \item[$\circ$] $\Lambda$ is the spatial domain of ice
     \item[$\circ$] ``$dx$'' $=dx\,dy\,dz$ in 3D, and ``$dx$'' $=dx\,dz$ in the planar case
     \end{itemize}
 
 \medskip
 \item the actual \alert{weak-form problem statement} is ``residual $=0$'':
    $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all test functions } \bv \text{ and } q$$
-\item the FE method solves this problem, but over a finite-dimensional space
+
+    \begin{itemize}
+    \item[$\circ$] the FE method solves the same problem, but over a finite-dimensional space
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -331,7 +340,7 @@ stress tensor, and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)
 \frametitle{UFL for the weak form}
 
 \begin{itemize}
-\item here is the nonlinear residual function:
+\item nonlinear residual function from last slide:
     $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 with $\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + (\eps\, D_0)^2\right)^{((1/n) - 1)/2}$
 
@@ -350,6 +359,11 @@ fbody = rho * Constant((0.0, 0.0, - g))
 F = ( 2.0 * nu * inner(D(u), D(v)) \
       - p * div(v) - q * div(u) - inner(fbody, v) ) * dx
 \end{Verbatim}
+
+\medskip
+    \begin{itemize}
+    \item[$\circ$] \alert{Python UFL code is quite similar to the math}
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -381,6 +395,7 @@ v, q = TestFunctions(Z)
     \begin{itemize}
     \item[$\circ$] this $P_2 \times P_1$ choice is called Taylor-Hood
     \item[$\circ$] other mixed spaces are just as easy
+    \item[$\circ$] we choose $P_2\times DG_0$ in \texttt{stage4/}, for reasons \dots
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -417,7 +432,11 @@ v, q = TestFunctions(Z)
 \end{align*}
 \item which has symmetric block structure:
   $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
-with $A\ge 0$, and because $(-\Div)^\top = \grad$ under integration-by-parts
+
+    \begin{itemize}
+    \item[$\circ$] $A=-\nu_0 \nabla^2 \ge 0$
+    \item[$\circ$] $B^\top=(-\Div)^\top = \grad$ (integration-by-parts)
+    \end{itemize}
 \end{itemize}
 \end{column}
 
@@ -495,24 +514,17 @@ $ git clone https://github.com/bueler/stokes-ice-tutorial.git
 
 \begin{itemize}
 \item \emph{purpose:} solve linear Stokes on a trapezoidal ``glacier''
-
-    \begin{itemize}
-    \item[$\circ$] weak form:
-    \end{itemize}
-{\small
-    $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_0\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
-}
 \item \emph{source files:} \texttt{domain.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{domain.msh}, \texttt{domain.pvd}
 \end{itemize}
 
 \bigskip
-\begin{Verbatim}
+\begin{Verbatim}[xleftmargin=5mm]
 $ cd stage1/
-$ gmsh -2 domain.geo             # mesh the domain
-$ gmsh domain.msh                # view the mesh
-$ python3 solve.py               # solve linear Stokes
-$ paraview domain.pvd            # view the solution
+$ gmsh -2 domain.geo          # mesh the domain
+$ gmsh domain.msh             # view the mesh
+$ python3 solve.py            # solve linear Stokes
+$ paraview domain.pvd         # view the solution
 \end{Verbatim}
 %$
 
@@ -532,7 +544,7 @@ $ paraview domain.pvd            # view the solution
 \begin{columns}
 \begin{column}{0.8\textwidth}
 \begin{itemize}
-\item linear Stokes \small (\texttt{stage1/}) \normalsize solves a single linear system:
+\item linear Stokes in \texttt{stage1/} solves a single linear system:
   $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
 
     \begin{itemize}
@@ -567,18 +579,18 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \frametitle{\texttt{stage2/} \qquad Glen-Nye-Stokes for a glacier}
 
 \begin{itemize}
-\item \emph{purpose:} solve the Glen-Nye-Stokes equations on a domed glacier with a flat bed
+\item \emph{purpose:} solve the Glen-Nye-Stokes equations on a dome-shaped glacier with a flat bed
 \item \emph{source files:} \texttt{domain.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{dome.geo}, \texttt{dome.msh}, \texttt{dome.pvd}
 \end{itemize}
 
 \bigskip
-\begin{Verbatim}[fontsize=\small]
+\begin{Verbatim}[xleftmargin=5mm]
   $ cd stage2/
-  $ python3 domain.py       # generate the domain outline
-  $ gmsh -2 dome.geo        # mesh the domain
-  $ python3 solve.py        # solve Glen-Nye-Stokes
-  $ paraview dome.pvd       # view the solution
+  $ python3 domain.py     # generate domain outline
+  $ gmsh -2 dome.geo      # mesh the domain
+  $ python3 solve.py      # solve Glen-Nye-Stokes
+  $ paraview dome.pvd     # view the solution
 \end{Verbatim}
 %$
 
@@ -594,19 +606,18 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \section{\texttt{stage3/} \qquad more power: extruded meshes and 3D glaciers}
 
 \begin{frame}[fragile]
-\frametitle{a more practical and powerful solver}
+\frametitle{a more practical and powerful glacier solver}
 
 \begin{itemize}
-\item our stage goal is a more practical and powerful glacier-modeling tool
-\item we switch to an \alert{extruded mesh}
+\item this stage takes a more practical and powerful approach
+\item we switch to an \alert{extruded mesh}, and allow a bumpy bed (below)
     \begin{itemize}
     \item[$\circ$] the \alert{base mesh} has lower dimension
-    \item[$\circ$] now the elements are quadrilaterals ($Q_2\times Q_1$ mixed method) in the planar case, versus triangles in \texttt{stage2/}
-    \item[$\circ$] also we allow a bumpy bed (below)
+    \item[$\circ$] now the elements are quadrilaterals ($=Q_2\times Q_1$ mixed method) in the planar case, versus triangles in \texttt{stage2/}
     \end{itemize}
 \item we demonstrate (mostly) \alert{dimension-independent programming}
     \begin{itemize}
-    \item[$\circ$] code for 2D and 3D glacier geometry is nearly the same
+    \item[$\circ$] code for 2D and 3D glacier geometry is nearly the same; elements are prisms in 3D
     \item[$\circ$] dimension chosen at runtime
     \end{itemize}
 \item additional bells \& whistles:
@@ -632,10 +643,10 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \begin{itemize}
 \item \emph{purpose:} a practical and robust solver
     \begin{itemize}
-    \item[$\circ$] construct mesh by vertically extruding a base mesh  \hfill \emph{refinement framework}
+    \item[$\circ$] construct mesh by vertically extruding a base mesh  \hfill \emph{practical geometry}
     \item[$\circ$] rescale the equations  \hfill \emph{better conditioning}
     \item[$\circ$] vertical grid sequencing  \hfill \emph{better initial iterates}
-    \item[$\circ$] write $\nu_\eps$, $\tau$, $\Delta p$ from solution  \hfill \emph{better diagnostics}
+    \item[$\circ$] write $\nu_\eps$, $\tau$, $p-p_{\text{hydrostatic}}$ into output file  \hfill \emph{better diagnostics}
     \end{itemize}
 \item \emph{source file:} \texttt{solve.py} \hfill \alert{$\gets$ inspect this}
 \item \emph{generated file:} \texttt{dome.pvd}
@@ -668,7 +679,7 @@ $ paraview dome.pvd
 \frametitle{evidence of convergence}
 
 \begin{itemize}
-\item \texttt{stage3/} code sets resolution at runtime, for example:
+\item we can now set resolution at runtime, for example:
 \begin{Verbatim}
 $ python3 solve.py -b0 0 -mx 400 -mz 4 -refine 2
 \end{Verbatim}
@@ -700,8 +711,7 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
 \end{center}
 
     \begin{itemize}
-    \item[$\circ$] velocities are apparently converging
-    \item[$\circ$] however, we do not know the exact solution \dots this is not verification
+    \item[$\circ$] velocities are apparently converging, but we do not know the exact solution \dots this is not verification
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -714,14 +724,14 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
 \item as usual with Firedrake, everything works in parallel
     \begin{itemize}
     \item[$\circ$] extruded mesh gets partitioned following base mesh partition
-    \item[$\circ$] see \texttt{rank} field in \texttt{.pvd} output, for example with 4 processes:
+    \item[$\circ$] see \texttt{rank} field in \texttt{.pvd} output; result with 4 processes:
+    \end{itemize}
 
-\smallskip
+\medskip
 \qquad \includegraphics[width=0.85\textwidth]{figs/stage3rank.png}
 
 \medskip
-    \item[$\circ$] using the default direct solver (Mumps), solution values are essentially independent of number of processes
-    \end{itemize}
+\item using the default direct solver (Mumps), results are essentially independent of number of processes
 \item however, speed-up is sublinear because of significant serial workloads
 
 \medskip
@@ -777,14 +787,13 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \bigskip
 \item \emph{limiting factor:} the \alert{direct solver} for each Newton step linear system uses too much memory when generating the LU factors
     \begin{itemize}
-    \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D, and they are slow
-    \item[$\circ$] see B (2021b, 2023)
+    \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D; see B (2021b)
     \end{itemize}
-\item for higher resolution we need a scalable solver
+\item for higher resolution we need a \alert{scalable solver}
     \begin{itemize}
-    \item[$\circ$] such a solver would be built by composition of features: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
-    \item[$\circ$] for an example, see Isaac, Stadler, \& Ghattas (2015)
-    \item[$\circ$] addressing scalability properly is a different talk!
+    \item[$\circ$] such a solver would be built by composition of features: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block; see B (2021b)
+    \item[$\circ$] for a scalable implementation see Isaac, Stadler, \& Ghattas (2015)
+    \item[$\circ$] addressing scalability properly is a different talk, but see B (2023)
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -795,16 +804,16 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{frame}{but don't glaciers actually change with the climate?}
 
 \begin{itemize}
-\item we do not yet have a ``real'' glacier model
+\item we do not yet have a evolving glacier model
     \begin{itemize}
+    \item[$\circ$] time derivatives have not appeared!
     \item[$\circ$] the climate (e.g.~surface mass balance) has not appeared as an input
-    \item[$\circ$] time derivatives have not appeared either!
     \end{itemize}
 
 \medskip
 \item[Q.] how do glaciers change shape?
 
-\item[A.] via the \alert{free-surface equation}, a kinematical statement:
+\item[A.] via the \alert{free-surface equation}, a kinematical and mass conservation statement:
    $$\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s = a$$
 
     \begin{itemize}
@@ -817,11 +826,8 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
     \end{itemize}
 
 \medskip
-\item the equation holds on $(0,T) \times \Omega$
-    \begin{itemize}
-    \item[$\circ$] $\Omega \subset \RR^d\strut$ is a fixed map-plane region
-    \end{itemize}
-\item an initial surface $s(0,x,y)$ is needed
+\item equation holds on $(0,T) \times \Omega$, where $\Omega \subset \RR^d\strut$ is a fixed map-plane region
+\item initial surface $s(0,x,y)$ is needed
 \end{itemize}
 \end{frame}
 
@@ -831,12 +837,12 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{itemize}
 \item so we have a \alert{coupled} system of simultaneous equations
 
-\begin{block}{coupled free-surface \& Stokes equations}
+\begin{block}{coupled free-surface \& Glen-Nye-Stokes equations}
 \vspace{-2mm}
 
 \begin{align*}
 \frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
-- \Div \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \strut \\
+- \Div \left(2 \nu_\eps\, D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \strut \\
 \Div \bu &= 0 &&\text{\emph{incompressibility}} \phantom{\int}
 \end{align*}
 \end{block}
@@ -846,11 +852,11 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{columns}
 \begin{column}{0.5\textwidth}
 \begin{itemize}
-\item the two coupling directions:
+\item 2 coupling directions:
 \end{itemize}
 \begin{enumerate}
 \item[I.] the free-surface equation has $\bu|_s$ as a coefficient
-\item[II.] $s(t,x,y)$ determines the \alert{evolving domain $\Lambda(t)$} on which the Stokes problem is solved
+\item[II.] $s(t,x,y)$ determines the \alert{evolving domain $\Lambda(t)$} on which the Stokes problem is solved at each instant
 \end{enumerate}
 \end{column}
 \begin{column}{0.5\textwidth}
@@ -864,7 +870,8 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \begin{itemize}
 \item we get the weak form of the coupled system in the usual way \dots
-\item multiply by test functions and integrate by parts:
+
+multiply by test functions and integrate by parts:
 {\small
 \begin{align*}
 \int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r\,dx &=0  &&\forall r \\
@@ -877,7 +884,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{columns}
 \begin{column}{0.55\textwidth}
 \begin{itemize}
-\item high-level choices to make about this coupled system:
+\item high-level choices to make about the coupled system:
     \begin{enumerate}
     \item[1.] time-stepping: explicit or implicit?
     \item[2.] solved together (\emph{monolithic}) or split?
@@ -901,7 +908,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \item early/naive approaches to solving this coupled problem have been fragile
 \item the method everyone tries first is to solve Glen-Nye-Stokes for the current geometry, then advance the surface, and repeat
     \begin{itemize}
-    \item[$\circ$] This is an \emph{explicit} approach to the coupled problem based on \emph{splitting} the coupling.
+    \item[$\circ$] This is an \emph{explicit} approach on \emph{splitting} the coupling.
     \item[$\circ$] Resulting performance is \alert{stability limited}, but in a manner which is not precisely understood.
     \end{itemize}
 
@@ -910,7 +917,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \end{itemize}
 
 \begin{enumerate}
-\item<2> Because $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved, the mesh used for the $\bu,p$ solver changes at every time step.  This makes monolithic and/or implicit implementations difficult.
+\item<2> Because $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved, the geometry of the mesh used for the $\bu,p$ solver changes at every time step.  This makes monolithic and/or implicit implementations difficult.
 \item<2> The coupled problem mixes advective and diffusive aspects, with proportions depending on the particular boundary conditions.
     \begin{itemize}
     \item Precise time-step restrictions remain unclear.
@@ -952,7 +959,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
     \end{itemize}
 
 \medskip
-\item it uses an extruded mesh between $P_1$ surfaces $s$ and $b$
+\item it uses an extruded mesh between continuous $P_1$ surfaces $s$ and $b$
     \begin{itemize}
     \item[$\circ$] thus the Stokes domain $\Lambda(t)$ is \alert{polygonal} at each $t$
     \end{itemize}
@@ -962,7 +969,10 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \includegraphics[width=0.75\textwidth]{figs/extruded.png}
 \end{center}
 
-\item as before, for $\bu,p$ on $\Lambda(t)$ we use quadrilateral ($Q_2\times Q_1$) elements for planar glaciers and prism elements for 3D glaciers
+\item as before, the extruded mesh for $\Lambda(t)$ is built from \alert{quadrilaterals} for planar, or \alert{prisms} for 3D
+    \begin{itemize}
+    \item[$\circ$] but we will rethink the pressure space
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -990,6 +1000,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
         \begin{itemize}
         \item[A.] we apply a bounds-respecting Newton method
         \item[B.] we allow variable ice extent on the extruded mesh
+        \item[C.] we prefer pressure elements with interior degrees of freedom
         \end{itemize}
 \end{enumerate}
 
@@ -1143,6 +1154,9 @@ $40$ & $0.125$
 with \texttt{MX}$=25,50,100,200,400$
     \item[$\circ$] Tominec et al (2026) does more experimentation
     \end{itemize}
+
+\medskip
+\item \emph{with} technique 2, \alert{arbitrary time steps are stable w.r.t.~sloshing}
 \end{itemize}
 \end{frame}
 
@@ -1181,8 +1195,10 @@ solver from PETSc (B 2021b)
 \begin{frame}{technique 3B: extruded mesh with variable ice extent}
 
 \begin{itemize}
-\item the base mesh covers all of $\Omega$
-\item \alert{extruded mesh has a fixed number \texttt{mz} of levels in the vertical}
+\item the base mesh covers all of $\Omega$, \alert{including areas with no ice}
+
+\medskip
+\item the extruded mesh has a \alert{fixed number \texttt{mz} of levels in the vertical}
     \begin{itemize}
     \item[$\circ$] $\bu,p$ are defined at each node of the extruded mesh
     \item[$\circ$] our meshes and fields have \alert{constant memory footprint} as we time-step
@@ -1193,16 +1209,41 @@ solver from PETSc (B 2021b)
     \begin{itemize}
     \item[$\circ$] note that $s^h_k$ and $b^h$ define the ice domain $\Lambda(t_k)$
     \end{itemize}
+
+\medskip
 \item \alert{in columns with no ice we lock $\bu,p$ values to zero}
     \begin{itemize}
-    \item[$\circ$] classes \texttt{PinchColumnPressure} and \texttt{PinchColumnVelocity} are sub-classes of \texttt{DirichletBC}
-    \item[$\circ$] see \texttt{stage4/geometry.py}
+    \item[$\circ$] classes \texttt{PinchColumnPressure|Velocity} are sub-classes of \texttt{DirichletBC}; see \texttt{stage4/geometry.py}
     \end{itemize}
 \end{itemize}
 
 \vspace{-2mm}
 
 \hfill \includegraphics[width=0.7\textwidth]{figs/pinched.png}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{technique 3C: pressure elements with interior degrees of freedom}
+
+\begin{itemize}
+\item as on previous slide, in columns with no ice we lock $\bu,p$ values to zero
+\item however, we do \alert{not} want to lock $p$ to be zero anywhere in the closest-to-margin elements containing ice
+    \begin{itemize}
+    \item[$\circ$] doing so is an ``accidental'' Dirichlet condition on the pressure
+    \end{itemize}
+\item thus we prefer elements for pressure which only have interior degrees of freedom, for example:
+
+\medskip
+\begin{Verbatim}[fontsize=\small,xleftmargin=0mm]
+W = FunctionSpace(mesh, "DQ", 1, variant="spectral")  # best
+
+W = FunctionSpace(mesh, "DG", 0)  # adequate alternative
+\end{Verbatim}
+
+\medskip
+\item for such elements the moving-margin mass conservation error (later slides) is one-sided
+\end{itemize}
 \end{frame}
 
 
@@ -1233,7 +1274,7 @@ $ paraview movie.pvd
 
 
 \begin{frame}[fragile]
-\frametitle{instability showing need for stabilization technique 1}
+\frametitle{instability showing need for stabilization technique 1A}
 
 \begin{itemize}
 \item especially near the glacier margin, \alert{edge stabilization} (technique 1A) \alert{is clearly needed}
@@ -1254,22 +1295,45 @@ $ python3 solve.py -mx 200 -T 1 -noedge
 
 \bigskip
 \item runs with \texttt{-walls} generally do not show the need
+\end{itemize}
+\end{frame}
 
-% COMMENTED-OUT
-\begin{comment}
+
+
+\begin{frame}[fragile]
+\frametitle{instability showing need for stabilization technique 1B}
+
+\begin{itemize}
 \item need for technique 1B (CFL for time-step length) is more subtle
-    \begin{itemize}
-    \item[$\circ$] compare the margin shape at the end of these two runs:
+
+\medskip
+\item compare the margin shape at the end of these two runs:
 
 \begin{Verbatim}[fontsize=\small,xleftmargin=10mm]
 $ python3 solve.py -mx 100
+\end{Verbatim}
+%$
+
+\medskip
+\mbox{\hspace{15mm} \includegraphics[width=0.75\textwidth]{figs/stage4withcfl.png}}
+
+\begin{Verbatim}[fontsize=\small,xleftmargin=10mm]
 $ python3 solve.py -mx 100 -nocfl -maxdt 1.0
 \end{Verbatim}
-    \item[$\circ$] margin shape in run 2 is wrong (bulging!), but not wildly unstable (\emph{not shown})
-    \end{itemize}
-\end{comment}
-% COMMENTED-OUT
+%$
 
+\medskip
+\mbox{\hspace{15mm} \includegraphics[width=0.61\textwidth]{figs/stage4nocfl.png}}
+
+\medskip
+    \begin{itemize}
+    \item[$\circ$] advancing margin shape without CFL-limited time steps is wrong
+        \begin{itemize}
+        \item bulging and not downsloping
+        \item not close to Halfar margin location (next slides)  
+        \end{itemize}
+    \item[$\circ$] but the margin shape is not wildly unstable
+    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -1285,14 +1349,14 @@ $ python3 solve.py -mx 100 -nocfl -maxdt 1.0
     \begin{itemize}
     \item[$\circ$] both time-dependent (Halfar) and steady-state exact solutions are known
     \end{itemize}
-\item SIA exact solutions are \alert{close} to solving the free-surface $+$ Stokes coupled equations when the \alert{aspect ratio $\eps = (\text{height}) / (\text{width})$ is small}
+\item SIA exact solutions are \alert{close} to solving the free-surface $+$ Stokes coupled equations when the aspect ratio $\eps = (\text{height}) / (\text{width})$ is small
 
 \bigskip
 \item next slide: we compare with the Halfar (1981) exact solution
     \begin{itemize}
     \item[$\circ$] on a \alert{shallow initial dome geometry}, so SIA is reasonably accurate
     \item[$\circ$] initial height 1000 m and width 20 km \quad $\implies$ \quad $\eps = 0.05$
-    \item[$\circ$] Halfar characteristic time $t_0=0.17$ a
+    %\item[$\circ$] Halfar characteristic time $t_0=0.17$ a
     \end{itemize}
 \end{itemize}
 
@@ -1335,7 +1399,7 @@ Halfar & 28.993 & 689.829
 \end{center}
 
 \medskip
-\item reasonably close \dots but \emph{not} expected to converge to the Halfar values
+\item reasonably close \dots but we do \emph{not} want convergence to the Halfar values
 \end{itemize}
 \end{frame}
 
@@ -1360,16 +1424,16 @@ Halfar & 28.993 & 689.829
 \end{itemize}
 \end{column}
 \begin{column}{0.5\textwidth}
-\mbox{\, \includegraphics[width=0.98\textwidth]{figs/areatimeseries.png}}
+\mbox{\, FIXME \includegraphics[width=0.98\textwidth]{figs/areatimeseries.png}}
 \end{column}
 \end{columns}
 
 \begin{itemize}
 \item this is \alert{only a moving margin effect}
     \begin{itemize}
-    \item[$\circ$] our scheme conserves mass in \texttt{-walls} cases (Tominec et al 2026)
+    \item[$\circ$] our scheme conserves mass in \texttt{-walls} cases, as proven by Tominec et al (2026)
     \end{itemize}
-\item the free-boundary mass conservation issues reported by B (2021a) and Jarosch et al (2013) are different from the issue here
+\item the glacier margin mass conservation issues reported by B (2021a) and Jarosch et al (2013) are different from the issue here
 \end{itemize}
 \end{frame}
 
