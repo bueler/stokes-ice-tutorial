@@ -32,7 +32,7 @@ from firedrake.petsc import PETSc
 class PinchColumnPressure(fd.DirichletBC):
     """A 'pinched column' is one where the degrees of freedom are trivialized (pinned) according to the column height being below a tolerance.  The column height is determined from R-space elevation stored in an application context."""
 
-    def __init__(self, V, g, sub_domain, htol=1.0):
+    def __init__(self, V, g, sub_domain, htol=0.01):
         self.htol = htol
         super().__init__(V, fd.Constant(0.0), None)
 
@@ -52,7 +52,7 @@ class PinchColumnPressure(fd.DirichletBC):
 class PinchColumnVelocity(fd.DirichletBC):
     """For vector-valued velocity.  Compare PinchColumnPressure."""
 
-    def __init__(self, V, g, sub_domain, htol=1.0):
+    def __init__(self, V, g, sub_domain, htol=0.01):
         self.htol = htol
         super().__init__(V, fd.as_vector([0.0, 0.0]), None)
 
@@ -101,7 +101,7 @@ def trace_to_vector_p2base(basemesh, mesh, u, ubm):
     return None
 
 
-def evaluate_shape(basemesh, s, stol=1.0):
+def evaluate_shape(basemesh, s, stol=0.01):
     # note: these methods are correct in parallel
     xx = basemesh.coordinates.dat.data_ro
     spos = xx[s.dat.data_ro > stol]
