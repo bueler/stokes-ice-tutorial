@@ -1406,33 +1406,38 @@ Halfar & 28.993 & 689.829
 \begin{frame}{mass conservation errors with moving glacier margins}
 
 \begin{itemize}
-\item since $a=0$ for this moving margin solution, mass is exactly conserved in the continuum fluid model
+\item since $a=0$ here, \alert{mass is exactly conserved in the continuum model}
 \end{itemize}
+
+\medskip
 
 \begin{columns}
 \begin{column}{0.5\textwidth}
 \vspace{-5mm}
 
 \begin{itemize}
-\item unfortunately, our scheme \alert{does not conserve mass} in this case
-\item numerical mass (planar ice area) drifts by about 1\% over 5 years
+\item unfortunately, our scheme \alert{does not conserve mass} here
+\item numerical mass ($=$ ice area) drifts about 1\% over 5 years
     \begin{itemize}
     \item[$\circ$] curves should be horizontal lines
-    \item[$\circ$] higher spatial resolution gives better mass conservation
+    \item[$\circ$] higher res $\implies$ better conserve
     \end{itemize}
 \end{itemize}
 \end{column}
 \begin{column}{0.5\textwidth}
-\mbox{\, FIXME \includegraphics[width=0.98\textwidth]{figs/areatimeseries.png}}
+\mbox{\, \includegraphics[width=0.98\textwidth]{figs/areatimeseries.png}}
 \end{column}
 \end{columns}
+
+\vspace{-2mm}
 
 \begin{itemize}
 \item this is \alert{only a moving margin effect}
     \begin{itemize}
-    \item[$\circ$] our scheme conserves mass in \texttt{-walls} cases, as proven by Tominec et al (2026)
+    \item[$\circ$] our scheme conserves mass for fixed walls (proved by Tominec et al 2026)
+    \item[$\circ$] for this moving-margin, $a=0$ case mass is non-decreasing (proved from VI)
     \end{itemize}
-\item the glacier margin mass conservation issues reported by B (2021a) and Jarosch et al (2013) are different from the issue here
+\item glacier margin mass conservation issues addressed in B (2021a) and Jarosch et al (2013) are distinct from issue here
 \end{itemize}
 \end{frame}
 

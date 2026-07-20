@@ -10,7 +10,8 @@ Provide an easy-to-modify and well-documented finite element solver for glacier 
 
 ## versions
 
-  * **v2.0**  Includes well-behaved glacial evolution in `stage4/`.
+  * **v2.1**  Switch pressure elements.
+  * **v2.0**  Well-behaved glacial evolution in `stage4/`.
   * **v1.0**  The first version of this tutorial was for glacier dynamics only, for fixed geometry.
 
 ## model equations

@@ -2,7 +2,7 @@
 #   python3 solve.py ... -mx MX -ots areaMX.txt
 # for MX in mxrange.
 
-mxrange = [25, 50, 100, 200, 400, 800]
+mxrange = [50, 100, 200, 400, 800]
 
 import numpy as np
 import matplotlib.pyplot as plt
