@@ -242,7 +242,9 @@ solverske = NonlinearVariationalSolver(
 def get_dt(t, dx, umagmax):
     """Determine dt from CFL and options."""
     dtcfl = PETSc.INFINITY if args.nocfl else args.cfl * dx / umagmax
-    return np.array([dtcfl, args.maxdt * secpera, args.T * secpera - t]).min()
+    dtvals = np.array([dtcfl, args.maxdt * secpera, args.T * secpera - t])
+    dtreasons = ["CFL", "MAX", "END"]
+    return float(dtvals.min()), dtreasons[int(dtvals.argmin())]
 
 
 def report_shape(s):
@@ -292,7 +294,7 @@ for k in range(args.maxN):
         solve(F == 0, up, bcs=bcs, options_prefix="stokes", solver_parameters=stokespar)
         u, _ = up.subfunctions
         _, umagmax = evaluate_speed(mesh, u)
-        dt = get_dt(t, deltax, umagmax)
+        dt, _ = get_dt(t, deltax, umagmax)
 
     # solving Stokes on current geometry (in current mesh) requires
     # resetting form and boundary conditions
@@ -308,9 +310,9 @@ for k in range(args.maxN):
 
     # find ice speed, and use CFL to determine time step
     umagav, umagmax = evaluate_speed(mesh, u)
-    dt = get_dt(t, deltax, umagmax)
+    dt, reason = get_dt(t, deltax, umagmax)
     printpar(
-        f"  speed (m a-1) at t={t / secpera:.3f} a: av = {umagav * secpera:.3f}, max = {umagmax * secpera:.3f} --> dt = {dt / secpera:.3f} a"
+        f"  speed (m a-1): av = {umagav * secpera:.3f}, max = {umagmax * secpera:.3f} --> {reason} dt = {dt / secpera:.3f} a"
     )
 
     # solve SKE for one semi-implicit Euler time-step, a variational inequality
