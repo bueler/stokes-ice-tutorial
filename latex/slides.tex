@@ -1443,14 +1443,14 @@ Halfar & 28.993 & 689.829
 \begin{frame}{summary and outlook}
 
 \begin{itemize}
-\item Firedrake makes solving the glacier Stokes problem easy for the new numerical modeler:
+\item Firedrake makes solving the glacier Stokes problem \alert{easy for the new numerical modeler}:
     \begin{itemize}
     \item[$\circ$] the Python codes in this tutorial are short
     \item[$\circ$] UFL (for weak forms) and PETSc (for nonlinear solvers) are in the stack
     \end{itemize}
 
 \medskip
-\item modern tools work:
+\item \alert{modern tools work}:
     \begin{itemize}
     \item[$\circ$] Firedrake extruded meshes, because glaciers are (generally) thin flows
     \item[$\circ$] Swedish stabilizations, so semi-implicit time-stepping is safe (and easy)
@@ -1461,8 +1461,8 @@ Halfar & 28.993 & 689.829
 \item major remaining challenges:
     \begin{enumerate}
     \item make the Stokes solver faster by replacing the direct linear algebra with a \alert{scalable matrix-free solver} (presumably multigrid)
-    \item make time-stepping glacier simulations \alert{mass conserving even in free-boundary cases}
     \item make the simulation faster by combining the free-surface equation and the Stokes solver in a \alert{monolithic implicit step}
+    \item make time-stepping glacier simulations \alert{mass conserving even in free-boundary cases}
     \end{enumerate}
 \end{itemize}
 \end{frame}
