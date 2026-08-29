@@ -4,7 +4,7 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage4/  Solve the coupled free-surface (kinematical) equation and Glen-Nye-Stokes momentum equations for a 2D ice sheet.  Defaults to P2 x DQ1 for the Stokes equations.  Uses first-order mostly-explicit time-stepping based on the 2 Swedish stabilizations, suplemented by a CFL condition (motivated by margin advance considerations).  The free-surface update is by a variational inequality (free boundary) method.  Uses an extruded mesh.  Initial shape is from the Halfar solution.""",
+    description="""stage4/  Solve the coupled free-surface (kinematical) equation and Glen-Nye-Stokes momentum equations for a 2D ice sheet.  Uses an extruded mesh of quadrilaterals, and defaults to Q2 x DQ1 for (u,p) in the Stokes equations.  Uses first-order mostly-explicit time-stepping based on the Swedish stabilizations, supplemented by a CFL condition motivated by margin-advance considerations.  The free-surface update is by a variational inequality (free-boundary) method.  Initial shape is from the Halfar solution.""",
     add_help=False,
 )
 hs = "coefficient to use in CFL scheme for time-stepping (default=0.25)"
@@ -23,7 +23,7 @@ hs = "subintervals in coarse mesh (default=50)"
 parser.add_argument("-mx", type=int, metavar="MX", default=50, help=hs)
 hs = "vertical layers in coarse mesh (default=4)"
 parser.add_argument("-mz", type=int, metavar="MZ", default=4, help=hs)
-hs = "turn off CFL determination of time step; instead need -maxdt, -T for time axis"
+hs = "turn off CFL determination of time step; instead -maxdt, -T determine time axis"
 parser.add_argument("-nocfl", action="store_true", default=False, help=hs)
 hs = "turn off edge stabilization"
 parser.add_argument("-noedge", action="store_true", default=False, help=hs)
@@ -33,7 +33,7 @@ hs = "output filename (default=dome.pvd)"
 parser.add_argument("-o", metavar="FILE.pvd", default="dome.pvd", help=hs)
 hs = "output filename for movie; provide .pvd name to turn movie on"
 parser.add_argument("-omovie", metavar="FILE.pvd", default=None, help=hs)
-hs = "output filename for ice area time series; provide .txt name to turn on"
+hs = "output filename for ice area time series; provide name to turn on"
 parser.add_argument("-ots", metavar="FILE.txt", default=None, help=hs)
 hs = "element type to use for pressure: DQ1|DG0|Q1 (default=DQ1)"
 parser.add_argument('-pressure', metavar='X', choices=['DQ1','DG0','Q1'], default='DQ1', help=hs)
@@ -247,7 +247,7 @@ def get_dt(t, dx, umagmax):
 def report_shape(s):
     lm, rm, smax, iarea = evaluate_shape(basemesh, s)
     printpar(
-        f"  width = {(rm - lm) / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {iarea / 1e6:.6f} km^2"
+        f"  width = {(rm - lm) / 1e3:.3f} km, max(s) = {smax:.3f} m, area = {iarea / 1e6:.3f} km^2"
     )
     return iarea
 
@@ -263,8 +263,9 @@ if args.ots is not None:
 
 # main time stepping loop
 deltax = 2.0 * args.L / args.mx
+Lkm = args.L / 1000.0
 printpar(
-    f"solving on {args.mx} x {args.mz} mesh (2L = {2*args.L / 1000.0:.0f} km, dx = {deltax:.3f} m) ..."
+    f"solving on {args.mx} x {args.mz} mesh ([{-Lkm:.0f}, {Lkm:.0f}] km, dx = {deltax:.3f} m) ..."
 )
 printpar(f"  space dimensions: n_u = {V.dim()}, n_p = {W.dim()}")
 t = 0.0
@@ -301,9 +302,10 @@ for k in range(args.maxN):
     solve(F == 0, up, bcs=bcs, options_prefix="stokes", solver_parameters=stokespar)
     u, p = up.subfunctions
     if args.omovie is not None:
-        u.rename("velocity (m/s)")
+        upera = Function(u.function_space()).interpolate(secpera * u)
+        upera.rename("velocity (m/a)")
         p.rename("pressure (Pa)")
-        movie.write(u, p, time=t)
+        movie.write(upera, p, time=t)
 
     # find ice speed, and use CFL to determine time step
     umagav, umagmax = evaluate_speed(mesh, u)
@@ -357,8 +359,11 @@ u *= secpera
 p /= 1.0e5
 u.rename("velocity (m/a)")
 p.rename("pressure (bar)")
-# integer-valued element-wise process rank
-rank = Function(FunctionSpace(mesh, "DG", 0))
-rank.dat.data[:] = mesh.comm.rank
-rank.rename("rank")
-VTKFile(args.o).write(u, p, tau, nu, rank)
+fields = [u, p, tau, nu]
+if mesh.comm.size > 1:
+    # integer-valued element-wise process rank
+    rank = Function(FunctionSpace(mesh, "DG", 0))
+    rank.dat.data[:] = mesh.comm.rank
+    rank.rename("rank")
+    fields.append(rank)
+VTKFile(args.o).write(*fields)
