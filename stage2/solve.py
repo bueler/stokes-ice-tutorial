@@ -50,7 +50,7 @@ par = {
     "pc_factor_shift_type": "inblocks",
     "pc_factor_mat_solver_type": "mumps",
 }
-solve(F == 0, up, bcs=bcs, solver_parameters=par)
+solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=par)
 
 # integrate 1 to get area of domain
 R = FunctionSpace(mesh, "R", 0)
