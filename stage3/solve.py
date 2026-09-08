@@ -4,7 +4,7 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage3/  Solve the Glen-Stokes momentum equations for a 2D or 3D ice sheet. Generates an extruded mesh with optional bumpy bed. Adds: rescaled equations, vertical grid sequencing, and diagnostic computation of viscosity and stresses. Demonstrates (mostly) dimension-indpendent programming in Firedrake and UFL.""",
+    description="""stage3/  Solve the power-law Stokes momentum equations for a 2D or 3D ice sheet. Generates an extruded mesh with optional bumpy bed. Adds: rescaled equations, vertical grid sequencing, and diagnostic computation of viscosity and stresses. Demonstrates (mostly) dimension-indpendent programming in Firedrake and UFL.""",
     add_help=False,
 )
 hs = "scale of bed bumpiness (default=200 m)"

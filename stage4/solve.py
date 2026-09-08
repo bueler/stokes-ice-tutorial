@@ -4,7 +4,7 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage4/  Solve the coupled free-surface (kinematical) equation and Glen-Nye-Stokes momentum equations for a 2D ice sheet.  Uses an extruded mesh of quadrilaterals, and defaults to Q2 x DQ1 for (u,p) in the Stokes equations.  Uses first-order mostly-explicit time-stepping based on the Swedish stabilizations, supplemented by a CFL condition motivated by margin-advance considerations.  The free-surface update is by a variational inequality (free-boundary) method.  Initial shape is from the Halfar solution.""",
+    description="""stage4/  Solve the coupled free-surface (kinematical) equation and power-law Stokes momentum equations for a 2D ice sheet.  Uses an extruded mesh of quadrilaterals, and defaults to Q2 x DQ1 for (u,p) in the Stokes equations.  Uses first-order mostly-explicit time-stepping based on the Swedish stabilizations, supplemented by a CFL condition motivated by margin-advance considerations.  The free-surface update is by a variational inequality (free-boundary) method.  Initial shape is from the Halfar solution.""",
     add_help=False,
 )
 hs = "coefficient to use in CFL scheme for time-stepping (default=0.25)"
@@ -83,7 +83,7 @@ from geometry import (
 
 # create 1D base mesh
 if args.walls:
-    assert args.L < args.R0, "initial shape must contact walls at locations |x|=L"
+    assert args.L < args.R0, "for -walls, initial shape must extend to locations |x|=L"
 basemesh = IntervalMesh(args.mx, -args.L, args.L)
 xbase = SpatialCoordinate(basemesh)
 P1base = FunctionSpace(basemesh, "CG", 1)
@@ -157,8 +157,7 @@ dt_loadstab = Constant(0.0)
 
 
 def form_stokes(loadstab=False):
-    """Weak form for the Stokes problem on the geometry stored in the current
-    mesh.  This must be called every time the geometry is re-set."""
+    """Weak form for the power-law Stokes problem on the geometry stored in the current mesh.  This must be called every time the geometry is re-set."""
     u, p = split(up)
     Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
     nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
@@ -325,7 +324,7 @@ for k in range(args.maxN):
     set_mesh_geometry(mesh, s, xzorig=xzflat)
     t += dt
 
-# report on final quantities and close open files
+# report on final quantities and close files
 printpar(f"t={t / secpera:.3f} a (done):")
 iarea = report_shape(s)
 if args.ots is not None:
