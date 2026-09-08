@@ -97,7 +97,7 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[version 2.2]{version 2.2 (August 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
+\date[version 2.2]{version 2.2 (September 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
 \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 
@@ -167,27 +167,34 @@
     \item[$\circ$] momentum conservation is therefore called a ``stress balance''
     \item[$\circ$] velocity \& pressure are \alert{instantaneously determined} by glacier geometry and boundary stresses
     \end{itemize}
+
+\medskip
+{\scriptsize velocity} \quad \includegraphics[width=0.6\textwidth]{figs/speed.png}
+
+\medskip
+{\scriptsize pressure} \quad \includegraphics[width=0.6\textwidth]{figs/pressure.png}
+
+\bigskip
 \item \alert{Stokes equations $=$ stress balance $+$ incompressibility}
 \end{itemize}
 
-\bigskip\bigskip
+\vspace{-14mm}
 
-{\scriptsize velocity} \hfill \includegraphics[width=0.8\textwidth]{figs/speed.png}
+\hfill \includegraphics[width=0.12\textwidth]{figs/people/gstokes.jpg}
 
-\medskip
-{\scriptsize pressure} \hfill \includegraphics[width=0.8\textwidth]{figs/pressure.png}
+\hfill {\tiny George Stokes}
 \end{frame}
 
 
-\begin{frame}{Glen-Nye-Stokes equations}
+\begin{frame}{Glen-Steinemann-Nye-Stokes equations}
 
 \begin{itemize}
-\item the canonical glacier dynamics equations are from Glen, Nye, and Stokes
+\item the canonical glacier dynamics equations are from Glen, Steinemann, Nye, and Stokes; the  model is isotropic \emph{power-law Stokes}
 \item the main equations:
 \begin{align*}
 - \Div \tau + \nabla p &= \rho \bg &&\text{\emph{stress balance}} &&\phantom{dlfsj fdasj} \\
 \Div \bu &= 0 &&\text{\emph{incompressibility}} \\
-\tau = B_n &|D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{Glen-Nye flow law}}
+\tau = B_n &|D\bu|^{(1/n) - 1} D\bu  &&\text{\emph{flow law}}
 \end{align*}
 
     \begin{itemize}
@@ -197,27 +204,38 @@ and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain
     \item[$\circ$] our model has \emph{constant ice density}; incompressibility follows
     \end{itemize}
 
-\vspace{-33mm}
+\vspace{-43mm}
 
 %https://www.bl.uk/voices-of-science/interviewees/john-glen#
-\hfill \includegraphics[width=0.12\textwidth]{figs/people/jglen.png}
+\hfill \includegraphics[width=0.10\textwidth]{figs/people/jglen.png}
 %https://www.igsoc.org/john-f-nye-1923-2019
 
 \hfill {\tiny John Glen}
 
 \medskip
-\hfill \includegraphics[width=0.12\textwidth]{figs/people/jnye.jpg}
+\hfill \includegraphics[width=0.10\textwidth]{figs/people/generic.png}
+
+\vspace{-2mm}
+
+\hfill {\tiny Samuel G. Steinemann}
+
+\vspace{-2mm}
+
+\hfill {\tiny (1923--2016)}
+
+\medskip
+\hfill \includegraphics[width=0.10\textwidth]{figs/people/jnye.jpg}
 
 \hfill {\tiny John Nye}
 
-\vspace{-10mm}
+\vspace{-17mm}
 
 \item constants (\emph{with default values in demos}):
     \begin{itemize}
     \item[$\circ$] $\rho=910 \,\text{kg}\,\text{m}^{-3}$
     \item[$\circ$] $|\bg|=9.81\,\text{m}\,\text{s}^{-2}$
     \item[$\circ$] $n=3$
-    \item[$\circ$] $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$ \hfill {\footnotesize $\leftarrow$ \emph{constant because isothermal}}
+    \item[$\circ$] $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$ \hspace{10mm} {\footnotesize $\leftarrow$ \emph{constant because isothermal here}}
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -227,13 +245,13 @@ and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain
 
 \begin{itemize}
 \item the classical viscosity relationship $\tau=2\nu D\bu$ eliminates $\tau$ from the equations, giving a system for $\bu,p$
-\item however, the unmodified Glen-Nye viscosity formula yields unbounded values as $D\bu\to 0$, i.e.~for vanishing strain rates
+\item however, the unmodified power-law viscosity formula yields unbounded values as $D\bu\to 0$, i.e.~for vanishing strain rates
     \begin{itemize}
     \item[$\circ$] note that ``$(1/n) - 1$'' in $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ is a negative power
     \end{itemize}
 \item so we also regularize with \alert{small $\eps>0$} to generate bounded viscosity
 
-\begin{block}{Glen-Nye-Stokes equations with regularized viscosity}
+\begin{block}{power-law Stokes equations with regularized viscosity}
 
 \begin{align*}
 - \Div \left(2 \alert{\nu_\eps(|D\bu|)} D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
@@ -395,7 +413,7 @@ v, q = TestFunctions(Z)
     \begin{itemize}
     \item[$\circ$] this $P_2 \times P_1$ choice is called Taylor-Hood
     \item[$\circ$] other mixed spaces are just as easy
-    \item[$\circ$] we choose $P_2\times DG_0$ in \texttt{stage4/}, for reasons \dots
+    \item[$\circ$] we choose $P_2\times DQ_1$ in \texttt{stage4/}, for reasons \dots
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -416,9 +434,6 @@ v, q = TestFunctions(Z)
 
 \begin{frame}{the linear Stokes equations}
 
-\begin{columns}
-
-\begin{column}{0.6\textwidth}
 \begin{itemize}
 \item if we make viscosity constant ($\nu_0>0$) then we get a linear Stokes system:
 \begin{align*}
@@ -431,25 +446,22 @@ v, q = TestFunctions(Z)
 -\Div \bu \qquad \,\,\,\, &= 0
 \end{align*}
 \item which has symmetric block structure:
-  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix}$$
+  $$\begin{bmatrix} A & B^\top \\ B & 0 \end{bmatrix} \begin{bmatrix} \bu \\ p  \end{bmatrix} = \begin{bmatrix} \bbf \\ 0 \end{bmatrix} \hspace{5mm}$$
 
     \begin{itemize}
     \item[$\circ$] $A=-\nu_0 \nabla^2 \ge 0$
+
+\smallskip
     \item[$\circ$] $B^\top=(-\Div)^\top = \grad$ (integration-by-parts)
     \end{itemize}
 \end{itemize}
-\end{column}
 
-\begin{column}{0.4\textwidth}
-\hfill \includegraphics[width=0.35\textwidth]{figs/people/gstokes.jpg}
+\vspace{-30mm}
 
-\hfill {\tiny George Stokes}
-
-\vspace{7mm}
 \hfill
 \begin{tikzpicture}
   \node[anchor=south west, inner sep=0] (img) at (0,0)
-    {\includegraphics[width=0.8\textwidth]{figs/Kstokes.pdf}};
+    {\includegraphics[width=0.25\textwidth]{figs/Kstokes.pdf}};
   \begin{scope}[x={(img.south east)},y={(img.north west)}]
     % block boundary: pressure DOFs are roughly last 18% of DOFs
     \node[red, font=\Large\bfseries] at (0.38,0.62) {$A$};
@@ -458,9 +470,6 @@ v, q = TestFunctions(Z)
     \node[red, font=\Large\bfseries] at (0.91,0.09) {$0$};
   \end{scope}
 \end{tikzpicture}
-\end{column}
-
-\end{columns}
 \end{frame}
 
 
@@ -514,17 +523,17 @@ $ git clone https://github.com/bueler/stokes-ice-tutorial.git
 
 \begin{itemize}
 \item \emph{purpose:} solve linear Stokes on a trapezoidal ``glacier''
-\item \emph{source files:} \texttt{domain.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
-\item \emph{generated files:} \texttt{domain.msh}, \texttt{domain.pvd}
+\item \emph{source files:} \texttt{trap.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
+\item \emph{generated files:} \texttt{trap.msh}, \texttt{trap.pvd}
 \end{itemize}
 
 \bigskip
 \begin{Verbatim}[xleftmargin=5mm]
 $ cd stage1/
-$ gmsh -2 domain.geo          # mesh the domain
-$ gmsh domain.msh             # view the mesh
-$ python3 solve.py            # solve linear Stokes
-$ paraview domain.pvd         # view the solution
+$ gmsh -2 trap.geo          # mesh the domain
+$ gmsh trap.msh             # view the mesh
+$ python3 solve.py          # solve linear Stokes
+$ paraview trap.pvd         # view the solution
 \end{Verbatim}
 %$
 
@@ -537,7 +546,7 @@ $ paraview domain.pvd         # view the solution
 \end{frame}
 
 
-\section{\texttt{stage2/} \qquad Glen-Nye-Stokes for glacier ice}
+\section{\texttt{stage2/} \qquad power-law Stokes for glacier ice}
 
 \begin{frame}{Newton's method}
 
@@ -550,7 +559,7 @@ $ paraview domain.pvd         # view the solution
     \begin{itemize}
     \item[$\circ$] default solver: Firedrake $\to$ PETSc KSP $\to$ MUMPS
     \end{itemize}
-\item but Glen-Nye-Stokes residual function is \alert{nonlinear in $\bu$}:
+\item but Glen-Stokes residual function is \alert{nonlinear in $\bu$}:
 \small
 $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 \normalsize
@@ -576,10 +585,10 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage2/} \qquad Glen-Nye-Stokes for a glacier}
+\frametitle{\texttt{stage2/} \qquad power-law Stokes for a glacier}
 
 \begin{itemize}
-\item \emph{purpose:} solve the Glen-Nye-Stokes equations on a dome-shaped glacier with a flat bed
+\item \emph{purpose:} solve the power-law Stokes equations on a dome-shaped glacier with a flat bed
 \item \emph{source files:} \texttt{domain.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{dome.geo}, \texttt{dome.msh}, \texttt{dome.pvd}
 \end{itemize}
@@ -589,7 +598,7 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
   $ cd stage2/
   $ python3 domain.py     # generate domain outline
   $ gmsh -2 dome.geo      # mesh the domain
-  $ python3 solve.py      # solve Glen-Nye-Stokes
+  $ python3 solve.py      # solve power-law Stokes
   $ paraview dome.pvd     # view the solution
 \end{Verbatim}
 %$
@@ -613,7 +622,7 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \item we switch to an \alert{extruded mesh}, and allow a bumpy bed (below)
     \begin{itemize}
     \item[$\circ$] the \alert{base mesh} has lower dimension
-    \item[$\circ$] now the elements are quadrilaterals ($=Q_2\times Q_1$ mixed method) in the planar case, versus triangles in \texttt{stage2/}
+    \item[$\circ$] now the elements are quadrilaterals in the planar case, versus triangles in \texttt{stage2/}
     \end{itemize}
 \item we demonstrate (mostly) \alert{dimension-independent programming}
     \begin{itemize}
@@ -834,7 +843,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \begin{frame}{coupled equations}
 
-\begin{block}{coupled free-surface \& Glen-Nye-Stokes equations}
+\begin{block}{coupled free-surface \& power-law Stokes equations}
 \vspace{-2mm}
 
 \begin{align*}
@@ -902,7 +911,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \begin{itemize}
 \item early/naive approaches to solving this coupled problem have been fragile
-\item the method everyone tries first is to solve Glen-Nye-Stokes for the current geometry, then advance the surface, and repeat
+\item the method everyone tries first is to solve power-law Stokes for the current geometry, then advance the surface, and repeat
     \begin{itemize}
     \item[$\circ$] this is an \emph{explicit} approach, which \emph{splits} the coupling
     \item[$\circ$] resulting performance is \alert{stability-limited}, in a manner which is not well understood
@@ -916,7 +925,6 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \item<2> because $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved, the geometry of the mesh used for the $\bu,p$ solver changes at every time step
     \begin{itemize}
     \item[$\circ$] this makes monolithic and/or implicit implementations difficult
-    \item[$\circ$] but see Ahlkrona et al (2026)
     \end{itemize}
 \item<2> the coupled problem mixes advective and diffusive aspects, with proportions depending on stress boundary conditions
     \begin{itemize}
@@ -1019,13 +1027,15 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \begin{frame}{technique 1A: implicit edge stabilization in free-surface equation}
 
+\vspace{-10mm}
+
 \begin{itemize}
 \item this technique is from Tominec et al (2026)
     \begin{itemize}
     \item[$\circ$] see also Burman \& Hansbro (2004), Ern \& Guermond (2013)
     \end{itemize}
 \item add FE \alert{edge stabilization}, applied semi-implicitly:
-    $$\int_{\Omega^h} \left(\frac{\alert{s_{k+1}^h} - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right) r^h\,dx + J(\alert{s_{k+1}^h},r^h) = 0$$
+    $$\int_{\Omega^h} \left(\frac{\alert{s_{k+1}^h} - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right) r^h\,dx + J(\alert{s_{k+1}^h},r^h) = 0 \hspace{15mm}$$
 for all test functions $r^h$, where
     $$J(s,r) = \sum_{e\in E^h} \int_e \tfrac{1}{2} h_e^2 \left|\bu|_{s_k^h}\right| \jump{\grad s} \jump{\grad r}\,dS$$
 
@@ -1033,11 +1043,41 @@ for all test functions $r^h$, where
     \item[$\circ$] $s_k^h$ is the FE approximation of surface elevation at time $t_k$
     \item[$\circ$] the system to solve for unknown $\alert{s_{k+1}^h}$ is \alert{linear}
     \item[$\circ$] $E^h$ is the set of interior edges in the triangulation $\Omega^h$
-    \item[$\circ$] $\jump{\bv} = \bv_+ \cdot \bn_+ - \bv_- \cdot \bn_-$ is the \alert{jump of a vector field along an edge}
+    \item[$\circ$] $\jump{\bv} = \bv_+ \cdot \bn_+ - \bv_- \cdot \bn_-$ is a \alert{vector field jump along an edge}
     \item[$\circ$] $h_e$ is the average of the diameters of the two cells which meet $e$
     \item[$\circ$] note surface velocity ($\bu|_{s_k^h}$) and slope ($\bn_{s_k^h}$) are evaluated explicitly, at $t_k$
     \end{itemize}
 \end{itemize}
+
+\vspace{-80mm}
+
+\hfill \includegraphics[width=0.07\textwidth]{figs/people/itominec.jpg}
+
+\vspace{-2mm}
+
+\hfill {\tiny Igor Tominec}
+
+\smallskip
+\hfill \includegraphics[width=0.07\textwidth]{figs/people/generic.png}
+
+\vspace{-2mm}
+
+\hfill {\tiny Lukas Lundgren}
+
+\smallskip
+\hfill \includegraphics[width=0.07\textwidth]{figs/people/alofgren.jpg}
+
+\vspace{-2mm}
+
+\hfill {\tiny Andres L\"ofgren}
+
+\smallskip
+\hfill \includegraphics[width=0.08\textwidth]{figs/people/jahlkrona.png}
+
+\vspace{-2mm}
+
+\hfill {\tiny Josefin Ahlkrona}
+
 \end{frame}
 
 
@@ -1065,17 +1105,21 @@ for all test functions $r^h$, where
 
 \begin{frame}{technique 2: semi-implicit coupling heuristic in stress balance}
 
+\vspace{-20mm}
+
 \begin{itemize}
-\item also from Tominec et al (2026), via L\"ofgren et al (2022)
+\item from L\"ofgren et al (2022); refined by Tominec et al (2026)
 \item add \alert{extrapolated surface mass balance load} to the Stokes form:
 {\small
 \begin{align*}
 \int_{\Lambda(t_k)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rho \mathbf{g} \cdot \bv\,dx \qquad& \\
-\alert{+ \int_{\Gamma_s(t_k)} \rho g \Delta t \left[\frac{1}{2} (\bu|_{s_k}\cdot \bn_{s_k}) + a\right] (\bv\cdot \bn) \,ds} &= 0
+\alert{+ \int_{\Gamma_s(t_k)} \rho g \Delta t \left[\frac{1}{2} (\bu|_{s_k}\cdot \bn_{s_k}) + a\right] (\bv\cdot \bn) \,ds} &= 0 \hspace{10mm}
 \end{align*}
 
     \begin{itemize}
-    \item[$\circ$] $\Lambda(t_k)$ is the Stokes domain defined by the current surface elevation $s_k$
+    \item[$\circ$] $\Lambda(t_k)$ is the Stokes domain defined by the current
+    
+surface elevation $s_k$
     \item[$\circ$] $\Gamma_s(t_k)$ is the upper surface of $\Lambda(t_k)$
     \item[$\circ$] $\bn_{s_k}=\left<-\grad s_k,1\right>$ is an outward normal on $\Gamma_s(t_k)$
     \item[$\circ$] $\bn=\bn_{s_k}/|\bn_{s_k}|$ is the outward \emph{unit} normal 
@@ -1086,11 +1130,34 @@ for all test functions $r^h$, where
 \item concept: modifying the stress balance stabilizes the coupling
     \begin{itemize}
     \item[$\circ$] Reynold's transport theorem motivates this extrapolation
-    \item[$\circ$] it puts \alert{$\Delta t$ and SMB $a$ inside the Stokes solve!}
-    \item[$\circ$] the above form is additionally \alert{symmetrized} (compare L\"ofgren et al 2022)
+    \item[$\circ$] this stabilization puts $\Delta t$ and SMB $a$ inside the Stokes solve!
+    \item[$\circ$] the above form is additionally symmetrized
     \item[$\circ$] \alert{Tominec et al (2026) prove that the $L^2$ norm of the evolving surface is controlled}; it can't blow up
     \end{itemize}
 \end{itemize}
+
+\vspace{-80mm}
+
+\hfill \includegraphics[width=0.07\textwidth]{figs/people/alofgren.jpg}
+
+\vspace{-2mm}
+
+\hfill {\tiny Andres L\"ofgren}
+
+\smallskip
+\hfill \includegraphics[width=0.08\textwidth]{figs/people/jahlkrona.png}
+
+\vspace{-2mm}
+
+\hfill {\tiny Josefin Ahlkrona}
+
+\smallskip
+\hfill \includegraphics[width=0.08\textwidth]{figs/people/chelanow.png}
+
+\vspace{-2mm}
+
+\hfill {\tiny Christian Helanow}
+
 \end{frame}
 
 
@@ -1155,10 +1222,10 @@ $40$ & $0.125$
 
 \smallskip
     \begin{itemize}
-    \item[$\circ$] Tominec et al (2026) does more experimentation
+    \item[$\circ$] Tominec et al (2026) does additional experimentation
     \end{itemize}
 
-\medskip
+\smallskip
 \item \alert{with technique 2, arbitrary time steps are stable}, and exhibit no sloshing
 \end{itemize}
 \end{frame}
@@ -1191,7 +1258,7 @@ bounds-respecting Newton
 solver from PETSc (B 2021b)
 
 \vspace{-34mm}
-\hfill \includegraphics[width=0.5\textwidth]{figs/domain-margin.png}
+\hfill \includegraphics[width=0.45\textwidth]{figs/domain-margin.png}
 \end{itemize}
 \end{frame}
 
@@ -1339,6 +1406,8 @@ $ python3 solve.py -mx 100 -nocfl -maxdt 1.0
 
 \begin{frame}{assessing correctness}
 
+\vspace{-10mm}
+
 \begin{itemize}
 \item[Q.] is our time-dependent solver correct?
 
@@ -1352,8 +1421,8 @@ $ python3 solve.py -mx 100 -nocfl -maxdt 1.0
 \bigskip
 \item next slide: we compare with the Halfar (1981) exact solution
     \begin{itemize}
-    \item[$\circ$] on a \alert{shallow initial dome geometry}, so SIA is reasonably accurate
-    \item[$\circ$] e.g.~initial height 1000 m and width 20 km \quad $\implies$ \quad $\eps = 0.05$
+    \item[$\circ$] on a \alert{shallow initial dome geometry}, SIA is reasonably accurate
+    \item[$\circ$] e.g.~initial height 1000 m and width 20 km yields $\eps = 0.05$
     %\item[$\circ$] Halfar characteristic time $t_0=0.17$ a
     \end{itemize}
 \end{itemize}
@@ -1362,6 +1431,14 @@ $ python3 solve.py -mx 100 -nocfl -maxdt 1.0
 \begin{center}
 \includegraphics[width=0.8\textwidth]{figs/halfarinitial.png}
 \end{center}
+
+\vspace{-20mm}
+
+\hfill \includegraphics[width=0.07\textwidth]{figs/people/generic.png}
+
+\vspace{-2mm}
+
+\hfill {\tiny Peter Halfar}
 \end{frame}
 
 
@@ -1488,7 +1565,7 @@ Halfar & 28.993 & 689.829
 \item PETSc: \href{https://petsc.org}{\texttt{petsc.org}}
 
 \vspace{15mm}
-\item for Glen-Nye-Stokes eqns, see Ch.~1 by Hewitt in Fowler \& Ng (2021)
+\item for power-law Stokes eqns, see Ch.~1 by Hewitt in Fowler \& Ng (2021)
 
 \item for finite elements and Stokes:  Elman, Silvester, \& Wathen (2014)
 
@@ -1502,7 +1579,7 @@ Halfar & 28.993 & 689.829
 \href{https://www.firedrakeproject.org/}{\includegraphics[width=\textwidth]{figs/firedrakebanner.png}}
 
 \bigskip
-\hfill \href{https://www.mcs.anl.gov/petsc/}{\includegraphics[width=0.6\textwidth]{figs/petscbanner.png}}
+\hfill \href{https://petsc.org}{\includegraphics[width=0.4\textwidth]{figs/petscbanner.png}}
 
 \vspace{10mm}
 \includegraphics[width=0.31\textwidth]{figs/covers/karthaus.png} \hfill
