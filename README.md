@@ -2,14 +2,15 @@
 
 ## purpose
 
-Provide an easy-to-modify and well-documented finite element solver for glacier modeling, for planar and 3D glacier geometries, without shallowness assumptions in the equations.
+Provide an easy-to-modify and well-documented finite element solver for glacier modeling, for planar and 3D glacier geometries, without shallowness assumptions in the equations.  This is not a _library_, it is a _tutorial_, but it can be used as a starting point for other projects.
 
 <p align="center">
 <img src="latex/figs/stage3speed.png" alt="ice speed in a glacier" />
 </p>
 
-## versions
+## version log
 
+  * **v2.2**  Better text and citations.
   * **v2.1**  Switch pressure elements.
   * **v2.0**  Well-behaved glacial evolution in `stage4/`.
   * **v1.0**  The first version of this tutorial was for glacier dynamics only, for fixed geometry.
@@ -19,15 +20,15 @@ Provide an easy-to-modify and well-documented finite element solver for glacier 
 The Glen-Nye-Stokes equations describe the dynamics of ice in a [glacier](https://en.wikipedia.org/wiki/Glacier) or [ice sheet](https://en.wikipedia.org/wiki/Glacier) as a gravity-driven, viscous, shear-thinning flow:
 
 $$\begin{align*}
--\nabla \cdot \tau + \nabla p &= \rho_i \mathbf{g} & &\text{stress balance} \\
-\nabla \cdot \mathbf{u} &= 0 & &\text{incompressibility} \\
-\tau &= B_n |D\mathbf{u}|^{(1/n)-1} D\mathbf{u} & &\text{Glen-Nye flow law}
+-\nabla \cdot \tau + \nabla p &= \rho_i \mathbf{g} & &\text{\textsf{stress balance}} \\
+\nabla \cdot \mathbf{u} &= 0 & &\text{\textsf{incompressibility}} \\
+\tau &= B_n |D\mathbf{u}|^{(1/n)-1} D\mathbf{u} & &\text{\textsf{Glen-Nye flow law}}
 \end{align*}$$
 
 The free surface of a glacier is governed by an additional equation, coupled to the above, which has the [surface mass balance]() as a source term:
 
 $$\begin{align*}
-\frac{\partial s}{\partial t} - \mathbf{u}|_s \cdot \mathbf{n}_s &= a \hspace{10mm} \text{free-surface kinematics}
+\frac{\partial s}{\partial t} - \mathbf{u}|_s \cdot \mathbf{n}_s &= a \hspace{10mm} \text{\textsf{free-surface kinematics}}
 \end{align*}$$
 
 This repository contains a practical tutorial on solving these coupled [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) numerically, by using the [finite element method](https://en.wikipedia.org/wiki/Finite_element_method).
@@ -58,7 +59,7 @@ In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separate act
 
 All stages can be run in parallel.
 
-## known limitations
+### known limitations
 
   * We do not use any observational data from, and thus we do not actually model, any real glaciers.
   * We do not model sliding, nor floating ice.
@@ -68,8 +69,10 @@ All stages can be run in parallel.
   * In `stage3/` and `stage4/`, reading a `.msh` for the base mesh is easy but it requires code modifications.
   * In `stage4/`, adding a surface mass balance model is easy but it requires code modifications.
 
-## other glacier-related solvers using Firedrake
+### other solvers
 
-  * I wrote an earlier open-source Stokes solver for glaciology.  It uses the same Firedrake/PETSc/Gmsh/Paraview stack.  See the `py/stokes/` directory [in my McCarthy materials](https://github.com/bueler/mccarthy/tree/master/py/stokes).
+Here are two open-source glacier solvers using Firedrake:
+
+  * I wrote an earlier open-source Stokes solver for glaciology, in the `py/stokes/` directory [in my McCarthy materials](https://github.com/bueler/mccarthy/tree/master/py/stokes).  It uses the same Firedrake/PETSc/Gmsh/Paraview stack.
 
   * [Icepack](https://icepack.github.io/) by Dan Shapero and others is a general-purpose glacier and ice-sheet modeling framework based on Firedrake.
