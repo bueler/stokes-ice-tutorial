@@ -2,7 +2,7 @@
 
 from firedrake import *
 
-mesh = Mesh("domain.msh")
+mesh = Mesh("trap.msh")  # run "gmsh -2 trap.geo" to generate
 
 V = VectorFunctionSpace(mesh, "CG", 2)
 W = FunctionSpace(mesh, "CG", 1)
@@ -35,4 +35,4 @@ u = up.subfunctions[0]
 p = up.subfunctions[1]
 u.rename("velocity")
 p.rename("pressure")
-VTKFile("domain.pvd").write(u, p)
+VTKFile("trap.pvd").write(u, p)
