@@ -831,7 +831,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \smallskip
     \item[$\circ$] $\bu|_s\strut$ is the surface value (\emph{trace}) of the ice flow velocity
     \item[$\circ$] $\bn_s=\left<-\frac{\partial s}{\partial x},-\frac{\partial s}{\partial y},1\right>$ is a normal vector to the surface
-    \item[$\circ$] $a(t,x,y)$ is the surface mass balance, the source term
+    \item[$\circ$] $a(t,x,y)$ is the \alert{surface mass balance}, the source term
     \end{itemize}
 
 \medskip
@@ -853,10 +853,12 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \end{align*}
 \end{block}
 
-\bigskip
 \begin{columns}
 \begin{column}{0.5\textwidth}
 \begin{itemize}
+\item 3 solution variables: $s$, $\bu$, $p$
+
+\medskip
 \item 2 coupling directions:
 \end{itemize}
 \begin{enumerate}
@@ -876,7 +878,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{itemize}
 \item we get the weak form of the coupled system in the usual way
 
-\item multiply by test functions and integrate by parts:
+\item multiply by test functions and integrate:
 {\small
 \begin{align*}
 \int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r\,dx &=0  &&\forall r \\
@@ -889,7 +891,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{columns}
 \begin{column}{0.55\textwidth}
 \begin{itemize}
-\item high-level choices for this coupled system:
+\item high-level choices for system:
     \begin{enumerate}
     \item[1.] spaces and elements for $s,\bu,p$?
     \item[2.] time-stepping: explicit or implicit?
@@ -922,12 +924,13 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \end{itemize}
 
 \begin{enumerate}
-\item<2> because $s$ determines the evolving domain $\Lambda(t)$ on which the Stokes problem is solved, the geometry of the mesh used for the $\bu,p$ solver changes at every time step
+\item<2> the mesh used for the $\bu,p$ solver, or at least its geometry, changes at every time step
     \begin{itemize}
     \item[$\circ$] this makes monolithic and/or implicit implementations difficult
     \end{itemize}
-\item<2> the coupled problem mixes advective and diffusive aspects, with proportions depending on stress boundary conditions
+\item<2> the coupled problem mixes advective and diffusive aspects
     \begin{itemize}
+    \item[$\circ$] proportions depending on stress boundary conditions
     \item[$\circ$] precise time-step restrictions remain unclear
     \item[$\circ$] expected performance scaling remains unclear (B 2023)
     \item[$\circ$] but \texttt{stage4/} applies recent theoretical progress!
@@ -936,7 +939,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \end{frame}
 
 
-\begin{frame}{also, glaciers have moving margins}
+\begin{frame}{also, glaciers have moving margins!}
 
 \begin{itemize}
 \item the \alert{surface elevation must be above the bed}
@@ -957,30 +960,27 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \section{\texttt{stage4/} \qquad moving-margin dome solutions}
 
-\begin{frame}{evolving extruded meshes for \texttt{stage4/}}
+\begin{frame}{evolving extruded meshes}
 
 \begin{itemize}
-\item we will demonstrate and test a 2D solver which is \alert{semi-implicit}, \alert{split}, \alert{stabilized}, and \alert{free margin}
+\item we will demonstrate and test a 2D solver which is \alert{semi-implicit}, \alert{split}, \alert{stabilized}, and \alert{moving-margin}
     \begin{itemize}
     \item[$\circ$] \dots as explained on the next few slides
-    \item[$\circ$] note that ``stabilized'' means several things here
+    \item[$\circ$] caution: ``stabilized'' will mean several things here
     \end{itemize}
 
 \medskip
-\item it uses an extruded mesh between continuous $P_1$ surfaces $s$ and $b$
+\item using an extruded mesh
+\item between continuous $P_1$ surfaces $s=s(t,x)$ and $b=b(t,x)$:
     \begin{itemize}
-    \item[$\circ$] thus the Stokes domain $\Lambda(t)$ is \alert{polygonal} at each $t$
+    \item[$\circ$] the Stokes domain $\Lambda(t)$ is \alert{polygonal} (in space) at each $t$
+    \item[$\circ$] the elements are quadrilaterals (in 2D)
     \end{itemize}
 
 \medskip
 \begin{center}
 \includegraphics[width=0.75\textwidth]{figs/extruded.png}
 \end{center}
-
-\item as before, the extruded mesh for $\Lambda(t)$ is built from quadrilaterals
-    \begin{itemize}
-    \item[$\circ$] but we will rethink the pressure space
-    \end{itemize}
 \end{itemize}
 \end{frame}
 
@@ -999,7 +999,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
         \item[B.] and we determine the time step by a CFL condition
         \end{itemize}
 
-\item[2.] alternating free-surface and Stokes solves
+\item[2.] split, with alternating free-surface and Stokes solves
         \begin{itemize}
         \item[$\circ$] but we add a \alert{load stabilization} coupling to the Stokes solver
         \end{itemize}
@@ -1014,7 +1014,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \medskip
 \begin{itemize}
-\item the next slides give citations and details on these techniques
+\item \alert{the next slides give citations and details on these techniques}
     \begin{itemize}
     \item[$\circ$] techniques 1 and 2 are the ``Swedish stabilizations''
     \end{itemize}
@@ -1084,18 +1084,20 @@ for all test functions $r^h$, where
 \begin{frame}{technique 1B: CFL determination of time step}
 
 \begin{itemize}
-\item edge stabilization technique 1A applies semi-implicitly, with \alert{velocity evaluated explicitly}
 \item our application adds an advancing glacier margin, which is not considered in the stability proof from Tominec et al (2026)
+\item edge stabilization technique 1A applies split and semi-implicitly, with \alert{velocity evaluated explicitly}
+    \begin{itemize}
+    \item[$\circ$] thus margin advance is limited to one base-mesh element per time step
+    \end{itemize}
 
 \medskip
-\item therefore the time step $\Delta t$ is limited by CFL criterion:
-    $$\alert{\Delta t = C_{\text{CFL}} \frac{\min h}{\max \big|\bu\big|}}$$
+\item the time step $\Delta t$ is therefore limited by a CFL criterion:
+    $$\alert{\Delta t = C_{\text{CFL}} \min \frac{h}{\big|\bu\big|}}$$
 
     \begin{itemize}
-    \item[$\circ$] margin advance limited to one (base mesh) element per time step
     \item[$\circ$] we get reasonable results with $C_{\text{CFL}}=0.25$ \strut
         \begin{itemize}
-        \item Ern \& Guermond (2013) use $C_{\text{CFL}}=0.2$ or $0.25$, with weighted edge stabilization and SSP3, RK4 schemes, on linear advections
+        \item Ern \& Guermond (2013) use $C_{\text{CFL}}=0.2$ or $0.25$ on linear advections with weighted edge stabilization (and SSP3, RK4 schemes)
         %\item contrast the steady-state analysis in Burman \& Hansbro (2004)
         \end{itemize}
     \end{itemize}
@@ -1109,7 +1111,7 @@ for all test functions $r^h$, where
 
 \begin{itemize}
 \item from L\"ofgren et al (2022), as refined by Tominec et al (2026)
-\item add \alert{extrapolated surface mass balance load} to the Stokes form:
+\item add \alert{extrapolated surface mass balance load} to Stokes form:
 {\small
 \begin{align*}
 \int_{\Lambda(t_k)} 2\, \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - \rho \mathbf{g} \cdot \bv\,dx \qquad& \\
@@ -1127,11 +1129,10 @@ surface elevation $s_k$
 }
 
 \medskip
-\item concept: modifying the stress balance stabilizes the coupling
+\item concept: modify the stress balance to stabilize the coupled solve
     \begin{itemize}
-    \item[$\circ$] Reynold's transport theorem motivates this extrapolation
-    \item[$\circ$] this stabilization puts $\Delta t$ and SMB $a$ inside the Stokes solve!
-    \item[$\circ$] the above form is additionally symmetrized
+    \item[$\circ$] Reynold's transport theorem motivates this (symmetrized) extrapolation
+    \item[$\circ$] \dots which puts time step $\Delta t$ and SMB $a$ inside the Stokes solve!
     \item[$\circ$] \alert{Tominec et al (2026) prove that the $L^2$ norm of the evolving surface is controlled}; it can't blow up
     \end{itemize}
 \end{itemize}
