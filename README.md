@@ -51,12 +51,14 @@ You will need [Gmsh](https://gmsh.info/) to generate certain meshes (but only fo
 To do this tutorial, read [`slides.pdf`](slides.pdf) and follow the stages.  Each stage is essentially self-contained, with increasing sophistication.
 
 The first three stages use fixed geometry and address how to solve the Glen-Nye-Stokes equations for the dynamics of ice.
+  * In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separate actions.  Mesh generation uses [Gmsh](https://gmsh.info/) on `.geo` geometry-outline files, which generates `.msh` mesh files.
+  * `stage3/` combines meshing and solving into a single program by using extruded meshes; mesh management is thus entirely through [Firedrake](https://www.firedrakeproject.org/).  (The base mesh could be read from a `.msh` if desired, by small code modifications.)
+  * `stage3/` also allows choice of 2D (planar) or full 3D glacier geometry at runtime.
 
-In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separate actions.  Mesh generation uses [Gmsh](https://gmsh.info/) on `.geo` geometry-outline files, which generates `.msh` mesh files.
-
-`stage3/` combines meshing and solving into a single program by using extruded meshes.  (Mesh management is entirely through [Firedrake](https://www.firedrakeproject.org/), but the base mesh could be read from a `.msh` if desired.)  For this stage one can choose 2D (planar) or full 3D glacier geometry at runtime.
-
-`stage4/` solves the coupled system above, only in 2D (planar).  That is, we combine the Glen-Nye-Stokes dynamics model with the free-surface equation.  The coupled system, which is solved by time-stepping for a moving-margin case by default, permits the glacier to evolve in response to a climate (surface mass balance) model.  Several advanced and recent techniques are applied in this stage.
+By contrast, `stage4/` solves the full coupled system above, though only in 2D (planar).  That is, we combine the Glen-Nye-Stokes dynamics model with the free-surface equation.
+  * The coupled system is solved by time-stepping for a moving-margin case (by default).
+  * Several advanced and recent techniques are applied in this stage.
+  * The glacier can evolve in response to a climate (surface mass balance) model, though adding this requires small code modifications.  
 
 All stages can be run in parallel.
 
