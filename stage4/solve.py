@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+# get options help:  python3 solve.py -solvehelp
+
 import argparse
 import sys
 
 parser = argparse.ArgumentParser(
-    description="""stage4/  Solve the coupled free-surface (kinematical) equation and power-law Stokes momentum equations for a 2D ice sheet.  Uses an extruded mesh of quadrilaterals, and defaults to Q2 x DQ1 for (u,p) in the Stokes equations.  Uses first-order mostly-explicit time-stepping based on the Swedish stabilizations, supplemented by a CFL condition motivated by margin-advance considerations.  The free-surface update is by a variational inequality (free-boundary) method.  Initial shape is from the Halfar solution.""",
+    description="""stage4/  Solve the coupled free-surface (kinematical) equation and power-law Stokes momentum equations for a 2D ice sheet.  Initial dome shape is from the Halfar solution.  Uses an extruded mesh of quadrilaterals, and defaults to Q2 x DQ1 for (u,p) in the Stokes equations.  Uses first-order, mostly-explicit, adaptive time-stepping based on the Swedish stabilizations (see slides), supplemented by a CFL condition motivated by margin-advance considerations.  The free-surface update is by a variational inequality (free-boundary) method.""",
     add_help=False,
 )
 hs = "coefficient to use in CFL scheme for time-stepping (default=0.25)"
@@ -36,7 +38,9 @@ parser.add_argument("-omovie", metavar="FILE.pvd", default=None, help=hs)
 hs = "output filename for ice area time series; provide name to turn on"
 parser.add_argument("-ots", metavar="FILE.txt", default=None, help=hs)
 hs = "element type to use for pressure: DQ1|DG0|Q1 (default=DQ1)"
-parser.add_argument('-pressure', metavar='X', choices=['DQ1','DG0','Q1'], default='DQ1', help=hs)
+parser.add_argument(
+    "-pressure", metavar="X", choices=["DQ1", "DG0", "Q1"], default="DQ1", help=hs
+)
 hs = "initial half-width of dome (default=10000 m)"
 parser.add_argument("-R0", type=float, metavar="R0", default=10000.0, help=hs)
 hs = "print help for solve.py options and stop"
@@ -146,14 +150,16 @@ vipar = {
     "pc_factor_mat_solver_type": "mumps",
 }
 
-# strain-rate tensor
-def D(w):
-    return 0.5 * (grad(w) + grad(w).T)
-
-
 Dtyp = 1.0 / secpera  # s-1;  strain rate scale
-
 dt_loadstab = Constant(0.0)
+dt_ske = Constant(0.0)
+
+# various helper functions
+
+
+def D(w):
+    """UFL expression for strain-rate tensor."""
+    return 0.5 * (grad(w) + grad(w).T)
 
 
 def form_stokes(loadstab=False):
@@ -189,6 +195,7 @@ def bcs_stokes(Z):
         ]
     return bcs
 
+
 def evaluate_speed(mesh, u):
     """Find average and maximum speed of ice."""
     R = FunctionSpace(mesh, "R", 0)
@@ -200,16 +207,6 @@ def evaluate_speed(mesh, u):
     with umag.dat.vec_ro as vumag:
         umagmax = vumag.max()[1]
     return umagav, umagmax
-
-# functions for surface kinematical equation
-snew = Function(P1base)
-omega = TestFunction(P1base)
-VP2base = VectorFunctionSpace(basemesh, "CG", 2, dim=2)
-uwsurf = Function(VP2base)
-lb = Function(P1base).interpolate(Constant(0.0))
-ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
-
-dt_ske = Constant(0.0)
 
 
 def form_ske():
@@ -227,12 +224,17 @@ def form_ske():
     return Fske
 
 
-# set up SKE solver
-Fske = form_ske()
-probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
-solverske = NonlinearVariationalSolver(
-    probske, solver_parameters=vipar, options_prefix="surf"
-)
+def stresses(mesh, u):
+    """Generate tensor-valued deviatoric stress tau, and scalar effective viscosity nu, from the velocity solution.  Used for output diagnostics."""
+    Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
+    Q1 = FunctionSpace(mesh, "Q", 1)
+    TQ1 = TensorFunctionSpace(mesh, "Q", 1)
+    nu = Function(Q1).interpolate(0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0))
+    nu.rename("effective viscosity (Pa s)")
+    tau = Function(TQ1).interpolate(2.0 * nu * D(u))
+    tau /= 1.0e5
+    tau.rename("tau (bar)")
+    return tau, nu
 
 
 def get_dt(t, dx, umagmax):
@@ -253,6 +255,21 @@ def report_shape(s):
     )
     return iarea
 
+
+# functions for surface kinematical equation
+snew = Function(P1base)
+omega = TestFunction(P1base)
+VP2base = VectorFunctionSpace(basemesh, "CG", 2, dim=2)
+uwsurf = Function(VP2base)
+lb = Function(P1base).interpolate(Constant(0.0))
+ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
+
+# set up SKE solver
+Fske = form_ske()
+probske = NonlinearVariationalProblem(Fske, snew, [])  # bcs=[] .. no flux at (1,2)
+solverske = NonlinearVariationalSolver(
+    probske, solver_parameters=vipar, options_prefix="surf"
+)
 
 # open files if they are requested
 if args.omovie is not None:
@@ -337,21 +354,9 @@ if args.ots is not None:
 if args.omovie is not None:
     printpar(f"done with file {args.omovie}")
 Rh, Hh = get_halfar_dimensions_from_time(t + t0, R0=args.R0, H0=args.H0)
-printpar(f"  Halfar values (exact for SIA): width = {2 * Rh / 1000.0:.3f} km, max(s) = {Hh:.3f} m")
-
-# generate tensor-valued deviatoric stress tau, and effective viscosity nu,
-#   from the velocity solution
-def stresses(mesh, u):
-    Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
-    Q1 = FunctionSpace(mesh, "Q", 1)
-    TQ1 = TensorFunctionSpace(mesh, "Q", 1)
-    nu = Function(Q1).interpolate(0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0))
-    nu.rename("effective viscosity (Pa s)")
-    tau = Function(TQ1).interpolate(2.0 * nu * D(u))
-    tau /= 1.0e5
-    tau.rename("tau (bar)")
-    return tau, nu
-
+printpar(
+    f"  Halfar values (exact for SIA): width = {2 * Rh / 1000.0:.3f} km, max(s) = {Hh:.3f} m"
+)
 
 # write .pvd with results
 printpar(f"saving u,p,tau,nu,rank to {args.o} ...")
