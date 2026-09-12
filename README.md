@@ -10,6 +10,7 @@ Provide an easy-to-modify and well-documented finite element solver for glacier 
 
 ## version log
 
+  * **v2.3**  Better text and citations.
   * **v2.2**  Better text and citations.
   * **v2.1**  Switch pressure elements.
   * **v2.0**  Well-behaved glacial evolution in `stage4/`.
