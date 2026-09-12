@@ -189,8 +189,8 @@
 \begin{frame}{Glen-Steinemann-Nye-Stokes equations}
 
 \begin{itemize}
-\item the canonical glacier dynamics equations are from Glen, Steinemann, Nye, and Stokes; the  model is isotropic \emph{power-law Stokes}
-\item the main equations:
+\item canonical glacier dynamics equations are from Glen, Steinemann, Nye, and Stokes
+\item the model here is \alert{isotropic power-law Stokes}:
 \begin{align*}
 - \Div \tau + \nabla p &= \rho \bg &&\text{\emph{stress balance}} &&\phantom{dlfsj fdasj} \\
 \Div \bu &= 0 &&\text{\emph{incompressibility}} \\
@@ -201,7 +201,7 @@
     \item[$\circ$] $\bu$ is velocity, $p$ is pressure, $\tau$ is the deviatoric stress tensor,
 
 and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain-rate tensor
-    \item[$\circ$] our model has \emph{constant ice density}; incompressibility follows
+    \item[$\circ$] note \emph{constant ice density} $\rho$; incompressibility follows
     \end{itemize}
 
 \vspace{-43mm}
@@ -244,10 +244,13 @@ and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain
 \begin{frame}{viscosity, and avoiding unbounded values}
 
 \begin{itemize}
-\item the classical viscosity relationship $\tau=2\nu D\bu$ eliminates $\tau$ from the equations, giving a system for $\bu,p$
+\item eliminate $\tau$ from the equations, giving a system for $\bu,p$
+    \begin{itemize}
+    \item[$\circ$] and use the classical viscosity relationship $\tau=2\nu D\bu$
+    \end{itemize}
 \item however, the unmodified power-law viscosity formula yields unbounded values as $D\bu\to 0$, i.e.~for vanishing strain rates
     \begin{itemize}
-    \item[$\circ$] note that ``$(1/n) - 1$'' in $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ is a negative power
+    \item[$\circ$] note that $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ has a negative power
     \end{itemize}
 \item so we also regularize with \alert{small $\eps>0$} to generate bounded viscosity
 
@@ -330,7 +333,7 @@ and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain
 \begin{frame}{the weak form}
 
 \begin{itemize}
-\item start from the equations, now called the \emph{strong form}:
+\item start from power-law Stokes equations, now called the \emph{strong form}:
 \begin{align}
 - \nabla \cdot \left(2 \nu_\eps(|D\bu|)\, D\bu\right) + \nabla p &= \rho \mathbf{g} \\
 \Div \bu &= 0
@@ -559,7 +562,7 @@ $ paraview trap.pvd         # view the solution
     \begin{itemize}
     \item[$\circ$] default solver: Firedrake $\to$ PETSc KSP $\to$ MUMPS
     \end{itemize}
-\item but Glen-Stokes residual function is \alert{nonlinear in $\bu$}:
+\item but power-law Stokes residual function is \alert{nonlinear in $\bu$}:
 \small
 $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 \normalsize
