@@ -97,7 +97,7 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[version 2.2]{version 2.2 (September 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
+\date[version 2.3]{version 2.3 (September 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
 \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 
@@ -924,15 +924,14 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \end{itemize}
 
 \begin{enumerate}
-\item<2> the mesh used for the $\bu,p$ solver, or at least its geometry, changes at every time step
+\item<2> mesh used for the $\bu,p$ solver, or its geometry, changes at every time step
     \begin{itemize}
-    \item[$\circ$] this makes monolithic and/or implicit implementations difficult
+    \item[$\circ$] makes monolithic and/or implicit implementations difficult
     \end{itemize}
-\item<2> the coupled problem mixes advective and diffusive aspects
+\item<2> coupled problem mixes advective and diffusive aspects
     \begin{itemize}
-    \item[$\circ$] proportions depending on stress boundary conditions
-    \item[$\circ$] precise time-step restrictions remain unclear
-    \item[$\circ$] expected performance scaling remains unclear (B 2023)
+    \item[$\circ$] proportions depend on stress boundary conditions
+    \item[$\circ$] time-step restrictions and performance scaling remain unclear (B 2023)
     \item[$\circ$] but \texttt{stage4/} applies recent theoretical progress!
     \end{itemize}
 \end{enumerate}
@@ -989,14 +988,19 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{frame}{new techniques for \texttt{stage4/}}
 
 \begin{itemize}
-\item our solver is based on these \alert{3 new techniques} which modify the weak form of the coupled problem:
+\item our solver is based on \alert{new techniques} which modify the weak form of the coupled problem
+\item \alert{the next slides give citations and details on these techniques}
+    \begin{itemize}
+    \item[$\circ$] techniques 1 and 2 are the ``Swedish stabilizations''
+    \end{itemize}
 \end{itemize}
 
+\begin{block}{3 techniques}
 \begin{enumerate}
 \item[1.] first-order, and mostly explicit, time-stepping
         \begin{itemize}
         \item[A.] but we add an implicit \alert{edge stabilization} in the free-surface equation
-        \item[B.] and we determine the time step by a CFL condition
+        \item[B.] and we add a CFL condition when margins are moving
         \end{itemize}
 
 \item[2.] split, with alternating free-surface and Stokes solves
@@ -1011,14 +1015,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
         \item[C.] we prefer pressure elements with interior degrees of freedom
         \end{itemize}
 \end{enumerate}
-
-\medskip
-\begin{itemize}
-\item \alert{the next slides give citations and details on these techniques}
-    \begin{itemize}
-    \item[$\circ$] techniques 1 and 2 are the ``Swedish stabilizations''
-    \end{itemize}
-\end{itemize}
+\end{block}
 \end{frame}
 
 
@@ -1030,11 +1027,11 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \vspace{-10mm}
 
 \begin{itemize}
-\item this technique is from Tominec et al (2026)
+\item technique introduced for glaciers in Tominec et al (2026)
     \begin{itemize}
-    \item[$\circ$] see also Ern \& Guermond (2013), and refs therein
+    \item[$\circ$] from Burman \& Fern\'andez (2009) and Ern \& Guermond (2013)
     \end{itemize}
-\item add FE \alert{edge stabilization}, applied semi-implicitly:
+\item add (semi-)implicit and weighted FE \alert{edge stabilization}:
     $$\int_{\Omega^h} \left(\frac{\alert{s_{k+1}^h} - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right) r^h\,dx + J(\alert{s_{k+1}^h},r^h) = 0 \hspace{15mm}$$
 for all test functions $r^h$, where
     $$J(s,r) = \sum_{e\in E^h} \int_e \tfrac{1}{2} h_e^2 \left|\bu|_{s_k^h}\right| \jump{\grad s} \jump{\grad r}\,dS$$
@@ -1110,7 +1107,7 @@ for all test functions $r^h$, where
 \vspace{-20mm}
 
 \begin{itemize}
-\item from L\"ofgren et al (2022), as refined by Tominec et al (2026)
+\item from L\"ofgren et al (2022); refined by Tominec et al (2026)
 \item add \alert{extrapolated surface mass balance load} to Stokes form:
 {\small
 \begin{align*}
@@ -1304,7 +1301,6 @@ solver from PETSc (B 2021b)
 \medskip
 \begin{Verbatim}[fontsize=\small,xleftmargin=0mm]
 W = FunctionSpace(mesh, "DQ", 1, variant="spectral")  # best
-
 W = FunctionSpace(mesh, "DG", 0)  # adequate
 \end{Verbatim}
 
@@ -1538,16 +1534,16 @@ Halfar & 28.993 & 689.829
     \item[$\circ$] extruded meshes (Firedrake), because glaciers are thin flows$\strut$
     \item[$\circ$] Swedish stabilizations, so semi-implicit time-stepping is safe and easy$\strut$
         \begin{itemize}
-        \item[$\circ$] Tominec et al (2026) has 1st coupled Stokes-surface \emph{proof} (to my knowledge)
+        \item[$\circ$] Tominec et al (2026) has 1st coupled Stokes-surface \emph{proof} in glaciology, to my knowledge
         \end{itemize}
-    \item[$\circ$] bounds-constrained Newton solvers (PETSc), giving moving margins
+    \item[$\circ$] bounds-constrained Newton solvers (PETSc), enabling moving margins
     \end{itemize}
 
 \medskip
-\item remaining challenges and improvements:
+\item<2> remaining improvements (and challenges):
     \begin{enumerate}
-    \item make the Stokes solver faster by replacing the direct linear algebra with a \alert{scalable matrix-free solver} (presumably multigrid)
-    \item make the simulation faster by combining the free-surface equation and the Stokes solver in a \alert{monolithic implicit step} solved by a scalable solve (presumably multigrid $=$ FASCD?)
+    \item make Stokes solver faster by replacing the direct linear algebra with a \alert{scalable matrix-free solver} \dots presumably multigrid
+    \item make coupled (free-surface and Stokes) solver via a scalable \alert{monolithic implicit step} \dots presumably multigrid $=$ FASCD
     \item make time-stepping glacier simulations \alert{mass conserving even in free-boundary cases}
     \end{enumerate}
 \end{itemize}
