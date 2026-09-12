@@ -17,8 +17,8 @@ hs = "half-width of computational domain (default=15000 m)"
 parser.add_argument("-L", type=float, metavar="L", default=15000.0, help=hs)
 hs = "maximum number of time steps (default=10000)"
 parser.add_argument("-maxN", type=int, metavar="N", default=10000, help=hs)
-hs = "maximum time step in years (default=1.0)"
-parser.add_argument("-maxdt", type=float, metavar="DT", default=1.0, help=hs)
+hs = "maximum time step in years (set DT > 0 to engage)"
+parser.add_argument("-maxdt", type=float, metavar="DT", default=-1.0, help=hs)
 hs = "subintervals in coarse mesh (default=50)"
 parser.add_argument("-mx", type=int, metavar="MX", default=50, help=hs)
 hs = "vertical layers in coarse mesh (default=4)"
@@ -236,9 +236,12 @@ solverske = NonlinearVariationalSolver(
 
 
 def get_dt(t, dx, umagmax):
-    """Determine dt from CFL and options."""
+    """Determine dt from CFL and user options."""
     dtcfl = PETSc.INFINITY if args.nocfl else args.cfl * dx / umagmax
-    dtvals = np.array([dtcfl, args.maxdt * secpera, args.T * secpera - t])
+    # A practical/realistic glacier simulation should additionally determine
+    # -maxdt based on desired frequency of SMB coupling.)"""
+    dtmax = PETSc.INFINITY if args.maxdt < 0.0 else args.maxdt * secpera
+    dtvals = np.array([dtcfl, dtmax, args.T * secpera - t])
     dtreasons = ["CFL", "MAX", "END"]
     return float(dtvals.min()), dtreasons[int(dtvals.argmin())]
 
