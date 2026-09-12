@@ -70,7 +70,7 @@ All stages can be run in parallel.
   * In `stage3/` and `stage4/`, reading a `.msh` for the base mesh is easy but it requires code modifications.
   * In `stage4/`, adding a surface mass balance model is easy but it requires code modifications.
 
-### other solvers
+### other solvers based on Firedrake
 
 Here are two open-source glacier solvers using Firedrake:
 
