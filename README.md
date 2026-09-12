@@ -74,6 +74,6 @@ All stages can be run in parallel.
 
 Here are two open-source glacier solvers using Firedrake:
 
-  * I wrote an earlier open-source Stokes solver for glaciology, in the `py/stokes/` directory [in my McCarthy materials](https://github.com/bueler/mccarthy/tree/master/py/stokes).  It uses the same Firedrake/PETSc/Gmsh/Paraview stack.
-
   * [Icepack](https://icepack.github.io/) by Dan Shapero and others is a general-purpose glacier and ice-sheet modeling framework based on Firedrake.
+
+  * I wrote an earlier open-source Stokes solver for glaciology, in the `py/stokes/` directory [in my McCarthy materials](https://github.com/bueler/mccarthy/tree/master/py/stokes).  It uses the same Firedrake/PETSc/Gmsh/Paraview stack.
