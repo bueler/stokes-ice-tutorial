@@ -89,7 +89,7 @@
 \newcommand{\surl}[2]{\,{\tiny \href{#1}{#2}}}
 
 
-\title{Stokes glacier models, with Firedrake}
+\title{Stokes glacier models with Firedrake}
 
 \subtitle{a finite element tutorial}
 
@@ -99,6 +99,10 @@
 
 \date[version 2.3]{version 2.3 (September 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
 \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
+
+\begin{comment}
+abstract:  The power-law Stokes equations describe the flow of ice in glaciers and ice sheets.  This is a gravity-driven, viscous, and shear-thinning flow with a stress-free surface.  The surface is governed by a coupled evolution equation, with the surface mass balance (snow minus melt) as a source term.  This model is closely related to the free-surface mantle convection problem, but with a lateral margin that is also free to move.  So, how do you put this system on a computer and make the simulation work reliably?  My talk shows how to solve these coupled equations numerically, using Python and the Firedrake finite element library, and PETSc solvers under the hood.  We will model 2D and 3D land-based glaciers with moving margins, using some new techniques, and by exploiting flexible solver and meshing tools.  The tutorial is hosted at a well-maintained, MIT-licensed repository https://github.com/bueler/stokes-ice-tutorial, so self-study afterwards is encouraged, as are modifications to extend it to applications using real data.
+\end{comment}
 
 
 \begin{document}
