@@ -2,7 +2,7 @@
 
 ## purpose
 
-Provide an easy-to-modify and well-documented finite element solver for glacier modeling, for planar and 3D glacier geometries, without shallowness assumptions in the equations.  This is not a _library_, it is a _tutorial_, but it can be used as a starting point for other projects.
+Provide an easy-to-modify and well-documented finite element solver for glacier modeling, for planar and 3D glacier geometries, without shallowness assumptions in the equations.  This is a _tutorial_, not a _library_, but it can be used as a starting point for other projects.
 
 <p align="center">
 <img src="latex/figs/stage3speed.png" alt="ice speed in a glacier" />
@@ -10,20 +10,19 @@ Provide an easy-to-modify and well-documented finite element solver for glacier 
 
 ## version log
 
-  * **v2.3**  Better text and citations.
-  * **v2.2**  Better text and citations.
+  * **v2.3, v2.2**  Better text and citations.
   * **v2.1**  Switch pressure elements.
   * **v2.0**  Well-behaved glacial evolution in `stage4/`.
   * **v1.0**  The first version of this tutorial was for glacier dynamics only, for fixed geometry.
 
 ## model equations
 
-The Glen-Nye-Stokes equations describe the dynamics of ice in a [glacier](https://en.wikipedia.org/wiki/Glacier) or [ice sheet](https://en.wikipedia.org/wiki/Glacier) as a gravity-driven, viscous, shear-thinning flow:
+The power-law Stokes equations describe the dynamics of ice in a [glacier](https://en.wikipedia.org/wiki/Glacier) or [ice sheet](https://en.wikipedia.org/wiki/Glacier) as a gravity-driven, viscous, shear-thinning flow:
 
 $$\begin{align*}
 -\nabla \cdot \tau + \nabla p &= \rho_i \mathbf{g} & &\text{\textsf{stress balance}} \\
 \nabla \cdot \mathbf{u} &= 0 & &\text{\textsf{incompressibility}} \\
-\tau &= B_n |D\mathbf{u}|^{(1/n)-1} D\mathbf{u} & &\text{\textsf{Glen-Nye flow law}}
+\tau &= B_n |D\mathbf{u}|^{(1/n)-1} D\mathbf{u} & &\text{\textsf{Glen-Steinemann-Nye flow law}}
 \end{align*}$$
 
 The free surface of a glacier is governed by an additional equation, coupled to the above, which has the [surface mass balance]() as a source term:
@@ -34,7 +33,7 @@ $$\begin{align*}
 
 This repository contains a practical tutorial on solving these coupled [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) numerically, by using the [finite element method](https://en.wikipedia.org/wiki/Finite_element_method).
 
-The [Python](https://www.python.org/) programs here are relatively-short and only solve idealized problems.  We model 2D and 3D land-based glaciers with moving margins.  The emphasis is on modern and robust solver techniques.
+The [Python](https://www.python.org/) programs here are relatively-short and only solve idealized problems.  We model 2D and 3D land-based glaciers with moving margins.  The emphasis is on modern and robust solver techniques, but not directly on scalable solvers.
 
 The codes are documented by [`slides.pdf`](slides.pdf).
 
@@ -50,15 +49,15 @@ You will need [Gmsh](https://gmsh.info/) to generate certain meshes (but only fo
 
 To do this tutorial, read [`slides.pdf`](slides.pdf) and follow the stages.  Each stage is essentially self-contained, with increasing sophistication.
 
-The first three stages use fixed geometry and address how to solve the Glen-Nye-Stokes equations for the dynamics of ice.
+The first three stages use fixed geometry and address how to solve the power-law Stokes equations for the dynamics of ice.
   * In `stage1/` and `stage2/`, mesh-generation and Stokes solution are separate actions.  Mesh generation uses [Gmsh](https://gmsh.info/) on `.geo` geometry-outline files, which generates `.msh` mesh files.
   * `stage3/` combines meshing and solving into a single program by using extruded meshes; mesh management is thus entirely through [Firedrake](https://www.firedrakeproject.org/).  (The base mesh could be read from a `.msh` if desired, by small code modifications.)
   * `stage3/` also allows choice of 2D (planar) or full 3D glacier geometry at runtime.
 
-By contrast, `stage4/` solves the full coupled system above, though only in 2D (planar).  That is, we combine the Glen-Nye-Stokes dynamics model with the free-surface equation.
-  * The coupled system is solved by time-stepping for a moving-margin case (by default).
-  * Several advanced and recent techniques are applied in this stage.
-  * The glacier can evolve in response to a climate (surface mass balance) model, though adding this requires small code modifications.  
+By contrast, `stage4/` solves the full coupled system above, though only in 2D (planar).  That is, we combine the power-law Stokes dynamics model with the free-surface equation.
+  * The coupled system is solved by time-stepping for a moving-margin case (by default); the PDE system includes a variational inequality.
+  * Several advanced and recent stabilization techniques are applied in this stage.
+  * The glacier could evolve in response to a climate (surface mass balance) model; this would require small code modifications.  
 
 All stages can be run in parallel.
 
@@ -70,7 +69,7 @@ All stages can be run in parallel.
   * The time-stepping in `stage4/`, though apparently very well-behaved under the applied stabilization and adaptive techniques, remains mostly-explicit and CFL-limited.
   * In the moving-margin cases for `stage4/`, there is a mass-conservation error committed at the free boundary.
   * In `stage3/` and `stage4/`, reading a `.msh` for the base mesh is easy but it requires code modifications.
-  * In `stage4/`, adding a surface mass balance model is easy but it requires code modifications.
+  * In `stage4/`, adding surface mass balance data, or a lapse-rate model, is easy but it requires code modifications.
 
 ### other solvers based on Firedrake
 
