@@ -163,7 +163,7 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
 \begin{frame}{glacier dynamics using a Stokes model: the high-level view}
 
 \begin{itemize}
-\item we apply conservation principles to glaciers:
+\item we apply conservation principles to glaciers and ice sheets:
     \begin{itemize}
     \item[$\circ$] mass conservation \hfill \cmark
     \item[$\circ$] momentum conservation \hfill \cmark
@@ -173,27 +173,27 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
     \begin{itemize}
     \item[$\circ$] another is the free-surface equation \dots see \texttt{stage4/}
     \end{itemize}
-\item glaciers are a ``slow flow'' problem because inertial forces are tiny
+\item<2> glaciers are a ``slow flow'' problem because inertial forces are tiny
     \begin{itemize}
-    \item[$\circ$] momentum conservation is therefore called a ``stress balance''
+    \item[$\circ$] momentum conservation thus called a ``stress balance''
     \item[$\circ$] velocity \& pressure are \alert{instantaneously determined} by glacier geometry and boundary stresses
     \end{itemize}
 
 \medskip
-{\scriptsize velocity} \quad \includegraphics[width=0.6\textwidth]{figs/speed.png}
+{\scriptsize speed $|\bu|$} \quad \includegraphics[width=0.6\textwidth]{figs/speed.png}
 
 \medskip
-{\scriptsize pressure} \quad \includegraphics[width=0.6\textwidth]{figs/pressure.png}
+{\scriptsize pressure $p$} \quad \includegraphics[width=0.6\textwidth]{figs/pressure.png}
 
-\bigskip
-\item \alert{Stokes equations $=$ stress balance $+$ incompressibility}
-\end{itemize}
+\medskip
+\item<2> Stokes equations $=$ stress balance $+$ incompressibility
 
-\vspace{-14mm}
+\vspace{-13mm}
 
 \hfill \includegraphics[width=0.12\textwidth]{figs/people/gstokes.jpg}
 
 \hfill {\tiny George Stokes}
+\end{itemize}
 \end{frame}
 
 
@@ -214,7 +214,7 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
     \item[$\circ$] $\tau$ is deviatoric stress tensor
     \item[$\circ$] $\ds D\bu=\tfrac{1}{2}\big(\grad \bu + \grad \bu^\top\big)$ is strain-rate tensor
     \item[$\circ$] \smallskip flow law is in \emph{viscosity form}: $\tau = 2 \nu(|D\bu|) D\bu$
-    \item[] \detailgo{regularized} viscosity is actually regularized, $\nu_\eps(|D\bu|)$, to avoid $\infty$
+    \item[] \detailgo{regularized} viscosity is regularized (``$\nu_\eps$'') to avoid $\infty$ when $D\bu\to 0$
     \end{itemize}
 
 \vspace{-45mm}
@@ -291,18 +291,9 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
 \begin{itemize}
 \item by-hand solution of the Stokes model is impossible for most geometries
     \begin{itemize}
-    \item[$\circ$] \emph{exercise.}  solve slab-on-a-slope, which is an exception
+    \item[$\circ$] \emph{exercise} on the exception:  solve slab-on-a-slope
     \end{itemize}
 \item so we solve numerically using the finite element (FE) method
-
-\medskip
-\input{figs/trihat.tex}
-
-\vspace{-9mm}
-\hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
-
-\bigskip
-\item Firedrake (\href{https://www.firedrakeproject.org/}{\texttt{firedrakeproject.org}}) is an open-source Python library for the solution of partial differential equations using the FE method
     \begin{itemize}
     \item[$\circ$] this tutorial \alert{suppresses the details} of FE
     \item[$\circ$] try e.g.~Elman, Sylvester \& Wathen (2014) for FE self-study
@@ -310,7 +301,17 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
     \end{itemize}
 
 \medskip
-\item however, to use FE one needs to know a key step:\, \alert{write a weak form}
+\input{figs/trihat.tex}
+
+\vspace{-9mm}
+\hfill \includegraphics[width=0.7\textwidth]{figs/stage2speed.png}
+
+\bigskip
+\item<2> we will use Firedrake (\href{https://www.firedrakeproject.org/}{\texttt{firedrakeproject.org}}) for the FE method
+    \begin{itemize}
+    \item[$\circ$] an open-source Python library for the solution of partial differential equations
+    \end{itemize}
+\item<2> to use it one needs to know a key step:\, \alert{write a weak form}
 \end{itemize}
 \end{frame}
 
@@ -328,7 +329,7 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
 
     \begin{itemize}
     \item[$\circ$] $\Lambda$ is the spatial domain of ice
-    \item[$\circ$] ``$dx$'' $=dx\,dy\,dz$ in 3D, and ``$dx$'' $=dx\,dz$ in the planar case
+    \item[$\circ$] ``$dx$'' $=dx\,dy\,dz$ in 3D, and ``$dx$'' $=dx\,dz$ in the 2D planar case
     \end{itemize}
 
 \medskip
@@ -336,7 +337,7 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
    $$F(\bu,p;\bv,q) = 0 \qquad \text{ for all test functions } \bv \text{ and } q$$
 
     \begin{itemize}
-    \item[$\circ$] the FE method solves the same problem, but over a finite-dimensional space
+    \item[$\circ$] the FE method solves this problem over a finite-dimensional space
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -346,7 +347,7 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
 \frametitle{UFL for the weak form}
 
 \begin{itemize}
-\item nonlinear residual function from last slide:
+\item nonlinear residual function:
     $$F(\bu,p;\bv,q) = \int_{\Lambda} 2 \nu_\eps(|D\bu|)\, D\bu\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
 with $\nu_\eps(|D\bu|) = \tfrac{1}{2} B_n \left(|D\bu|^2 + (\eps\, D_0)^2\right)^{((1/n) - 1)/2}$
 
@@ -380,7 +381,7 @@ F = ( 2.0 * nu * inner(D(u), D(v)) \
 \begin{itemize}
 \item other details we need to know about:
     \begin{itemize}
-    \item[{\color{black} 1.}] choose \alert{separate function spaces} for the velocity and the pressure
+    \item[{\color{black} 1.}] choose \alert{function spaces} for the velocity and the pressure
     \item[{\color{black} 2.}] choose finite element spaces that (the experts say) are \alert{stable}
     \end{itemize}
 
@@ -423,7 +424,7 @@ v, q = TestFunctions(Z)
 \begin{frame}{the linear Stokes equations}
 
 \begin{itemize}
-\item if we make viscosity constant ($\nu_0>0$) then we get a linear Stokes system:
+\item if we make viscosity constant ($\nu_0>0$) then we get a \alert{linear} Stokes system:
 \begin{align*}
 - \nabla \cdot \left(2 \nu_0\, D\bu\right) + \nabla p &= \rho \mathbf{g}  \\
 \Div \bu &= 0
@@ -440,7 +441,7 @@ v, q = TestFunctions(Z)
     \item[$\circ$] $A=-\nu_0 \nabla^2 \ge 0$
 
 \smallskip
-    \item[$\circ$] $B^\top=(-\Div)^\top = \grad$ (integration-by-parts)
+    \item[$\circ$] $B^\top=(-\Div)^\top = \grad$ \,\dots from integration-by-parts
     \end{itemize}
 \end{itemize}
 
@@ -482,14 +483,14 @@ $ source ~/venv-firedrake/bin/activate
 %$
 
 \medskip
-\item other tools you will need:
+\item other tools you will need (install from packages?):
     \begin{itemize}
     \item[$\circ$] Gmsh \quad \href{https://gmsh.info/}{\texttt{gmsh.info}}
     \item[$\circ$] Paraview \quad \href{https://www.paraview.org/}{\texttt{paraview.org}}
     \end{itemize}
 
 \medskip
-\item clone this tutorial, both for the codes and these slides:
+\item clone this tutorial, for both codes and slides:
 
 \bigskip
 \begin{Verbatim}[fontsize=\small]
@@ -510,7 +511,7 @@ $ git clone https://github.com/bueler/stokes-ice-tutorial.git
 \frametitle{\texttt{stage1/} \qquad linear Stokes}
 
 \begin{itemize}
-\item \emph{purpose:} solve linear Stokes on a trapezoidal ``glacier''
+\item \emph{purpose:} solve linear Stokes on a trapezoidal ``ice sheet''
 \item \emph{source files:} \texttt{trap.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{trap.msh}, \texttt{trap.pvd}
 \item[] \detailgo{codesone} these short codes are on slides at the end
@@ -551,14 +552,18 @@ $ paraview trap.pvd         # view the solution
 \item but power-law Stokes residual function is \alert{nonlinear in $\bu$}:
 \small
 $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv - p \nabla \cdot \bv - q \nabla \cdot \bu - \rho \mathbf{g} \cdot \bv \,dx$$
+
 \normalsize
-\item fortunately, Firedrake applies Newton's method by default if we write the problem as\, \texttt{solve(F == 0,\dots)}
+\item fortunately, Firedrake applies Newton's method by default!
+
+    \begin{itemize}
+    \item[$\circ$] just write the problem as\, \texttt{solve(F == 0,\dots)}
+    \end{itemize}
 \item what you need to know about Newton's iteration:
     \begin{itemize}
-    \item[$\circ$] it does linearization around each iterate
+    \item[$\circ$] linearize (and solve a linear system) at each iterate
     \item[$\circ$] Firedrake uses UFL symbolic differentiation for linearization
-    \item[$\circ$] Firedrake asks PETSc's SNES to do the Newton iteration
-    \item[$\circ$] SNES options will monitor and control the iteration
+    \item[$\circ$] Firedrake asks PETSc's SNES to do Newton; SNES options monitor and control the iteration
     \end{itemize}
 \end{itemize}
 \end{column}
@@ -577,7 +582,7 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \frametitle{\texttt{stage2/} \qquad power-law Stokes for a glacier}
 
 \begin{itemize}
-\item \emph{purpose:} solve the power-law Stokes equations on a dome-shaped glacier with a flat bed
+\item \emph{purpose:} solve the power-law Stokes equations on a dome-shaped glacier (ice sheet) with a flat bed
 \item \emph{source files:} \texttt{domain.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{dome.geo}, \texttt{dome.msh}, \texttt{dome.pvd}
 \end{itemize}
@@ -594,9 +599,14 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 
 \vspace{6mm}
 \begin{center}
-\includegraphics[width=0.95\textwidth]{figs/stage2.png}
+\includegraphics[width=0.95\textwidth]{figs/stage2speed.png}
 
 {\tiny speed $|\bu|$}
+
+\medskip
+\includegraphics[width=0.95\textwidth]{figs/stage2pressure.png}
+
+{\tiny pressure $p$}
 \end{center}
 \end{frame}
 
@@ -610,12 +620,13 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \item this stage takes a more practical and powerful approach
 \item we switch to an \alert{extruded mesh}, and allow a bumpy bed (below)
     \begin{itemize}
-    \item[$\circ$] the \alert{base mesh} has lower dimension
-    \item[$\circ$] now the elements are quadrilaterals in the planar case, versus triangles in \texttt{stage2/}
+    \item[$\circ$] the \alert{base mesh} has lower dimension; it could come via Gmsh
+    \item[$\circ$] now elements are quadrilaterals (in planar case), vs triangles in \texttt{stage2/}
+    \item[$\circ$] elements are prisms in 3D
     \end{itemize}
 \item we demonstrate (mostly) \alert{dimension-independent programming}
     \begin{itemize}
-    \item[$\circ$] code for 2D and 3D glacier geometry is nearly the same; elements are prisms in 3D
+    \item[$\circ$] code for 2D and 3D glacier geometry is nearly the same
     \item[$\circ$] dimension chosen at runtime
     \end{itemize}
 \item additional bells \& whistles:
@@ -719,17 +730,19 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
 \frametitle{parallel computation}
 
 \begin{itemize}
-\item as usual with Firedrake, everything works in parallel
+\item \alert{Firedrake codes work in parallel by default}
     \begin{itemize}
     \item[$\circ$] extruded mesh gets partitioned following base mesh partition
-    \item[$\circ$] see \texttt{rank} field in \texttt{.pvd} output; result with 4 processes:
-    \end{itemize}
+    \item[$\circ$] see MPI \texttt{rank} field in \texttt{.pvd} output; result with 4 processes:
 
-\medskip
+\smallskip
 \qquad \includegraphics[width=0.85\textwidth]{figs/stage3rank.png}
 
 \medskip
-\item using the default direct solver (Mumps), results are essentially independent of number of processes
+    \item[$\circ$] with default direct solver (Mumps), results are essentially independent of number of processes
+    \end{itemize}
+
+\medskip
 \item however, speed-up is sublinear because of significant serial workloads
 
 \medskip
@@ -778,20 +791,19 @@ $ paraview dome.pvd
 
 \begin{Verbatim}[fontsize=\small]
 $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
-    -refine 2 -s_snes_atol 1.0e-2 -o finest.pvd
+    -refine 2 -o finest.pvd
 \end{Verbatim}
 %$
 
-\bigskip
 \item \emph{limiting factor:} the \alert{direct solver} for each Newton step linear system uses too much memory when generating the LU factors
     \begin{itemize}
-    \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D; see B (2021b)
+    \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D (B.~2021b)
     \end{itemize}
 \item for higher resolution we need a \alert{scalable solver}
     \begin{itemize}
-    \item[$\circ$] such a solver would be built by composition of features: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block; see B (2021b)
+    \item[$\circ$] such a solver would be built by composition of features: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
     \item[$\circ$] for a scalable implementation see Isaac, Stadler, \& Ghattas (2015)
-    \item[$\circ$] addressing scalability properly is a different talk, but see B (2023)
+    \item[$\circ$] addressing scalability properly is a different talk (B.~2023)
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -799,19 +811,19 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \section{\emph{theory} \hspace{11mm} evolving glaciers: free-surface equation coupled to Stokes}
 
-\begin{frame}{but don't glaciers actually change with the climate?}
+\begin{frame}{don't glaciers actually change with the climate?}
 
 \begin{itemize}
 \item we do not yet have an evolving glacier model
     \begin{itemize}
     \item[$\circ$] time derivatives have not even appeared!
-    \item[$\circ$] the climate (e.g.~surface mass balance) has not appeared as an input
+    \item[$\circ$] the climate (surface mass balance) has not appeared as an input
     \end{itemize}
 
 \medskip
 \item[Q.] how do glaciers change shape?
 
-\item[A.] via the \alert{free-surface equation}, a kinematical and mass conservation statement:
+\item[A.] via a \alert{free-surface equation}, a kinematical and conservation statement:
    $$\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s = a$$
 
     \begin{itemize}
@@ -852,7 +864,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \end{itemize}
 \begin{enumerate}
 \item[I.] the free-surface equation \alert{has $\bu|_s$ as a coefficient}
-\item[II.] \alert{$s(t,x,y)$ determines the evolving domain $\Lambda(t)$} on which the Stokes problem is solved at each instant
+\item[II.] \alert{$s(t,x,y)$ determines the domain $\Lambda(t)$} on which the Stokes sub-problem is solved, at each $t$
 \end{enumerate}
 \end{column}
 \begin{column}{0.5\textwidth}
@@ -909,7 +921,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
     \end{itemize}
 
 \medskip
-\item<2> what are the underlying challenges in designing better schemes?
+\item<2> what are the underlying challenges?
 \end{itemize}
 
 \begin{enumerate}
@@ -931,10 +943,10 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \begin{itemize}
 \item the \alert{surface elevation must be above the bed}
-\item enforcing this obvious fact provides the (lateral) free-boundary condition for a land-based glacier
+\item enforcing this obvious fact provides the (lateral) \alert{free-boundary condition} for a land-based glacier
     \begin{itemize}
     \item[$\circ$] the weak form is a \alert{variational inequality} (B 2021b, Chapter 12)
-    \item[$\circ$] the thickness and flux are both zero at the free boundary
+    \item[$\circ$] the thickness and horizontal flux are both zero at the free boundary
     \end{itemize}
 \item solving the coupled problem subject to this condition determines the location of the moving glacier margin (free boundary)
 
@@ -958,8 +970,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
     \end{itemize}
 
 \medskip
-\item using an extruded mesh
-\item between continuous $P_1$ surfaces $s=s(t,x)$ and $b=b(t,x)$:
+\item using an extruded mesh between continuous $P_1$ (piecewise-linear) surfaces $s(t,x)$ and $b(t,x)$:
     \begin{itemize}
     \item[$\circ$] the Stokes domain $\Lambda(t)$ is \alert{polygonal} (in space) at each $t$
     \item[$\circ$] the elements are quadrilaterals (in 2D)
@@ -981,7 +992,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \item our solver is based on \alert{new techniques} which modify the weak form of the coupled problem
 \item \alert{the next slides give citations and details on these techniques}
     \begin{itemize}
-    \item[$\circ$] techniques 1 and 2 are the ``Swedish stabilizations''
+    \item[$\circ$] techniques 1 and 2 below are the \alert{Swedish stabilizations}
     \end{itemize}
 \end{itemize}
 
@@ -1003,7 +1014,6 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
         \begin{itemize}
         \item[A.] we apply a bounds-respecting Newton method
         \item[B.] we allow variable ice extent on the extruded mesh
-        \item[C.] we prefer pressure elements with interior degrees of freedom
         \end{itemize}
 \end{enumerate}
 \end{block}
@@ -1121,7 +1131,7 @@ surface elevation $s_k$
     \begin{itemize}
     \item[$\circ$] Reynold's transport theorem motivates this (symmetrized) extrapolation
     \item[$\circ$] \dots which puts time step $\Delta t$ and SMB $a$ inside the Stokes solve!
-    \item[$\circ$] \alert{Tominec et al (2026) prove that the $L^2$ norm of the evolving surface is controlled}; it can't blow up
+    \item[$\circ$] Tominec et al (2026) \alert{prove} that the $L^2$ norm of the evolving surface is controlled; it can't blow up
     \end{itemize}
 \end{itemize}
 
@@ -1252,7 +1262,8 @@ solver from PETSc (B 2021b)
 \end{frame}
 
 
-\begin{frame}{technique 3B: extruded mesh with variable ice extent}
+\begin{frame}[label=techthreeb]
+\frametitle{technique 3B: extruded mesh with variable ice extent}
 
 \begin{itemize}
 \item the base mesh covers all of $\Omega$, \alert{including areas with no ice}
@@ -1274,29 +1285,8 @@ solver from PETSc (B 2021b)
     \item[$\circ$] $s^h_k$, $b^h$ define ice domain $\Lambda(t_k)$ in this semi-implicit framework
     \item[$\circ$] $s^h_k=b^h$ at a base mesh node \, $\implies$ \, no ice in that extruded column
     \item[$\circ$] \texttt{PinchColumnPressure|Velocity} sub-class \texttt{DirichletBC}
+    \item[] \detailgo{dgonepressure} for $p$, switch from $P_1$ to $DQ1$ ``spectral'' to avoid bad pinching
     \end{itemize}
-\end{itemize}
-\end{frame}
-
-
-\begin{frame}[fragile]
-\frametitle{technique 3C: pressure elements with interior degrees of freedom}
-
-\begin{itemize}
-\item however, we do \alert{not} want to pinch $p$ to be zero anywhere in the closest-to-margin elements containing ice
-    \begin{itemize}
-    \item[$\circ$] doing so causes an unintended Dirichlet condition on the pressure
-    \end{itemize}
-\item therefore prefer pressure elements with interior degrees of freedom:
-
-\medskip
-\begin{Verbatim}[fontsize=\small,xleftmargin=0mm]
-W = FunctionSpace(mesh, "DQ", 1, variant="spectral")  # best
-W = FunctionSpace(mesh, "DG", 0)  # adequate
-\end{Verbatim}
-
-\medskip
-\item for such elements the moving-margin mass conservation error (later slides) is provably one-sided
 \end{itemize}
 \end{frame}
 
@@ -1643,6 +1633,30 @@ Halfar & 28.993 & 689.829
 \end{itemize}
 
 \detailreturn{newtech}
+\end{frame}
+
+
+\begin{frame}[label=dgonepressure,fragile]
+\frametitle{pressure elements with interior degrees of freedom}
+
+\begin{itemize}
+\item we do \alert{not} want to pinch $p$ to be zero anywhere in the closest-to-margin elements containing ice
+    \begin{itemize}
+    \item[$\circ$] doing so causes an unintended Dirichlet condition on the pressure
+    \end{itemize}
+\item therefore prefer pressure elements with interior degrees of freedom:
+
+\medskip
+\begin{Verbatim}[fontsize=\small,xleftmargin=0mm]
+W = FunctionSpace(mesh, "DQ", 1, variant="spectral")  # best
+W = FunctionSpace(mesh, "DG", 0)  # adequate
+\end{Verbatim}
+
+\medskip
+\item for such elements the moving-margin mass conservation error (later slides) is provably one-sided
+\end{itemize}
+
+\detailreturn{techthreeb}
 \end{frame}
 
 
