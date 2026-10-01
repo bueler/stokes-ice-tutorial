@@ -11,16 +11,15 @@ up = Function(Z)
 u, p = split(up)
 v, q = TestFunctions(Z)
 
-
 def D(w):  # strain-rate tensor
     return 0.5 * (grad(w) + grad(w).T)
-
 
 g = 9.81  # m s-2
 rho = 910.0  # kg m-3
 nu0 = 1.0e12  # Pa s
 fbody = Constant((0.0, -rho * g))
-F = (2.0 * nu0 * inner(D(u), D(v)) - p * div(v) - q * div(u) - inner(fbody, v)) * dx
+F = 2.0 * nu0 * inner(D(u), D(v)) * dx \
+    - (p * div(v) + q * div(u) + inner(fbody, v)) * dx
 bcs = [DirichletBC(Z.sub(0), Constant((0.0, 0.0)), (42,))]
 
 par = {
@@ -29,7 +28,7 @@ par = {
     "pc_type": "lu",
     "pc_factor_shift_type": "inblocks",
 }
-solve(F == 0, up, bcs=bcs, options_prefix="s", solver_parameters=par)
+solve(F == 0, up, bcs=bcs, solver_parameters=par)
 
 u = up.subfunctions[0]
 p = up.subfunctions[1]

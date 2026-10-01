@@ -1,6 +1,6 @@
 // hand-written trapezoid, the boundary of our domain
 
-lc = 5000.0;              // tell Gmsh we want 5km triangles (roughly)
+lc = 5000.0;              // tell Gmsh we want 5km triangles
 Point(1) = {0.0,0.0,0,lc};
 Point(2) = {20000.0,0.0,0,lc};
 Point(3) = {15000.0,1000.0,0,lc};
@@ -16,4 +16,4 @@ Plane Surface(10) = {9};
 //   boundary ids:  41, 42 = top, base
 Physical Line(41) = {6,7,8};
 Physical Line(42) = {5};
-Physical Surface(51) = {10};   // if Physical Surface omitted, Gmsh fails
+Physical Surface(51) = {10};
