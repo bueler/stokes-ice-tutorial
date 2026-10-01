@@ -25,6 +25,7 @@
 \usepackage{empheq}
 \usepackage{xspace}
 \usepackage{verbatim,fancyvrb}
+\usepackage{appendixnumberbeamer}
 
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows.meta,decorations.markings,decorations.pathreplacing,fadings,positioning}
@@ -88,6 +89,9 @@
 \newcommand{\sdoi}[1]{\,{\tiny \href{https://doi.org/#1}{doi:#1}}}
 \newcommand{\surl}[2]{\,{\tiny \href{#1}{#2}}}
 
+\newcommand{\detailgo}[1]{\smallskip \hspace{-4mm} \hyperlink{#1}{\beamergotobutton{detail}} \,}
+\newcommand{\detailreturn}[1]{\hfill \hyperlink{#1}{\beamerreturnbutton{return to main}}}
+
 
 \title{Stokes glacier models with Firedrake}
 
@@ -97,7 +101,7 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[version 2.3]{version 2.3 (September 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
+\date[version 2.4]{version 2.4 (October 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
 \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 \begin{comment}
@@ -118,19 +122,22 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
 
 
 \begin{frame}{making this presentation effective}
+\vspace{10mm}
 
 \begin{itemize}
 \item \alert{please ask questions}, thanks!
-\item send questions or comments:
+\item or later questions/comments:
   \begin{itemize}
   \item[$\circ$] by email to \href{mailto:elbueler@alaska.edu}{\texttt{elbueler@alaska.edu}}
   \item[$\circ$] or by using \href{https://github.com/bueler/stokes-ice-tutorial/issues}{issues at \texttt{github.com/bueler/stokes-ice-tutorial/}}
   \end{itemize}
 
 \bigskip
-\item these slides are the primary documentation for some Python codes
-\item \alert{please try the codes}, and give me your feedback?
+\item these slides document some Python codes \dots \alert{please try the codes} and give me your feedback?
 \end{itemize}
+
+\vspace{10mm}
+\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png} \qquad
 \end{frame}
 
 
@@ -146,8 +153,8 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
 
   \tableofcontents[hideallsubsections]
 
-\vspace{5mm}
-  \outlinelink
+%\vspace{5mm}
+%  \outlinelink
 \end{frame}
 
 
@@ -190,10 +197,11 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
 \end{frame}
 
 
-\begin{frame}{Glen-Steinemann-Nye-Stokes equations}
+\begin{frame}[label=stokeseqns]
+\frametitle{Glen-Steinemann-Nye-Stokes equations}
 
 \begin{itemize}
-\item canonical glacier dynamics equations are from Glen, Steinemann, Nye, and Stokes
+\item canonical glacier dynamics equations: \, Stokes flow, with power-law viscosity from Glen, Steinemann, and Nye (1950s)
 \item the model here is \alert{isotropic power-law Stokes}:
 \begin{align*}
 - \Div \tau + \nabla p &= \rho \bg &&\text{\emph{stress balance}} &&\phantom{dlfsj fdasj} \\
@@ -202,13 +210,14 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
 \end{align*}
 
     \begin{itemize}
-    \item[$\circ$] $\bu$ is velocity, $p$ is pressure, $\tau$ is the deviatoric stress tensor,
-
-and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain-rate tensor
-    \item[$\circ$] note \emph{constant ice density} $\rho$; incompressibility follows
+    \item[$\circ$] $\bu$ is velocity, $p$ is pressure
+    \item[$\circ$] $\tau$ is deviatoric stress tensor
+    \item[$\circ$] $\ds D\bu=\tfrac{1}{2}\big(\grad \bu + \grad \bu^\top\big)$ is strain-rate tensor
+    \item[$\circ$] \smallskip flow law is in \emph{viscosity form}: $\tau = 2 \nu(|D\bu|) D\bu$
+    \item[] \detailgo{regularized} viscosity is actually regularized, $\nu_\eps(|D\bu|)$, to avoid $\infty$
     \end{itemize}
 
-\vspace{-43mm}
+\vspace{-45mm}
 
 %https://www.bl.uk/voices-of-science/interviewees/john-glen#
 \hfill \includegraphics[width=0.10\textwidth]{figs/people/jglen.png}
@@ -221,56 +230,24 @@ and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain
 
 \vspace{-2mm}
 
-\hfill {\tiny Samuel G. Steinemann}
+\hfill {\tiny Samuel Steinemann}
 
-\vspace{-2mm}
-
-\hfill {\tiny (1923--2016)}
+%\vspace{-2mm}
+%\hfill {\tiny (1923--2016)}
 
 \medskip
 \hfill \includegraphics[width=0.10\textwidth]{figs/people/jnye.jpg}
 
 \hfill {\tiny John Nye}
 
-\vspace{-17mm}
+\vspace{-13mm}
 
-\item constants (\emph{with default values in demos}):
+\item constants (\emph{defaults}):
     \begin{itemize}
-    \item[$\circ$] $\rho=910 \,\text{kg}\,\text{m}^{-3}$
-    \item[$\circ$] $|\bg|=9.81\,\text{m}\,\text{s}^{-2}$
-    \item[$\circ$] $n=3$
-    \item[$\circ$] $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$ \hspace{10mm} {\footnotesize $\leftarrow$ \emph{constant because isothermal here}}
-    \end{itemize}
-\end{itemize}
-\end{frame}
-
-
-\begin{frame}{viscosity, and avoiding unbounded values}
-
-\begin{itemize}
-\item eliminate $\tau$ from the equations, giving a system for $\bu,p$
-    \begin{itemize}
-    \item[$\circ$] and use the classical viscosity relationship $\tau=2\nu D\bu$
-    \end{itemize}
-\item however, the unmodified power-law viscosity formula yields unbounded values as $D\bu\to 0$, i.e.~for vanishing strain rates
-    \begin{itemize}
-    \item[$\circ$] note that $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ has a negative power
-    \end{itemize}
-\item so we also regularize with \alert{small $\eps>0$} to generate bounded viscosity
-
-\begin{block}{power-law Stokes equations with regularized viscosity}
-
-\begin{align*}
-- \Div \left(2 \alert{\nu_\eps(|D\bu|)} D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
-\phantom{\int} \Div \bu &= 0 &&\text{\emph{incompressibility}} \\
-\alert{\nu_\eps(|D\bu|)} &= \tfrac{1}{2} B_n \left(|D\bu|^2 + (\eps\, D_0)^2\right)^{((1/n) - 1)/2} &&\text{\emph{flow law}}
-\end{align*}
-
-\smallskip
-\end{block}
-
-    \begin{itemize}
-    \item[$\circ$] we use $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$ in the demonstrations
+    \item[$\circ$] ice density $\rho=910 \,\text{kg}\,\text{m}^{-3}$
+    %\item[$\circ$] $|\bg|=9.81\,\text{m}\,\text{s}^{-2}$
+    \item[$\circ$] power-law exponent $n=3$
+    \item[$\circ$] ice hardness $B_n=6.8\times 10^7\,\text{Pa}\,\text{s}^{1/3}$ \hspace{10mm} {\footnotesize $\leftarrow$ \emph{isothermal here}}
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -279,10 +256,10 @@ and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain
 \begin{frame}{boundary conditions, as simple as possible}
 
 \begin{itemize}
-\item note that $\sigma = 2 \nu_\eps D\bu - pI$ is the \alert{Cauchy stress tensor}
+\item note that $\sigma = 2 \nu_\eps(|D\bu|) D\bu - pI$ is the \alert{Cauchy stress tensor}
 \item stress-free top:
 \begin{equation*}
-\sigma \bn = \left(2 \nu_\eps D\bu - pI\right) \bn = \bzero
+\sigma \bn = \left(2 \nu_\eps(|D\bu|) D\bu - pI\right) \bn = \bzero
 \end{equation*}
 
     \begin{itemize}
@@ -308,7 +285,8 @@ and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain
 \end{frame}
 
 
-\begin{frame}{finite elements \dots with no details}
+\begin{frame}[label=mainfe]
+\frametitle{finite elements \dots with no details}
 
 \begin{itemize}
 \item by-hand solution of the Stokes model is impossible for most geometries
@@ -316,7 +294,6 @@ and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain
     \item[$\circ$] \emph{exercise.}  solve slab-on-a-slope, which is an exception
     \end{itemize}
 \item so we solve numerically using the finite element (FE) method
-\item the FE method allow us to start from a mesh of triangles {\small (or quadrilaterals, prisms, \dots) over our domain, {\footnotesize then express the approximate solution in terms of functions built from the mesh, {\scriptsize but I will skip the details \dots}}}
 
 \medskip
 \input{figs/trihat.tex}
@@ -325,11 +302,15 @@ and $\ds D\bu=\tfrac{1}{2}\left(\grad \bu + \grad \bu^\top\right)$ is the strain
 \hfill \includegraphics[width=0.7\textwidth]{figs/stage2.png}
 
 \bigskip
-\item the whole point of Firedrake is \alert{suppress the details} of FE!
+\item Firedrake (\href{https://www.firedrakeproject.org/}{\texttt{firedrakeproject.org}}) is an open-source Python library for the solution of partial differential equations using the FE method
     \begin{itemize}
-    \item[$\circ$] but try Elman, Sylvester \& Wathen (2014) for self-study?
+    \item[$\circ$] this tutorial \alert{suppresses the details} of FE
+    \item[$\circ$] try e.g.~Elman, Sylvester \& Wathen (2014) for FE self-study
+    \item[] \detailgo{finiteelements} one slide at end summarizes the FE idea
     \end{itemize}
-\item however, one needs to know a key step:\, \alert{write a weak form}
+
+\medskip
+\item however, to use FE one needs to know a key step:\, \alert{write a weak form}
 \end{itemize}
 \end{frame}
 
@@ -431,8 +412,8 @@ v, q = TestFunctions(Z)
   \begin{frame}{Outline}
   \tableofcontents[currentsection]
 
-\vspace{5mm}
-  \outlinelink
+%\vspace{5mm}
+%  \outlinelink
   \end{frame}
 }
 
@@ -525,13 +506,14 @@ $ git clone https://github.com/bueler/stokes-ice-tutorial.git
 \end{frame}
 
 
-\begin{frame}[fragile]
+\begin{frame}[label=stageone,fragile]
 \frametitle{\texttt{stage1/} \qquad linear Stokes}
 
 \begin{itemize}
 \item \emph{purpose:} solve linear Stokes on a trapezoidal ``glacier''
 \item \emph{source files:} \texttt{trap.geo}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
 \item \emph{generated files:} \texttt{trap.msh}, \texttt{trap.pvd}
+\item[] \detailgo{codesone} these short codes are on slides at the end
 \end{itemize}
 
 \bigskip
@@ -923,7 +905,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \item the method everyone tries first is to solve power-law Stokes for the current geometry, then advance the surface, and repeat
     \begin{itemize}
     \item[$\circ$] this is an \emph{explicit} approach, which \emph{splits} the coupling
-    \item[$\circ$] resulting performance is \alert{stability-limited}, in a manner which is not well understood
+    \item[$\circ$] resulting performance is \alert{stability-limited}, in a confusing manner
     \end{itemize}
 
 \medskip
@@ -992,7 +974,8 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 
 
-\begin{frame}{new techniques for \texttt{stage4/}}
+\begin{frame}[label=newtech]
+\frametitle{new techniques for \texttt{stage4/}}
 
 \begin{itemize}
 \item our solver is based on \alert{new techniques} which modify the weak form of the coupled problem
@@ -1013,6 +996,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \item[2.] split, with alternating free-surface and Stokes solves
         \begin{itemize}
         \item[$\circ$] but we add a \alert{load stabilization} coupling to the Stokes solver
+        \item[] \detailgo{mantle} connection to free-surface mantle flow
         \end{itemize}
 
 \item[3.] the coupled free-surface problem is solved as a \alert{variational inequality} which determines the glacier extent and margin
@@ -1531,8 +1515,8 @@ Halfar & 28.993 & 689.829
 \begin{itemize}
 \item Firedrake makes solving the glacier Stokes problem \alert{easy for the new numerical modeler}:
     \begin{itemize}
-    \item[$\circ$] the Python codes in this tutorial are short
-    \item[$\circ$] UFL (weak forms) and PETSc (nonlinear solvers) are built-in to the stack
+    \item[$\circ$] the Python codes are short
+    \item[$\circ$] UFL (weak forms) and PETSc (nonlinear solvers) are already in the stack
     \end{itemize}
 
 \medskip
@@ -1541,18 +1525,21 @@ Halfar & 28.993 & 689.829
     \item[$\circ$] extruded meshes (Firedrake), because glaciers are thin flows$\strut$
     \item[$\circ$] Swedish stabilizations, so semi-implicit time-stepping is safe and easy$\strut$
         \begin{itemize}
-        \item[$\circ$] Tominec et al (2026) has 1st coupled Stokes-surface \emph{proof} in glaciology, to my knowledge
+        \item[$\circ$] Tominec et al (2026) has 1st coupled Stokes-surface \emph{proof} in glaciology
         \end{itemize}
     \item[$\circ$] bounds-constrained Newton solvers (PETSc), enabling moving margins
     \end{itemize}
 
 \medskip
-\item<2> remaining improvements (and challenges):
+\item<2> remaining improvements and challenges:
     \begin{enumerate}
-    \item make Stokes solver faster by replacing the direct linear algebra with a \alert{scalable matrix-free solver} \dots presumably multigrid
-    \item make coupled (free-surface and Stokes) solver via a scalable \alert{monolithic implicit step} \dots presumably multigrid $=$ FASCD
+    \item make Stokes solver faster by replacing direct linear algebra with a \alert{scalable solver} (matrix-free multigrid)
+    \item make coupled (free-surface and Stokes) solver via a scalable \alert{monolithic implicit step} (FASCD multigrid)
     \item make time-stepping glacier simulations \alert{mass conserving even in free-boundary cases}
     \end{enumerate}
+
+\medskip
+\hfill {\large \emph{thanks for listening!}}
 \end{itemize}
 \end{frame}
 
@@ -1562,7 +1549,7 @@ Halfar & 28.993 & 689.829
 \qquad \large \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}}
 
 \vspace{-5mm}
-\hfill \includegraphics[width=0.1\textwidth]{figs/qr.png}
+\hfill \includegraphics[width=0.12\textwidth]{figs/qr.png}
 
 \begin{columns}
 \begin{column}{0.55\textwidth}
@@ -1604,5 +1591,99 @@ Halfar & 28.993 & 689.829
 {\scriptsize \input{references.tex}}
 \end{frame}
 
+
+\appendix  % things after this not numbered
+
+\begin{frame}[label=regularized]
+\frametitle{avoiding unbounded viscosity values}
+
+\begin{itemize}
+\item the unmodified power-law viscosity formula yields unbounded values as $D\bu\to 0$, i.e.~for vanishing strain rates
+    \begin{itemize}
+    \item[$\circ$] note that $\nu = \frac{1}{2} B_n |D\bu|^{(1/n) - 1}$ has a negative power
+    \end{itemize}
+\item so we also regularize with \alert{small $\eps>0$} to generate bounded viscosity
+
+\begin{block}{power-law Stokes equations with regularized viscosity}
+
+\begin{align*}
+- \Div \left(2 \alert{\nu_\eps(|D\bu|)} D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \\
+\phantom{\int} \Div \bu &= 0 &&\text{\emph{incompressibility}} \\
+\alert{\nu_\eps(|D\bu|)} &= \tfrac{1}{2} B_n \left(|D\bu|^2 + (\eps\, D_0)^2\right)^{((1/n) - 1)/2} &&\text{\emph{flow law}}
+\end{align*}
+
+\smallskip
+\end{block}
+
+    \begin{itemize}
+    \item[$\circ$] we use $\eps = 10^{-4}$ and $D_0 = 1\,\text{a}^{-1}$ in the demonstrations
+    \end{itemize}
+\end{itemize}
+
+\detailreturn{stokeseqns}
+\end{frame}
+
+
+\begin{frame}[label=finiteelements]
+\frametitle{one slide about the finite element (FE) method}
+
+\begin{itemize}
+\item FIXME
+\end{itemize}
+
+\detailreturn{mainfe}
+\end{frame}
+
+
+\begin{frame}[label=mantle]
+\frametitle{connection: Swedish stabilizations and mantle flow}
+
+\begin{itemize}
+\item FIXME
+\end{itemize}
+
+\detailreturn{newtech}
+\end{frame}
+
+
+\begin{frame}[label=codesone,fragile]
+\frametitle{\texttt{stage1/} code: \texttt{trap.geo}}
+
+\begin{itemize}
+\item this generates the domain outline, and labels sides so that boundary conditions can work
+\item generates \texttt{trap.msh}: \, \verb|$ gmsh -2 trap.geo|
+\end{itemize}
+
+\bigskip
+\VerbatimInput[fontsize=\scriptsize,xleftmargin=9mm]{../stage1/trap.geo}
+
+\detailreturn{stageone}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{\texttt{stage1/} code: \texttt{solve.py}}
+
+\begin{itemize}
+\item this uses Firedrake to solve the problem
+\item generates Paraview-readable file \texttt{trap.pvd}: \, \verb|$ python3 solve.py|
+\end{itemize}
+
+\bigskip
+
+\VerbatimInput[fontsize=\scriptsize,lastline=16,xleftmargin=9mm]{../stage1/solve.py}
+
+\hfill {\small \emph{continued next slide}}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{\texttt{stage1/} code: \texttt{solve.py} cont.}
+
+\VerbatimInput[fontsize=\scriptsize,firstline=17,xleftmargin=9mm]{../stage1/solve.py}
+
+\bigskip
+\detailreturn{stageone}
+\end{frame}
 
 \end{document}
