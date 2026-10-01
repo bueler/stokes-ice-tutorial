@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from firedrake import *
 from firedrake.petsc import PETSc
 

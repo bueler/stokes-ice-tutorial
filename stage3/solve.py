@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# get options help:  python3 solve.py -solvehelp
 
 import argparse
 import sys

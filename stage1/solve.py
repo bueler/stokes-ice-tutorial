@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from firedrake import *
 
 mesh = Mesh("trap.msh")  # run "gmsh -2 trap.geo" to generate
