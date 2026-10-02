@@ -986,14 +986,10 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 
 \begin{frame}[label=newtech]
-\frametitle{new techniques for \texttt{stage4/}}
+\frametitle{new techniques in \texttt{stage4/}}
 
 \begin{itemize}
-\item our solver is based on \alert{new techniques} which modify the weak form of the coupled problem
-\item \alert{the next slides give citations and details on these techniques}
-    \begin{itemize}
-    \item[$\circ$] techniques 1 and 2 below are the \alert{Swedish stabilizations}
-    \end{itemize}
+\item we use \alert{new techniques} which modify the coupled weak form
 \end{itemize}
 
 \begin{block}{3 techniques}
@@ -1017,6 +1013,14 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
         \end{itemize}
 \end{enumerate}
 \end{block}
+
+\begin{itemize}
+\item the next slides give citations and details
+    \begin{itemize}
+    \item[$\circ$] techniques 1A and 2 are the \alert{Swedish stabilizations}
+    \end{itemize}
+\end{itemize}
+
 \end{frame}
 
 
@@ -1028,23 +1032,24 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \vspace{-10mm}
 
 \begin{itemize}
-\item technique introduced for glaciers in Tominec et al (2026)
+\item introduced for glaciers by Tominec et al (2026)
     \begin{itemize}
     \item[$\circ$] from Burman \& Fern\'andez (2009) and Ern \& Guermond (2013)
     \end{itemize}
+\item notation: $s_k^h$ is FE surface elevation at time $t_k$
 \item add (semi-)implicit and weighted FE \alert{edge stabilization}:
     $$\int_{\Omega^h} \left(\frac{\alert{s_{k+1}^h} - s_k^h}{\Delta t} - \bu|_{s_k^h} \cdot \bn_{s_k^h} - a\right) r^h\,dx + J(\alert{s_{k+1}^h},r^h) = 0 \hspace{15mm}$$
 for all test functions $r^h$, where
     $$J(s,r) = \sum_{e\in E^h} \int_e \tfrac{1}{2} h_e^2 \left|\bu|_{s_k^h}\right| \jump{\grad s} \jump{\grad r}\,dS$$
 
     \begin{itemize}
-    \item[$\circ$] $s_k^h$ is the FE approximation of surface elevation at time $t_k$
-    \item[$\circ$] the system to solve for unknown $\alert{s_{k+1}^h}$ is \alert{linear}
     \item[$\circ$] $E^h$ is the set of interior edges in the triangulation $\Omega^h$
     \item[$\circ$] $\jump{\bv} = \bv_+ \cdot \bn_+ - \bv_- \cdot \bn_-$ is a \alert{vector field jump along an edge}
     \item[$\circ$] $h_e$ is the average of the diameters of the two cells which meet $e$
-    \item[$\circ$] note surface velocity ($\bu|_{s_k^h}$) and slope ($\bn_{s_k^h}$) are evaluated explicitly, at $t_k$
+    \item[$\circ$] surface velocity ($\bu|_{s_k^h}$) and slope ($\bn_{s_k^h}$) are evaluated \alert{explicitly}, at $t_k$
     \end{itemize}
+
+\item we solve a \alert{linear} system for unknown $\alert{s_{k+1}^h}$
 \end{itemize}
 
 \vspace{-80mm}
@@ -1083,13 +1088,10 @@ for all test functions $r^h$, where
 
 \begin{itemize}
 \item our application adds an advancing glacier margin, which is not considered in the stability proof from Tominec et al (2026)
-\item edge stabilization technique 1A applies split and semi-implicitly, with \alert{velocity evaluated explicitly}
-    \begin{itemize}
-    \item[$\circ$] thus margin advance is limited to one base-mesh element per time step
-    \end{itemize}
+\item because edge stabilization technique 1A applies split and semi-implicitly, with \alert{velocity evaluated explicitly}, margin advance is limited to one base-mesh element per time step
 
 \medskip
-\item the time step $\Delta t$ is therefore limited by a CFL criterion:
+\item time step $\Delta t$ therefore limited by CFL criterion:
     $$\alert{\Delta t = C_{\text{CFL}} \min \frac{h}{\big|\bu\big|}}$$
 
     \begin{itemize}
@@ -1131,11 +1133,10 @@ surface elevation $s_k$
     \begin{itemize}
     \item[$\circ$] Reynold's transport theorem motivates this (symmetrized) extrapolation
     \item[$\circ$] \dots which puts time step $\Delta t$ and SMB $a$ inside the Stokes solve!
-    \item[$\circ$] Tominec et al (2026) \alert{prove} that the $L^2$ norm of the evolving surface is controlled; it can't blow up
     \end{itemize}
 \end{itemize}
 
-\vspace{-80mm}
+\vspace{-70mm}
 
 \hfill \includegraphics[width=0.07\textwidth]{figs/people/alofgren.jpg}
 
@@ -1166,10 +1167,11 @@ surface elevation $s_k$
 \begin{itemize}
 \item \emph{purpose:} exhibit \alert{numerical stability} and \alert{exact mass conservation} for an evolving surface between lubricated walls
     \begin{itemize}
-    \item[$\circ$] the geometry considered by L\"ofgren et al (2022), Tominec et al (2026)
+    \item[$\circ$] geometry considered by L\"ofgren et al (2022) and Tominec et al (2026)
+    \item[$\circ$] Tominec et al (2026) \alert{prove} that the $L^2$ norm of the evolving surface is controlled; it can't blow up
     \end{itemize}
 \item \emph{source files:} \texttt{geometry.py}, \texttt{halfar.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
-\item \emph{generated file:} \texttt{dome.pvd}
+\item \emph{generated files:} \texttt{dome.pvd}, \texttt{movie.pvd}
 \end{itemize}
 
 \bigskip
@@ -1292,12 +1294,12 @@ solver from PETSc (B 2021b)
 
 
 \begin{frame}[fragile]
-\frametitle{\texttt{stage4/} continued \qquad a dome flowing outward}
+\frametitle{\texttt{stage4/} continued \qquad a dome expanding outward}
 
 \begin{itemize}
 \item \emph{purpose:} moving-margin free surface, exhibiting numerical stability
 \item \emph{source files:} \texttt{geometry.py}, \texttt{halfar.py}, \texttt{solve.py} \hfill \alert{$\gets$ inspect these}
-\item \emph{generated file:} \texttt{movie.pvd}
+\item \emph{generated files:} \texttt{dome.pvd}, \texttt{movie.pvd}
 \end{itemize}
 
 \medskip
