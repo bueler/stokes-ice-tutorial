@@ -89,8 +89,8 @@
 \newcommand{\sdoi}[1]{\,{\tiny \href{https://doi.org/#1}{doi:#1}}}
 \newcommand{\surl}[2]{\,{\tiny \href{#1}{#2}}}
 
-\newcommand{\detailgo}[1]{\smallskip \hspace{-4mm} \hyperlink{#1}{\beamergotobutton{detail}} \,}
-\newcommand{\detailreturn}[1]{\hfill \hyperlink{#1}{\beamerreturnbutton{return to main}}}
+\newcommand{\detailgo}[1]{\smallskip \hspace{-4mm} \hyperlink{#1}{\beamergotobutton{details}} \,}
+\newcommand{\detailreturn}[1]{\hfill \hyperlink{#1}{\beamerreturnbutton{return}}}
 
 
 \title{Stokes glacier models with Firedrake}
@@ -297,7 +297,7 @@ abstract:  The power-law Stokes equations describe the flow of ice in glaciers a
     \begin{itemize}
     \item[$\circ$] this tutorial \alert{suppresses the details} of FE
     \item[$\circ$] try e.g.~Elman, Sylvester \& Wathen (2014) for FE self-study
-    \item[] \detailgo{finiteelements} one slide at end summarizes the FE idea
+    \item[] \detailgo{finiteelements} one-slide summary of the FE idea at the end
     \end{itemize}
 
 \medskip
@@ -418,7 +418,7 @@ v, q = TestFunctions(Z)
   \end{frame}
 }
 
-\section{\texttt{stage1/} \qquad first demo: linear Stokes}
+\section{\texorpdfstring{\texttt{stage1/} \qquad}{stage1/ }first demo: linear Stokes}
 
 
 \begin{frame}{the linear Stokes equations}
@@ -536,7 +536,7 @@ $ paraview trap.pvd         # view the solution
 \end{frame}
 
 
-\section{\texttt{stage2/} \qquad power-law Stokes for glacier ice}
+\section{\texorpdfstring{\texttt{stage2/} \qquad}{stage2/ }power-law Stokes for glacier ice}
 
 \begin{frame}{Newton's method}
 
@@ -611,7 +611,7 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \end{frame}
 
 
-\section{\texttt{stage3/} \qquad more power: extruded meshes and 3D glaciers}
+\section{\texorpdfstring{\texttt{stage3/} \qquad}{stage3/ }more power: extruded meshes and 3D glaciers}
 
 \begin{frame}[fragile]
 \frametitle{a more practical and powerful glacier solver}
@@ -958,7 +958,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \end{frame}
 
 
-\section{\texttt{stage4/} \qquad moving-margin dome solutions}
+\section{\texorpdfstring{\texttt{stage4/} \qquad}{stage4/ }moving-margin dome solutions}
 
 \begin{frame}{evolving extruded meshes}
 
@@ -1583,6 +1583,7 @@ Halfar & 28.993 & 689.829
 
 
 \appendix  % things after this not numbered
+\setbeamertemplate{page number in head/foot}{extra:~\insertframenumber{} / \inserttotalframenumber}
 
 \begin{frame}[label=regularized]
 \frametitle{avoiding unbounded viscosity values}
@@ -1615,48 +1616,44 @@ Halfar & 28.993 & 689.829
 
 
 \begin{frame}[label=finiteelements]
-\frametitle{one slide about the finite element (FE) method}
+\frametitle{how the finite element (FE) method works \quad {\small \emph{(in just one slide!)}}}
 
+\begin{columns}
+\begin{column}{0.7\textwidth}
 \begin{itemize}
-\item FIXME
+\setlength{\itemsep}{2mm}
+\item example PDE problem: \,$-\grad^2 u = f$, \, $u=0$ on $\partial\Omega$
+\item weak form: \, $\int_\Omega \grad u \cdot \grad v = \int_\Omega f\, v$ \, for all $v$
+\item build \alert{hat functions} $\psi_j$ on a mesh $\mathcal{T}_h$ \qquad $\rightarrow$
+\item \alert{test} functions are hats: $v=\psi_i$
+\end{itemize}
+\end{column}
+\begin{column}{0.27\textwidth}
+\vspace{5mm}
+
+\input{figs/trihat.tex}
+\end{column}
+\end{columns}
+
+\medskip
+\begin{itemize}
+\setlength{\itemsep}{2mm}
+\item approximate solution also a sum of hats (\alert{trial} function): $u_h = \sum_j u_j \psi_j$
+\item system \alert{assembly}: element-by-element, compute and sum integrals to build a matrix $A$ and vector $\mathbf{b}$
+    $$A_{ij} = \sum_{T\in \mathcal{T}_h} \int_T \grad\psi_j \cdot \grad\psi_i, \qquad b_i = \sum_{T\in \mathcal{T}_h} \int_T f\,\psi_i$$
+
+    \begin{itemize}
+    \item[$\circ$] hat functions are local \,$\implies$\, few elements in a sum \, $\implies$ \, $A$ is sparse
+    \end{itemize}
+\item \alert{solve} for nodal value $u_j$: \, $A\mathbf{u} = \mathbf{b}$
+    \begin{itemize}
+    \item[$\circ$] use e.g.~Gaussian elimination, and Newton if system is nonlinear
+    \end{itemize}
+
+\item Stokes is similar, but see Elman et al (2014) or B~(2021b) for details
 \end{itemize}
 
 \detailreturn{mainfe}
-\end{frame}
-
-
-\begin{frame}[label=mantle]
-\frametitle{connection: Swedish stabilizations and mantle flow}
-
-\begin{itemize}
-\item FIXME
-\end{itemize}
-
-\detailreturn{newtech}
-\end{frame}
-
-
-\begin{frame}[label=dgonepressure,fragile]
-\frametitle{pressure elements with interior degrees of freedom}
-
-\begin{itemize}
-\item we do \alert{not} want to pinch $p$ to be zero anywhere in the closest-to-margin elements containing ice
-    \begin{itemize}
-    \item[$\circ$] doing so causes an unintended Dirichlet condition on the pressure
-    \end{itemize}
-\item therefore prefer pressure elements with interior degrees of freedom:
-
-\medskip
-\begin{Verbatim}[fontsize=\small,xleftmargin=0mm]
-W = FunctionSpace(mesh, "DQ", 1, variant="spectral")  # best
-W = FunctionSpace(mesh, "DG", 0)  # adequate
-\end{Verbatim}
-
-\medskip
-\item for such elements the moving-margin mass conservation error (later slides) is provably one-sided
-\end{itemize}
-
-\detailreturn{techthreeb}
 \end{frame}
 
 
@@ -1698,6 +1695,41 @@ W = FunctionSpace(mesh, "DG", 0)  # adequate
 
 \bigskip
 \detailreturn{stageone}
+\end{frame}
+
+
+\begin{frame}[label=mantle]
+\frametitle{connection: Swedish stabilizations and mantle flow}
+
+\begin{itemize}
+\item FIXME
+\end{itemize}
+
+\detailreturn{newtech}
+\end{frame}
+
+
+\begin{frame}[label=dgonepressure,fragile]
+\frametitle{pressure elements with interior degrees of freedom}
+
+\begin{itemize}
+\item we do \alert{not} want to pinch $p$ to be zero anywhere in the closest-to-margin elements containing ice
+    \begin{itemize}
+    \item[$\circ$] doing so causes an unintended Dirichlet condition on the pressure
+    \end{itemize}
+\item therefore prefer pressure elements with interior degrees of freedom:
+
+\medskip
+\begin{Verbatim}[fontsize=\small,xleftmargin=0mm]
+W = FunctionSpace(mesh, "DQ", 1, variant="spectral")  # best
+W = FunctionSpace(mesh, "DG", 0)  # adequate
+\end{Verbatim}
+
+\medskip
+\item for such elements the moving-margin mass conservation error (later slides) is provably one-sided
+\end{itemize}
+
+\detailreturn{techthreeb}
 \end{frame}
 
 \end{document}
