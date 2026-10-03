@@ -1701,10 +1701,38 @@ Halfar & 28.993 & 689.829
 
 
 \begin{frame}[label=mantle]
-\frametitle{connection: Swedish stabilizations and mantle flow}
+\frametitle{connection: stabilization in free-surface mantle flow}
 
+\begin{columns}
+\begin{column}{0.6\textwidth}
 \begin{itemize}
-\item FIXME
+\item load-stabilization ``technique 2'' builds on the \alert{free surface stabilization approach} (FSSA) from Kaus et al (2010)
+    \begin{itemize}
+    \item[$\circ$] viscous free-surface geodynamics
+    \end{itemize}
+
+\medskip
+\item FSSA adds extrapolated ``boundary traction'' term to Stokes stress balance: \strut
+{\footnotesize
+$$\qquad \int_V (\sigma_{ij} w_{i,j} - \rho g_i w_i) - \int_\Gamma w_i (t_i \alert{+t_i^g}) = 0$$
+
+where $\alert{t_i^g = \Delta t\,\rho \nu_n g_i w_i}$
+}
+\item longer time steps by reducing sloshing  \, $\rightarrow$
+\end{itemize}
+\end{column}
+\begin{column}{0.4\textwidth}
+\includegraphics[width=1.05\textwidth]{figs/kausfigone.png}
+
+\bigskip
+\hfill \includegraphics[width=0.75\textwidth]{figs/kausfigtwo.png}
+\end{column}
+\end{columns}
+
+\bigskip
+\begin{itemize}
+\item technique 2 is essentially FSSA $+$ symmetrization (Tominec et al 2026)
+\item role for glaciers: essentially the same, but \emph{without} (major) density contrasts and \emph{with} a lateral free boundary
 \end{itemize}
 
 \detailreturn{newtech}
