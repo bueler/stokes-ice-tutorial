@@ -2,18 +2,13 @@
 
 ## purpose
 
-Provide an easy-to-modify and well-documented finite element solver for glacier modeling, for planar and 3D glacier geometries, without shallowness assumptions in the equations.  This is a _tutorial_, not a _library_, but it can be used as a starting point for other projects.
+Provide an easy-to-modify, well-understood, and well-documented finite element solver for glacier modeling, for planar and 3D glacier geometries, without shallowness assumptions in the equations.
+
+This is a _tutorial_, not a _library_, but it can be used as a starting point for other projects.
 
 <p align="center">
 <img src="latex/figs/stage3speed.png" alt="ice speed in a glacier" />
 </p>
-
-## version log
-
-  * **v2.3, v2.2**  Better text and citations.
-  * **v2.1**  Switch pressure elements.
-  * **v2.0**  Well-behaved glacial evolution in `stage4/`.
-  * **v1.0**  The first version of this tutorial was for glacier dynamics only, for fixed geometry.
 
 ## model equations
 
@@ -31,9 +26,9 @@ $$\begin{align*}
 \frac{\partial s}{\partial t} - \mathbf{u}|_s \cdot \mathbf{n}_s &= a \hspace{10mm} \text{\textsf{free-surface kinematics}}
 \end{align*}$$
 
-This repository contains a practical tutorial on solving these coupled [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) numerically, by using the [finite element method](https://en.wikipedia.org/wiki/Finite_element_method).
+This repository contains a _practical_ tutorial on solving these coupled [partial differential equations](https://en.wikipedia.org/wiki/Partial_differential_equation) numerically, by using the [finite element method](https://en.wikipedia.org/wiki/Finite_element_method).
 
-The [Python](https://www.python.org/) programs here are relatively-short and only solve idealized problems.  We model 2D and 3D land-based glaciers with moving margins.  The emphasis is on modern and robust solver techniques, but not directly on scalable solvers.
+The [Python](https://www.python.org/) programs here are relatively-short and only solve idealized problems, but small modification to sources and data will make them real glacier models.  We model 2D and 3D land-based glaciers with moving margins.  The emphasis is on modern and robust solver techniques, but not directly on scalable solvers.
 
 The codes are documented by [`slides.pdf`](slides.pdf).
 
@@ -64,12 +59,20 @@ All stages can be run in parallel.
 ### known limitations
 
   * We do not use any observational data from, and thus we do not actually model, any real glaciers.
-  * We do not model sliding, nor floating ice.
+  * We do not model sliding or floating ice.
   * The stages all currently use direct solvers, which limits scalability, especially in 3D.
-  * The time-stepping in `stage4/`, though apparently very well-behaved under the applied stabilization and adaptive techniques, remains mostly-explicit and CFL-limited.
+  * The time-stepping in `stage4/`, though apparently very well-behaved under the applied stabilization and adaptive techniques, remains CFL-limited.
   * In the moving-margin cases for `stage4/`, there is a mass-conservation error committed at the free boundary.
   * In `stage3/` and `stage4/`, reading a `.msh` for the base mesh is easy but it requires code modifications.
   * In `stage4/`, adding surface mass balance data, or a lapse-rate model, is easy but it requires code modifications.
+
+## version log
+
+  * **v2.4**  Return links to extra slides, better content/text.
+  * **v2.2|3**  Better text/citations.
+  * **v2.1**  Switch pressure elements.
+  * **v2.0**  Well-behaved glacial evolution in `stage4/` using Stockholm stabilizations.
+  * **v1.0**  The first version of this tutorial was for glacier dynamics only, for fixed geometry.
 
 ### other solvers based on Firedrake
 
