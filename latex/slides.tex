@@ -101,7 +101,7 @@
 
 \institute[UAF]{University of Alaska Fairbanks}
 
-\date[version 2.4]{version 2.4 (October 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
+\date[version 2.5]{version 2.5 (November 2026)  \\ \phantom{foo} \\ \phantom{foo} \\
 \href{https://github.com/bueler/stokes-ice-tutorial}{\texttt{github.com/bueler/stokes-ice-tutorial}} }
 
 \begin{comment}
@@ -611,7 +611,7 @@ $$F(\bu,p;\bv,q) = \int_{\Lambda} 2\, \alert{\nu_\eps(|D\bu|)\, D\bu}\,:\,D\bv -
 \end{frame}
 
 
-\section{\texorpdfstring{\texttt{stage3/} \qquad}{stage3/ }practical power: extruded meshes and 3D glaciers}
+\section{\texorpdfstring{\texttt{stage3/} \qquad}{stage3/ }practicalites: extruded meshes and 3D glaciers}
 
 \begin{frame}[fragile]
 \frametitle{a practical glacier solver}
@@ -687,7 +687,7 @@ $ paraview dome.pvd
 \frametitle{evidence of convergence}
 
 \begin{itemize}
-\item in this stage we are setting resolution at runtime, for example:
+\item we are now setting resolution at runtime, for example:
 \begin{Verbatim}
 $ python3 solve.py -b0 0 -mx 400 -mz 4 -refine 2
 \end{Verbatim}
@@ -720,7 +720,7 @@ $800\times 128$&   $25  \times 8$   &        1759 &     3190
 
     \begin{itemize}
     \item[$\circ$] velocities are apparently converging
-    \item[$\circ$] (we do not know the exact solution, and this is not verification)
+    \item[$\circ$] but we do not know the exact solution, so this is not verification
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -800,13 +800,13 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
     \item[$\circ$] direct solvers experience \emph{fill-in}, especially in 3D (B.~2021b)
     \end{itemize}
 
-\bigskip
-\item<2> for higher resolution we need a \alert{scalable solver}
+\pause
+\item for higher resolution we need a \alert{scalable solver}
     \begin{itemize}
     \item[$\circ$] built by composition of features: matrix-free, Schur-complement preconditioning, multigrid on the $\bu$-$\bu$ block
     \item[$\circ$] for example see Isaac, Stadler, \& Ghattas (2015)
-    \item[$\circ$] addressing surface-Stokes scalability properly is a different talk (B.~2023)
     \end{itemize}
+\item scalable solutions of the \alert{surface-Stokes} problem is even more challenging (B.~2023)
 \end{itemize}
 \end{frame}
 
@@ -817,7 +817,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \frametitle{don't glaciers actually change with the climate?}
 
 \begin{itemize}
-\item we do not yet have an evolving glacier model
+\item we do not \alert{yet} have an evolving glacier model
     \begin{itemize}
     \item[$\circ$] time derivatives have not even appeared!
     \item[$\circ$] the climate (surface mass balance) has not appeared as an input
@@ -828,7 +828,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \item<2>[A.] via \alert{free-surface equation}, a kinematical and conservation statement:
 \begin{equation}
-\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s = a \tag{$\ast$}
+\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s = a
 \end{equation}
 
     \begin{itemize}
@@ -839,7 +839,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \smallskip
     \item[$\circ$] $a(t,x,y)$ is the \alert{surface mass balance}, the source term
 \smallskip
-    \item[$\circ$] ($\ast$) holds on $(0,T) \times \Omega$, where $\Omega \subset \RR^d\strut$ is a fixed map-plane region
+    %\item[$\circ$] ($\ast$) holds on $(0,T) \times \Omega$, where $\Omega \subset \RR^d\strut$ is a fixed map-plane region
 \smallskip
     \item[] \detailgo{svsH} we can also use ice thickness $H=s-b$ here, but $s$ has advantages
     \end{itemize}
@@ -853,9 +853,9 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \vspace{-2mm}
 
 \begin{align*}
-\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation}} \\
-- \Div \left(2 \nu_\eps\, D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance}} \strut \\
-\Div \bu &= 0 &&\text{\emph{incompressibility}} \phantom{\int}
+\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s &= a &&\text{\emph{free-surface equation} on } \Omega \\
+- \Div \left(2 \nu_\eps\, D\bu\right) + \nabla p &= \rho \bg &&\text{\emph{stress balance} on } \Lambda(t) \strut \\
+\Div \bu &= 0 &&\text{\emph{incompressibility} on } \Lambda(t)
 \end{align*}
 \end{block}
 
@@ -864,12 +864,16 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{itemize}
 \item 3 solution variables: $s$, $\bu$, $p$
 
-\medskip
+\bigskip
 \item 2 coupling directions:
 \end{itemize}
 \begin{enumerate}
-\item[I.] the free-surface equation \alert{has $\bu|_s$ as a coefficient}
-\item[II.] \alert{$s(t,x,y)$ determines the domain $\Lambda(t)$} on which the Stokes sub-problem is solved, at each $t$
+\item[I.] the free-surface equation
+
+\alert{has $\bu|_s$ as a coefficient}
+
+\smallskip
+\item[II.] at each $t$, \alert{$s(t,x,y)$ determines the domain $\Lambda(t)$} on which the Stokes sub-problem is solved
 \end{enumerate}
 \end{column}
 \begin{column}{0.5\textwidth}
@@ -882,9 +886,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{frame}{weak form of coupled system of equations}
 
 \begin{itemize}
-\item we get the weak form of the coupled system in the usual way
-
-\item multiply by test functions and integrate:
+\item weak form of the coupled system:
 {\small
 \begin{align*}
 \int_\Omega \left(\frac{\partial s}{\partial t} - \bu|_s \cdot \bn_s - a\right)\, r\,dx &=0  &&\forall r \\
@@ -897,7 +899,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{columns}
 \begin{column}{0.55\textwidth}
 \begin{itemize}
-\item high-level choices for system:
+\item high-level choices needed:
     \begin{enumerate}
     \item[1.] spaces and elements for $s,\bu,p$?
     \item[2.] time-stepping: explicit or implicit?
@@ -908,7 +910,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 \begin{column}{0.45\textwidth}
 \phantom{foo}
 
-%\vspace{2mm}
+\vspace{2mm}
 \hfill \includegraphics[width=\textwidth]{figs/domain.png}
 \end{column}
 \end{columns}
@@ -919,7 +921,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \begin{itemize}
 \item early/naive approaches to solving this coupled problem have been fragile
-\item the method everyone tries first is to solve power-law Stokes for the current geometry, then advance the surface, and repeat
+\item the method everyone tries first is to: solve Stokes for the current geometry, then advance the surface, and repeat
     \begin{itemize}
     \item[$\circ$] this is an \emph{explicit} approach, which \emph{splits} the coupling
     \item[$\circ$] resulting performance is \alert{stability-limited}, in a confusing manner
@@ -934,17 +936,17 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
     \begin{itemize}
     \item[$\circ$] makes monolithic and/or implicit implementations difficult
     \end{itemize}
-\item<2> coupled problem mixes advective and diffusive aspects
+\item<2> the coupled problem \alert{has a mix of advective and diffusive aspects}
     \begin{itemize}
     \item[$\circ$] proportions depend on stress boundary conditions
-    \item[$\circ$] time-step restrictions and performance scaling remain unclear (B 2023)
+    \item[$\circ$] time-step restrictions and performance scaling unclear? (B 2023)
     \item[$\circ$] but \texttt{stage4/} applies recent theoretical progress!
     \end{itemize}
 \end{enumerate}
 \end{frame}
 
 
-\begin{frame}{also, glaciers have moving margins!}
+\begin{frame}{but there is more: glaciers have moving margins}
 
 \begin{itemize}
 \item the \alert{surface elevation must be above the bed}
@@ -953,7 +955,7 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
     \item[$\circ$] the weak form is a \alert{variational inequality} (B.~2021a, 2021b)
     \item[$\circ$] the thickness and horizontal flux are both zero at the free boundary
     \end{itemize}
-\item solving the coupled problem subject to this condition determines the location of the moving glacier margin (free boundary)
+\item solving the coupled problem subject to this condition determines the location of the moving glacier margin (\alert{red} $=$ free boundary)
 
 \medskip
 \begin{center}
@@ -999,22 +1001,22 @@ $ mpiexec -n 12 python3 solve.py -dim 3 -baserefine 4 \
 
 \begin{block}{3 techniques}
 \begin{enumerate}
-\item[1.] first-order, and mostly explicit, time-stepping
+\item[1.] first-order, and mostly explicit, time-stepping, plus
         \begin{itemize}
-        \item[A.] with an implicit \alert{edge stabilization} in the free-surface equation
-        \item[B.] and a CFL condition when margins are moving
+        \item[A.] an implicit \alert{edge stabilization} in the free-surface equation
+        \item[B.] a CFL condition when margins are moving
         \end{itemize}
 
-\item[2.] split, with alternating free-surface and Stokes solves
+\item[2.] split, with alternating free-surface and Stokes solves, plus
         \begin{itemize}
-        \item[A.] with a \alert{load stabilization} coupling to the Stokes solver
+        \item[A.] a \alert{load stabilization} coupling to the Stokes solver
         \item[] \detailgo{mantle} connection to free-surface mantle flow
         \end{itemize}
 
-\item[3.] the coupled free-surface problem is solved as a \alert{variational inequality} which determines the glacier extent and margin
+\item[3.] the coupled free-surface problem is solved as a \alert{variational inequality} which determines the glacier extent and margin, using
         \begin{itemize}
-        \item[A.] with a bounds-respecting Newton method
-        \item[B.] and ``pinching'' for variable ice extent on the extruded mesh
+        \item[A.] a bounds-respecting (VI-based) Newton method
+        \item[B.] a ``pinching'' scheme for variable ice extent on the extruded mesh
         \end{itemize}
 \end{enumerate}
 \end{block}
@@ -1054,7 +1056,7 @@ for all test functions $r^h$, where
     \item[$\circ$] surface velocity ($\bu|_{s_k^h}$) and slope ($\bn_{s_k^h}$) are evaluated \alert{explicitly}, at $t_k$
     \end{itemize}
 
-\item we solve a \alert{linear} system for unknown $\alert{s_{k+1}^h}$
+\item only requires solving a \alert{linear} system for unknown $\alert{s_{k+1}^h}$
 \end{itemize}
 
 \vspace{-80mm}
@@ -1092,17 +1094,18 @@ for all test functions $r^h$, where
 \begin{frame}{technique 1B: CFL determination of time step}
 
 \begin{itemize}
-\item our application adds an advancing glacier margin, which is not considered in the stability proof from Tominec et al (2026)
-\item because edge stabilization technique 1A is a splitting, with \alert{velocity evaluated explicitly}, margin advance is limited to one base-mesh element per time step
+\item our application \alert{adds an advancing glacier margin}
+    \begin{itemize}
+    \item[$\circ$] not considered in the stability proof from Tominec et al (2026)
+    \item[$\circ$] because technique 1A is a splitting, with \alert{velocity evaluated explicitly}, margin advance is limited to one (base-mesh) element per time step
+    \end{itemize}
 
 \medskip
-\item time step $\Delta t$ therefore limited by CFL criterion:
+\item time step $\Delta t$ limited by CFL criterion:
     $$\alert{\Delta t = C_{\text{CFL}} \min \frac{h}{\big|\bu\big|}}$$
 
     \begin{itemize}
-    \item[$\circ$] we get reasonable results with $C_{\text{CFL}}=0.25$, like Ern \& Guermond (2013)
-        % E&G use $C_{\text{CFL}}=0.2$ or $0.25$ on linear advections with weighted edge stabilization and SSP3, RK4 schemes
-        % contrast the steady-state analysis in Burman \& Hansbro (2004)
+    \item[$\circ$] we get reasonable results with $C_{\text{CFL}}=0.25$ (Ern \& Guermond, 2013)
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -1388,8 +1391,6 @@ $ python3 solve.py -mx 100 -nocfl -maxdt 1.0
 
 \begin{frame}{assessing correctness}
 
-\vspace{-10mm}
-
 \begin{itemize}
 \item[Q.] is our time-dependent solver correct?
 
@@ -1413,14 +1414,6 @@ $ python3 solve.py -mx 100 -nocfl -maxdt 1.0
 \begin{center}
 \includegraphics[width=0.8\textwidth]{figs/halfarinitial.png}
 \end{center}
-
-\vspace{-20mm}
-
-\hfill \includegraphics[width=0.07\textwidth]{figs/people/generic.png}
-
-\vspace{-2mm}
-
-\hfill {\tiny Peter Halfar}
 \end{frame}
 
 
@@ -1526,7 +1519,7 @@ Halfar & 28.993 & 689.829
     \end{itemize}
 
 \medskip
-\item<2> remaining improvements and challenges:
+\item remaining improvements and challenges:
     \begin{enumerate}
     \item make Stokes solver faster by replacing direct linear algebra with a \alert{scalable solver} (matrix-free multigrid)
     \item make coupled free-surface-and-Stokes solver via a scalable \alert{monolithic implicit step} (FASCD multigrid)
