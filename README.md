@@ -4,7 +4,7 @@
 
 Provide an easy-to-modify, well-understood, and well-documented finite element solver for glacier modeling, for planar and 3D glacier geometries, without shallowness assumptions in the equations.
 
-This is a _tutorial_, not a _library_, but it can be used as a starting point for other projects.
+This is a _tutorial_, not a _library_, but it can be used as a starting point for other projects.  The slides and demonstration codes are all open source, and the repository has a generous MIT license.  Please re-use as much as you wish, but please give me credit as you go.
 
 <p align="center">
 <img src="latex/figs/stage3speed.png" alt="ice speed in a glacier" />
