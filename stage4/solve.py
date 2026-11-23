@@ -309,11 +309,22 @@ def form_ske():
 def stresses(mesh, u):
     """Generate tensor-valued deviatoric stress tau, and scalar effective viscosity nu, from the velocity solution.  Used for output diagnostics."""
     Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
-    Q1 = FunctionSpace(mesh, "Q", 1)
-    TQ1 = TensorFunctionSpace(mesh, "Q", 1)
-    nu = Function(Q1).interpolate(0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0))
+    nuexpr = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
+    if args.hdiv:
+        # with H(div) u, evaluating at vertices of a cell with a zero-thickness
+        #   corner gives NaN (Piola map divides by det J = 0); DG0 evaluates
+        #   at cell midpoints, and the pointwise guard skips zero-height cells
+        S = FunctionSpace(mesh, "DG", 0)
+        TS = TensorFunctionSpace(mesh, "DG", 0)
+        ok = gt(abs(JacobianDeterminant(mesh)), 0.0)
+        nu = Function(S).interpolate(conditional(ok, nuexpr, 0.0))
+        tau = Function(TS).interpolate(conditional(ok, 2.0 * nu * D(u), zero((2, 2))))
+    else:
+        S = FunctionSpace(mesh, "Q", 1)
+        TS = TensorFunctionSpace(mesh, "Q", 1)
+        nu = Function(S).interpolate(nuexpr)
+        tau = Function(TS).interpolate(2.0 * nu * D(u))
     nu.rename("effective viscosity (Pa s)")
-    tau = Function(TQ1).interpolate(2.0 * nu * D(u))
     tau /= 1.0e5
     tau.rename("tau (bar)")
     return tau, nu
