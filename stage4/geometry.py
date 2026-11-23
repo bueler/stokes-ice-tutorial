@@ -6,7 +6,8 @@
 #   * PinchColumnPressure is a class for Dirichlet-type conditions for
 #     trivializing the pressure in zero-height columns
 #   * PinchColumnVelocity is the same, but for velocity
-#   * PinchColumnHdiv is the same, but for H(div) velocity
+#   * PinchColumnVelocityHdiv is the same, but for H(div) velocity
+#   * PinchColumnPressureHdiv is the same, but for pressure with H(div) velocity
 #   * set_mesh_geometry() sets the extruded mesh geometry from a
 #     surface elevation on the base mesh
 #   * extend_from_p1base() extends a scalar P1 function on the base mesh
@@ -69,8 +70,8 @@ class PinchColumnVelocity(fd.DirichletBC):
         return np.where(ss.dat.data_ro_with_halos < self.htol)[0]
 
 
-class PinchColumnHdiv(fd.DirichletBC):
-    """For H(div) velocity on an extruded mesh over an interval base mesh.  Compare PinchColumnVelocity.  H(div) dofs are not point values, so the criterion is applied by mesh entity:  dofs on vertical facets (normal flux of u_x) are pinned if s<htol at that base mesh vertex, and dofs interior to a column (horizontal facets and cell interiors) are pinned if s<htol at the base mesh cell midpoint."""
+class PinchColumnVelocityHdiv(fd.DirichletBC):
+    """For H(div) velocity on an extruded mesh over an interval base mesh.  Compare PinchColumnVelocity.  H(div) dofs are not point values, so the criterion is applied by mesh entity.  A column is a margin column if s<htol at either of its base mesh vertices, and otherwise a thick column (compare set_thick_columns()); this excludes degenerate cells with a zero-thickness corner from thick columns.  Dofs interior to a margin column (horizontal facets and cell interiors) are pinned.  Dofs on a vertical facet (normal flux of u_x) are pinned if s<htol at that base mesh vertex, or if both adjacent columns are margin columns.  Thus a facet between a thick and a margin column keeps its dofs, and is a stress-free boundary for the thick column (see form_stokes() in solve.py)."""
 
     def __init__(self, V, g, sub_domain, htol=0.01):
         self.htol = htol
@@ -90,6 +91,8 @@ class PinchColumnHdiv(fd.DirichletBC):
         edofs = V.finat_element.entity_dofs()
         ncelllayers = V.mesh().layers - 1
         pinned = set()
+        facetcand, facetkeep = set(), set()  # facet dofs of margin/thick columns
+        colpin = svert.min(axis=1) < self.htol
         for c, cnodes in enumerate(V.cell_node_list):
             for (dimh, dimv), ents in edofs.items():
                 for i, ldofs in ents.items():
@@ -102,12 +105,36 @@ class PinchColumnHdiv(fd.DirichletBC):
                         ib = i if dimv == 1 else i // 2
                         thin = svert[c, ib] < self.htol
                     else:
-                        thin = 0.5 * (svert[c, 0] + svert[c, 1]) < self.htol
-                    if thin:
-                        for ld in ldofs:
-                            for l in range(ncelllayers):
-                                pinned.add(cnodes[ld] + l * V.offset[ld])
+                        thin = colpin[c]
+                    for ld in ldofs:
+                        for l in range(ncelllayers):
+                            node = cnodes[ld] + l * V.offset[ld]
+                            if thin:
+                                pinned.add(node)
+                            elif dimh == 0:
+                                (facetcand if colpin[c] else facetkeep).add(node)
+        pinned |= facetcand - facetkeep
         return np.array(sorted(pinned), dtype=np.int32)
+
+
+class PinchColumnPressureHdiv(fd.DirichletBC):
+    """For discontinuous pressure with H(div) velocity:  pin all pressure dofs in margin columns, i.e. where s<htol at either base mesh vertex.  Compare PinchColumnVelocityHdiv."""
+
+    def __init__(self, W, g, sub_domain, htol=0.01):
+        self.htol = htol
+        super().__init__(W, fd.Constant(0.0), None)
+
+    @cached_property
+    def nodes(self):
+        W = self.function_space()
+        sR = get_appctx(W.mesh().coordinates.function_space().dm)["sR"]
+        svert = sR.dat.data_ro_with_halos[sR.function_space().cell_node_list]
+        colpin = svert.min(axis=1) < self.htol
+        nl = W.mesh().layers - 1
+        pinned = [cn + l * W.offset for c, cn in enumerate(W.cell_node_list) if colpin[c] for l in range(nl)]
+        if len(pinned) == 0:
+            return np.array([], dtype=np.int32)
+        return np.unique(np.concatenate(pinned)).astype(np.int32)
 
 
 def set_mesh_geometry(mesh, s, xzorig=None):
