@@ -81,7 +81,9 @@ from halfar import (
 from geometry import (
     PinchColumnPressure,
     PinchColumnVelocity,
-    PinchColumnHdiv,
+    PinchColumnVelocityHdiv,
+    PinchColumnPressureHdiv,
+    set_thick_columns,
     set_mesh_geometry,
     trace_top_to_basemesh,
     extend_from_p1base,
@@ -142,6 +144,15 @@ Z = V * W
 up = Function(Z)
 v, q = TestFunctions(Z)
 
+# thick-column indicators on base mesh, for -hdiv
+#   Stokes is solved only in thick columns (min vertex thickness
+#   >= htol); the others are margin columns, including degenerate ones with
+#   a zero-thickness corner, and zero-height columns
+if args.hdiv:
+    DG0base = FunctionSpace(basemesh, "DG", 0)
+    chibm = Function(DG0base)  # thick-column indicator on base mesh
+    chiR = Function(FunctionSpace(mesh, "DG", 0, vfamily="R", vdegree=0))  # same
+
 # parameters for Stokes solver
 stokespar = {
     "snes_converged_reason": None,
@@ -187,21 +198,40 @@ def form_stokes(loadstab=False):
     u, p = split(up)
     Du2 = 0.5 * inner(D(u), D(u)) + (args.eps * Dtyp) ** 2.0
     nu = 0.5 * B3 * Du2 ** ((1.0 / n - 1.0) / 2.0)
-    F = (2.0 * nu * inner(D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
+
+    def on(expr):
+        # with -hdiv, integrate only over thick columns; a facet between a thick
+        #   and a margin column then needs its own stress condition, see below
+        return conditional(gt(chiR, 0.5), expr, 0.0) if args.hdiv else expr
+
+    F = on(2.0 * nu * inner(D(u), D(v)) - p * div(v) - q * div(u)) * dx(degree=3)
     # body force source term
-    F -= inner(as_vector([0.0, -rho * g]), v) * dx
+    F -= on(inner(as_vector([0.0, -rho * g]), v)) * dx
     if loadstab:
         # apply load (FSSA-type) coupling stabilization, (4.28) in Tominec et al 2026
         nn = FacetNormal(mesh)
         nsR = as_vector([-sR.dx(0), Constant(1.0)])
-        F += rho * g * dt_loadstab * (0.5 * inner(u, nsR) + aR) * inner(v, nn) * ds_t
+        F += on(rho * g * dt_loadstab * (0.5 * inner(u, nsR) + aR) * inner(v, nn)) * ds_t
     if args.hdiv:
         F += form_hdiv_sip(u, v, nu)
+        F += form_hdiv_margin_stress(v)
     return F
 
 
+def form_hdiv_margin_stress(v):
+    """On a vertical facet between a thick column K and a margin column, apply the hydrostatic normal stress sigma n_K = - p_h n_K, where p_h = rho g (s - z), as a Neumann condition for K:  the weak form gains + int p_h (v . n_K) ds.  The term is evaluated on the thick side, which is not degenerate; because v is in H(div), v . n is single-valued on the facet anyway."""
+    nn = FacetNormal(mesh)
+    _, z = SpatialCoordinate(mesh)
+    sRh = extend_from_p1base(mesh, s)  # current geometry
+    ph = rho * g * (sRh - z)
+    tp, tm = gt(chiR("+"), 0.5), gt(chiR("-"), 0.5)  # thick on + / - side
+    fplus = conditional(And(tp, Not(tm)), ph("+") * dot(v("+"), nn("+")), 0.0)
+    fminus = conditional(And(tm, Not(tp)), ph("-") * dot(v("-"), nn("-")), 0.0)
+    return (fplus + fminus) * dS_v
+
+
 def form_hdiv_sip(u, v, nu):
-    """Symmetric interior penalty (SIP) terms, needed when u,v are in H(div) but not H^1; see (2.11) in Cockburn, Kanschat, Schotzau (2007), but with 2 nu D(u) in place of nu grad(u).  Because normal components are continuous, only tangential jumps are nonzero.  The same terms on ds_b (ice base) weakly impose tangential no-slip (Nitsche); the normal component is strong via DirichletBC.  There are no terms on the walls (1,2) because the tangential stress is zero there.  The penalty is kappa = alpha / h with h = |K|/|F| on a facet F with area |F| and where |K| is the average of neighboring cell volumes.  Conditionals skip zero-height cells and zero-length facets, where the Piola map divides by det J = 0."""
+    """Symmetric interior penalty (SIP) terms, needed when u,v are in H(div) but not H^1; see (2.11) in Cockburn, Kanschat, Schotzau (2007), but with 2 nu D(u) in place of nu grad(u).  Because normal components are continuous, only tangential jumps are nonzero.  The same terms on ds_b (ice base) weakly impose tangential no-slip (Nitsche); the normal component is strong via DirichletBC.  There are no terms on the walls (1,2) because the tangential stress is zero there.  The penalty is kappa = alpha / h with h = |K|/|F| on a facet F with area |F| and where |K| is the average of neighboring cell volumes.  Conditionals restrict all terms to thick columns:  interior-facet terms apply only between two thick columns, so there are no SIP terms on facets between thick and margin columns (see form_hdiv_margin_stress() for those), and bed terms apply only under thick columns."""
     nn = FacetNormal(mesh)
     vol, fa = CellVolume(mesh), FacetArea(mesh)
 
@@ -222,8 +252,8 @@ def form_hdiv_sip(u, v, nu):
         - inner(avg(2.0 * nu * D(v)), jmp(u))
         + kappa * avg(2.0 * nu) * inner(jmp(u), jmp(v))
     )
-    # exclude facets which are singular in SIP integral
-    ok = And(gt(avg(vol), 0.0), gt(fa("+"), 0.0))
+    # only facets between two thick columns (not degenerate)
+    ok = And(gt(chiR("+"), 0.5), gt(chiR("-"), 0.5))
     # integrate horizontal (dS_h) and vertical (dS_v) facet penalties
     F = conditional(ok, sip, 0.0) * (dS_h(degree=degds) + dS_v(degree=degds))
 
@@ -235,7 +265,7 @@ def form_hdiv_sip(u, v, nu):
         - inner(2.0 * nu * D(v), outer(u, nn))
         + kappab * 2.0 * nu * inner(u, v)
     )
-    F += conditional(gt(vol, 0.0), sipb, 0.0) * ds_b(degree=degds)
+    F += conditional(gt(chiR, 0.5), sipb, 0.0) * ds_b(degree=degds)
     return F
 
 
@@ -249,7 +279,10 @@ def bcs_stokes(Z):
       DirichletBCs on Z.sub(0) set only the normal-flux dofs, thus
       u.n=0 on 'bottom' and u.n=u_x=0 on (1,2).  For 'bottom' tangential
       part see Nitsche in form_hdiv_sip().  For walls (1,2),  the
-      tangential part is free, as in the Q2 case."""
+      tangential part is free, as in the Q2 case.  In the free-boundary
+      case, margin columns are pinched, and the vertical facets between
+      thick and margin columns get hydrostatic normal stress; see
+      form_hdiv_margin_stress()."""
     if args.hdiv:
         # g must be a Function in V:  a Constant would be projected onto V
         #   (H(div) has no point interpolation), which fails on zero-height cells
@@ -264,11 +297,16 @@ def bcs_stokes(Z):
             DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
         ]
     if not args.walls:
-        bcs += [PinchColumnPressure(Z.sub(1), None, None)]
         if args.hdiv:
-            bcs += [PinchColumnHdiv(Z.sub(0), None, None)]
+            bcs += [
+                PinchColumnPressureHdiv(Z.sub(1), None, None),
+                PinchColumnVelocityHdiv(Z.sub(0), None, None),
+            ]
         else:
-            bcs += [PinchColumnVelocity(Z.sub(0), None, None)]
+            bcs += [
+                PinchColumnPressure(Z.sub(1), None, None),
+                PinchColumnVelocity(Z.sub(0), None, None),
+            ]
     return bcs
 
 
@@ -395,6 +433,8 @@ for k in range(args.maxN):
 
     # report on current geometry
     printpar(f"t={t / secpera:.3f} a (k={k}):")
+    if args.hdiv:
+        set_thick_columns(s, chibm, chiR)
     iarea = report_shape(s)
     if args.ots is not None:
         tsfile.write(f"{t / secpera:.6f} {iarea / 1.0e6:.6f}\n")
