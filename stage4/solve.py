@@ -62,6 +62,7 @@ petsc4py.init(passthroughoptions)
 import numpy as np
 from firedrake import *
 from firedrake.petsc import PETSc
+from firedrake.exceptions import ConvergenceError
 
 printpar = PETSc.Sys.Print  # print once even in parallel
 
@@ -152,6 +153,8 @@ stokespar = {
     "pc_factor_shift_type": "inblocks",
     "pc_factor_mat_solver_type": "mumps",
 }
+if args.hdiv:  # extra workspace; -hdiv fails w/o (FACTOR_OUTMEMORY)
+    stokespar.update({"mat_mumps_icntl_14": 200})
 
 # parameters for SKE VI solver
 vipar = {
@@ -398,7 +401,14 @@ for k in range(args.maxN):
     dt_loadstab.assign(dt)
     F = form_stokes(loadstab=(not args.noload))
     bcs = bcs_stokes(Z)  # has to be re-set because PinchColumnX uses current s
-    solve(F == 0, up, bcs=bcs, options_prefix="stokes", solver_parameters=stokespar)
+    try:
+        solve(F == 0, up, bcs=bcs, options_prefix="stokes", solver_parameters=stokespar)
+    except ConvergenceError:
+        # previous solution can be a poor initial guess where the margin has
+        #   advanced (seen with -hdiv); retry once from zero
+        printpar("  Stokes solve failed from previous solution; restarting from zero ...")
+        up.assign(0.0)
+        solve(F == 0, up, bcs=bcs, options_prefix="stokes", solver_parameters=stokespar)
     u, p = up.subfunctions
     if args.omovie is not None:
         upera = Function(u.function_space()).interpolate(secpera * u)
