@@ -373,6 +373,9 @@ solverske = NonlinearVariationalSolver(
 if args.omovie is not None:
     printpar(f"opening {args.omovie} for writing u,p at each time step ...")
     movie = VTKFile(args.omovie)
+    # can't interpolate into RTCF2 (no dual basis for the sum of elements),
+    #   so with -hdiv write velocity in vector DQ2
+    Vmovie = VectorFunctionSpace(mesh, "DQ", 2) if args.hdiv else V
 if args.ots is not None:
     printpar(f"opening {args.ots} for writing ice area at each time step ...")
     tsfile = open(args.ots, "w")
@@ -426,7 +429,7 @@ for k in range(args.maxN):
         solve(F == 0, up, bcs=bcs, options_prefix="stokes", solver_parameters=stokespar)
     u, p = up.subfunctions
     if args.omovie is not None:
-        upera = Function(u.function_space()).interpolate(secpera * u)
+        upera = Function(Vmovie).interpolate(secpera * u)
         upera.rename("velocity (m/a)")
         p.rename("pressure (Pa)")
         movie.write(upera, p, time=t)
