@@ -7,6 +7,8 @@ parser = argparse.ArgumentParser(
     description="""stage4/  Solve the coupled free-surface (kinematical) equation and power-law Stokes momentum equations for a 2D ice sheet.  Initial dome shape is from the Halfar solution.  Uses an extruded mesh of quadrilaterals, and defaults to Q2 x DQ1 for (u,p) in the Stokes equations.  Uses first-order, mostly-explicit, adaptive time-stepping based on the Swedish stabilizations (see slides), supplemented by a CFL condition motivated by margin-advance considerations.  The free-surface update is by a variational inequality (free-boundary) method.""",
     add_help=False,
 )
+hs = "-hdiv only: interior penalty constant (default=10)"
+parser.add_argument("-alpha", type=float, metavar="A", default=10.0, help=hs)
 hs = "coefficient to use in CFL scheme for time-stepping (default=0.25)"
 parser.add_argument("-cfl", type=float, metavar="CFL", default=0.25, help=hs)
 hs = "regularization used in viscosity (default=1.0e-4)"
@@ -189,6 +191,47 @@ def form_stokes(loadstab=False):
         nn = FacetNormal(mesh)
         nsR = as_vector([-sR.dx(0), Constant(1.0)])
         F += rho * g * dt_loadstab * (0.5 * inner(u, nsR) + aR) * inner(v, nn) * ds_t
+    if args.hdiv:
+        F += form_hdiv_sip(u, v, nu)
+    return F
+
+
+def form_hdiv_sip(u, v, nu):
+    """Symmetric interior penalty (SIP) terms, needed when u,v are in H(div) but not H^1; see (2.11) in Cockburn, Kanschat, Schotzau (2007), but with 2 nu D(u) in place of nu grad(u).  Because normal components are continuous, only tangential jumps are nonzero.  The same terms on ds_b (ice base) weakly impose tangential no-slip (Nitsche); the normal component is strong via DirichletBC.  There are no terms on the walls (1,2) because the tangential stress is zero there.  The penalty is kappa = alpha / h with h = |K|/|F| on a facet F with area |F| and where |K| is the average of neighboring cell volumes.  Conditionals skip zero-height cells and zero-length facets, where the Piola map divides by det J = 0."""
+    nn = FacetNormal(mesh)
+    vol, fa = CellVolume(mesh), FacetArea(mesh)
+
+    def jmp(w):  # tensor jump [[w (x) n]] = w+ (x) n+ + w- (x) n-
+        return outer(w("+"), nn("+")) + outer(w("-"), nn("-"))
+
+    # degree for facet quadrature
+    #    Because of nu(Du), no fixed-degree choice makes the integrals exact.
+    #    Consistency terms: {D(u)}:[[v]] is roughly linear times quadratic, so
+    #    degree 3 is enough there.  Geometry factors: the cells are mapped
+    #    bilinearly, and the Piola map adds non-polynomial factors.
+    degds = 4
+
+    # interior facets: SIP weak form
+    kappa = args.alpha * fa("+") / avg(vol)  # FIXME find Houston & Suli ref?
+    sip = (
+        -inner(avg(2.0 * nu * D(u)), jmp(v))
+        - inner(avg(2.0 * nu * D(v)), jmp(u))
+        + kappa * avg(2.0 * nu) * inner(jmp(u), jmp(v))
+    )
+    # exclude facets which are singular in SIP integral
+    ok = And(gt(avg(vol), 0.0), gt(fa("+"), 0.0))
+    # integrate horizontal (dS_h) and vertical (dS_v) facet penalties
+    F = conditional(ok, sip, 0.0) * (dS_h(degree=degds) + dS_v(degree=degds))
+
+    # on ice bed: tangential no-slip by Nitsche
+    #   (similar to one-sided version of SIP, but bed *facets* do not degenerate)
+    kappab = args.alpha * fa / vol
+    sipb = (
+        -inner(2.0 * nu * D(u), outer(v, nn))
+        - inner(2.0 * nu * D(v), outer(u, nn))
+        + kappab * 2.0 * nu * inner(u, v)
+    )
+    F += conditional(gt(vol, 0.0), sipb, 0.0) * ds_b(degree=degds)
     return F
 
 
