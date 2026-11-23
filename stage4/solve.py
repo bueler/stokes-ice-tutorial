@@ -82,7 +82,7 @@ from geometry import (
     PinchColumnVelocity,
     PinchColumnHdiv,
     set_mesh_geometry,
-    trace_to_vector_p2base,
+    trace_top_to_basemesh,
     extend_from_p1base,
     evaluate_shape,
 )
@@ -284,14 +284,16 @@ def evaluate_speed(mesh, u):
 
 def form_ske():
     """weak form for surface kinematical equation"""
-    ns = as_vector([-s.dx(0), Constant(1.0)])
-    Fske = ((snew - s) / dt_ske - dot(uwsurf, ns) - a) * omega * dx
+    # qsurf = u.ns is the surface flux, held exactly in DG2 for both Q2 and
+    #   -hdiv; testing with omega=1 gives global mass conservation, except
+    #   where the VI bound s >= 0 is active
+    Fske = ((snew - s) / dt_ske - qsurf - a) * omega * dx
     if not args.noedge:
         # implicit edge stabilization, formula (4.3) in Tominec et al 2026
         hbase = CellDiameter(basemesh)
         h = (hbase("+") + hbase("-")) / 2
         nbase = FacetNormal(basemesh)
-        velmag = sqrt(dot(uwsurf, uwsurf))
+        velmag = avg(speedsurf)  # speedsurf is discontinuous with -hdiv
         gamma = 0.5 * h ** 2 * velmag
         Fske += gamma * jump(grad(snew), nbase) * jump(grad(omega), nbase) * dS
     return Fske
@@ -332,8 +334,13 @@ def report_shape(s):
 # functions for surface kinematical equation
 snew = Function(P1base)
 omega = TestFunction(P1base)
-VP2base = VectorFunctionSpace(basemesh, "CG", 2, dim=2)
-uwsurf = Function(VP2base)
+# surface quantities for SKE, on the base mesh:  qsurf = u.ns is the surface
+#   flux, and speedsurf = |u| is only used in the edge stabilization; DG2 holds
+#   the flux exactly in both cases:  quadratic per base mesh cell for Q2, and
+#   linear but discontinuous at base mesh vertices for RTCF2 (-hdiv)
+DG2base = FunctionSpace(basemesh, "DG", 2)
+qsurf = Function(DG2base)
+speedsurf = Function(DG2base)
 lb = Function(P1base).interpolate(Constant(0.0))
 ub = Function(P1base).interpolate(Constant(PETSc.INFINITY))
 
@@ -407,7 +414,10 @@ for k in range(args.maxN):
     )
 
     # solve SKE for one semi-implicit Euler time-step, a variational inequality
-    trace_to_vector_p2base(basemesh, mesh, u, uwsurf)
+    sRtr = extend_from_p1base(mesh, s)  # s is still the Stokes geometry
+    nsR = as_vector([-sRtr.dx(0), Constant(1.0)])
+    trace_top_to_basemesh(basemesh, mesh, dot(u, nsR), qsurf)
+    trace_top_to_basemesh(basemesh, mesh, sqrt(dot(u, u)), speedsurf)
     snew.interpolate(s)  # initial condition
     dt_ske.assign(dt)
     solverske.solve(bounds=(lb, ub))
