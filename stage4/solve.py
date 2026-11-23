@@ -80,6 +80,7 @@ from halfar import (
 from geometry import (
     PinchColumnPressure,
     PinchColumnVelocity,
+    PinchColumnHdiv,
     set_mesh_geometry,
     trace_to_vector_p2base,
     extend_from_p1base,
@@ -237,19 +238,34 @@ def form_hdiv_sip(u, v, nu):
 
 def bcs_stokes(Z):
     """Boundary conditions in all cases, both -walls and free-boundary:
-      Dirichlet: <u,w>=0 on 'bottom', u=0 on lateral ends (1,2)
+      Dirichlet: u=0 on 'bottom', u_x=0 on lateral ends (1,2)
       Neumann: stress free on 'top', zero tangential stress on (1,2)
-    Added in default free-boundar (VI) case:
-      pinch zero-height columns = trivialize all u,p dofs if s<stol"""
-    bcs = [
-        DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
-        DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
-    ]
-    if not args.walls:
-        bcs += [
-            PinchColumnPressure(Z.sub(1), None, None),
-            PinchColumnVelocity(Z.sub(0), None, None),
+    Added in default free-boundary (VI) case:
+      pinch zero-height columns = trivialize all u,p dofs if s<stol
+    With -hdiv:
+      DirichletBCs on Z.sub(0) set only the normal-flux dofs, thus
+      u.n=0 on 'bottom' and u.n=u_x=0 on (1,2).  For 'bottom' tangential
+      part see Nitsche in form_hdiv_sip().  For walls (1,2),  the
+      tangential part is free, as in the Q2 case."""
+    if args.hdiv:
+        # g must be a Function in V:  a Constant would be projected onto V
+        #   (H(div) has no point interpolation), which fails on zero-height cells
+        zero = Function(Z.sub(0))
+        bcs = [
+            DirichletBC(Z.sub(0), zero, "bottom"),
+            DirichletBC(Z.sub(0), zero, (1, 2)),
         ]
+    else:
+        bcs = [
+            DirichletBC(Z.sub(0), Constant((0.0, 0.0)), "bottom"),
+            DirichletBC(Z.sub(0).sub(0), Constant(0.0), (1, 2)),
+        ]
+    if not args.walls:
+        bcs += [PinchColumnPressure(Z.sub(1), None, None)]
+        if args.hdiv:
+            bcs += [PinchColumnHdiv(Z.sub(0), None, None)]
+        else:
+            bcs += [PinchColumnVelocity(Z.sub(0), None, None)]
     return bcs
 
 
