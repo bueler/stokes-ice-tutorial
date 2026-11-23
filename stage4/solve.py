@@ -15,6 +15,8 @@ hs = "initial ice thickness in center of dome (default=1000 m)"
 parser.add_argument("-H0", type=float, metavar="H0", default=1000.0, help=hs)
 hs = "half-width of computational domain (default=15000 m)"
 parser.add_argument("-L", type=float, metavar="L", default=15000.0, help=hs)
+hs = "use H(div) velocity (RTCF2) and DQ1 pressure, instead of Q2 x (-pressure)"
+parser.add_argument("-hdiv", action="store_true", default=False, help=hs)
 hs = "maximum number of time steps (default=10000)"
 parser.add_argument("-maxN", type=int, metavar="N", default=10000, help=hs)
 hs = "maximum time step in years (set DT > 0 to engage)"
@@ -36,9 +38,8 @@ parser.add_argument("-omovie", metavar="FILE.pvd", default=None, help=hs)
 hs = "output filename for ice area time series; provide name to turn on"
 parser.add_argument("-ots", metavar="FILE.txt", default=None, help=hs)
 hs = "element type to use for pressure: DQ1|DG0|Q1 (default=DQ1)"
-parser.add_argument(
-    "-pressure", metavar="X", choices=["DQ1", "DG0", "Q1"], default="DQ1", help=hs
-)
+pcho = ["DQ1", "DG0", "Q1"]
+parser.add_argument("-pressure", metavar="X", choices=pcho, default="DQ1", help=hs)
 hs = "initial half-width of dome (default=10000 m)"
 parser.add_argument("-R0", type=float, metavar="R0", default=10000.0, help=hs)
 hs = "print help for solve.py options and stop"
@@ -111,8 +112,23 @@ if not args.noload:
 #   note we prefer pressure spaces with interior DOFs to avoid accidental
 #   Dirichlet condition on pressure from PinchColumnPressure; also relates
 #   to element-wise conservation
-V = VectorFunctionSpace(mesh, "CG", 2)
-if args.pressure == "DQ1":
+if args.hdiv:
+    # H(div) velocity as the sum of two tensor-product (base x vertical) pieces:
+    #   x-component in CG2 x DG1:  continuous in x, so normal-continuous across
+    #                              vertical facets, discontinuous in z
+    #   z-component in DG1 x CG2:  continuous in z, so normal-continuous across
+    #                              horizontal facets, discontinuous in x
+    # this is RTCF2 in Firedrake numbering, = RT_1 in Cockburn et al (2007)
+    assert args.pressure == "DQ1", "-hdiv requires -pressure DQ1"
+    hcg = FiniteElement("CG", basemesh.ufl_cell(), 2)
+    hdg = FiniteElement("DG", basemesh.ufl_cell(), 1)
+    vcg = FiniteElement("CG", interval, 2)
+    vdg = FiniteElement("DG", interval, 1)
+    Vel = HDiv(TensorProductElement(hcg, vdg)) + HDiv(TensorProductElement(hdg, vcg))
+    V = FunctionSpace(mesh, Vel)
+else:
+    V = VectorFunctionSpace(mesh, "CG", 2)
+if args.pressure == "DQ1":  # with -hdiv: div V = W exactly
     W = FunctionSpace(mesh, "DQ", 1, variant="spectral")
 elif args.pressure == "DG0":  # not preferred: lower accuracy u,p
     W = FunctionSpace(mesh, "DG", 0)
