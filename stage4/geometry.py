@@ -14,6 +14,7 @@
 #     to a Q1 function in the R space on the extruded mesh
 #   * trace_top_to_basemesh() transfers the top trace of a scalar
 #     expression on the extruded mesh to a DG function on the base mesh
+#   * set_thick_columns() sets an indicator of thick (not margin) columns
 #   * evaluate_shape() computes the left and right margin position,
 #     maximum surface elevation, and area of a planar glacier shape
 #
@@ -71,7 +72,7 @@ class PinchColumnVelocity(fd.DirichletBC):
 
 
 class PinchColumnVelocityHdiv(fd.DirichletBC):
-    """For H(div) velocity on an extruded mesh over an interval base mesh.  Compare PinchColumnVelocity.  H(div) dofs are not point values, so the criterion is applied by mesh entity.  A column is a margin column if s<htol at either of its base mesh vertices, and otherwise a thick column (compare set_thick_columns()); this excludes degenerate cells with a zero-thickness corner from thick columns.  Dofs interior to a margin column (horizontal facets and cell interiors) are pinned.  Dofs on a vertical facet (normal flux of u_x) are pinned if s<htol at that base mesh vertex, or if both adjacent columns are margin columns.  Thus a facet between a thick and a margin column keeps its dofs, and is a stress-free boundary for the thick column (see form_stokes() in solve.py)."""
+    """For H(div) velocity on an extruded mesh over an interval base mesh.  Compare PinchColumnVelocity.  H(div) dofs are not point values, so the criterion is applied by mesh entity.  A column is a margin column if s<htol at either of its base mesh vertices, and otherwise a thick column (compare set_thick_columns()); this excludes degenerate cells with a zero-thickness corner from thick columns.  Dofs interior to a margin column (horizontal facets and cell interiors) are pinned.  Dofs on a vertical facet (normal flux of u_x) are pinned if s<htol at that base mesh vertex, or if both adjacent columns are margin columns.  Thus a facet between a thick and a margin column keeps its dofs; it is a boundary of the thick column, with hydrostatic normal stress (see form_hdiv_margin_stress() in solve.py)."""
 
     def __init__(self, V, g, sub_domain, htol=0.01):
         self.htol = htol
@@ -113,7 +114,7 @@ class PinchColumnVelocityHdiv(fd.DirichletBC):
                                 pinned.add(node)
                             elif dimh == 0:
                                 (facetcand if colpin[c] else facetkeep).add(node)
-        pinned |= facetcand - facetkeep
+        pinned = pinned.union(facetcand - facetkeep)
         return np.array(sorted(pinned), dtype=np.int32)
 
 
@@ -173,6 +174,15 @@ def trace_top_to_basemesh(basemesh, mesh, expr, fbm):
     f = fd.Function(Q).interpolate(fd.conditional(fd.gt(abs(detJ), 0.0), expr, 0.0))
     bc = fd.DirichletBC(Q, 0.0, "top")
     fbm.dat.data_with_halos[:] = f.dat.data_with_halos[bc.nodes]
+    return None
+
+
+def set_thick_columns(s, chibm, chiR, htol=0.01):
+    """Set indicators chi = 1 for thick columns and chi = 0 for margin columns, where a column is a margin column if s<htol at either of its base mesh vertices.  chibm is DG0 on the base mesh and chiR is DG0 x R on the extruded mesh (one dof per column, ordered like DG0 on the base mesh).  s is P1 on the base mesh."""
+    svert = s.dat.data_ro_with_halos[s.function_space().cell_node_list]
+    thick = (svert.min(axis=1) >= htol).astype(float)
+    chibm.dat.data_with_halos[chibm.function_space().cell_node_list[:, 0]] = thick
+    chiR.dat.data_with_halos[chiR.function_space().cell_node_list[:, 0]] = thick
     return None
 
 
