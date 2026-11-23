@@ -10,8 +10,8 @@
 #     surface elevation on the base mesh
 #   * extend_from_p1base() extends a scalar P1 function on the base mesh
 #     to a Q1 function in the R space on the extruded mesh
-#   * trace_to_vector_p2base() transfers the trace of a P2 vector field
-#     on the extruded mesh to a vector field on the base mesh
+#   * trace_top_to_basemesh() transfers the top trace of a scalar
+#     expression on the extruded mesh to a DG function on the base mesh
 #   * evaluate_shape() computes the left and right margin position,
 #     maximum surface elevation, and area of a planar glacier shape
 #
@@ -93,11 +93,17 @@ def extend_from_p1base(mesh, f):
     return fextend
 
 
-def trace_to_vector_p2base(basemesh, mesh, u, ubm):
-    """On an extruded mesh, put the surface trace of a vector-valued function u, which is in P2, into ubm which is a P2 vector-valued function on basemesh."""
-    P2V = fd.VectorFunctionSpace(mesh, "CG", 2)
-    bc = fd.DirichletBC(P2V, 0.0, "top")
-    ubm.dat.data_with_halos[:] = u.dat.data_with_halos[bc.nodes]
+def trace_top_to_basemesh(basemesh, mesh, expr, fbm):
+    """Put the top-surface trace of a scalar UFL expression on the extruded mesh into fbm, a DG function of degree k on basemesh.  The intermediate space Q is DGk horizontally, so each column keeps its own values (no averaging at base mesh vertices), and CG1 vertically, so Q has dofs on the top surface.  Assumes the top dofs of Q are ordered like the dofs of DGk on basemesh."""
+    k = fbm.function_space().ufl_element().degree()
+    Q = fd.FunctionSpace(mesh, "DG", k, vfamily="CG", vdegree=1)
+    # pointwise guard: for H(div) u the Piola map divides by det J, which is
+    #   zero in zero-height columns and at zero-thickness corners of margin
+    #   cells; set the trace to zero there
+    detJ = fd.JacobianDeterminant(mesh)
+    f = fd.Function(Q).interpolate(fd.conditional(fd.gt(abs(detJ), 0.0), expr, 0.0))
+    bc = fd.DirichletBC(Q, 0.0, "top")
+    fbm.dat.data_with_halos[:] = f.dat.data_with_halos[bc.nodes]
     return None
 
 
