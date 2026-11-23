@@ -1,0 +1,57 @@
+\documentclass[10pt]{article}
+\usepackage[margin=0.7in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=1.2em}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\newcommand{\jump}[1]{[\![#1]\!]}
+\newcommand{\avgb}[1]{\{#1\}}
+
+\begin{document}
+\begin{center}
+{\large\bf H(div)--SIP Stokes on extruded ice-sheet meshes:\ where coercivity fails}\\[1pt]
+{\small stage4/ on branch \texttt{margin-column-hdiv}, November 2026}
+\end{center}
+
+\textbf{Setup.} \texttt{solve.py -hdiv} uses RTCF2\,$\times$\,DQ1 (the $\mathrm{RT}_1/\mathbb{Q}_1$ pair of [CKS]), so $\nabla\cdot u_h=0$ exactly, with symmetric interior penalty (SIP) as in [CKS, (2.11)] but with $2\nu D(u)$:
+\[
+\textstyle -\int_{\mathcal{F}} \avgb{2\nu D(u)}:\jump{v\otimes n} - \int_{\mathcal{F}} \avgb{2\nu D(v)}:\jump{u\otimes n} + \int_{\mathcal{F}} \kappa\,\avgb{2\nu}\,\jump{u\otimes n}:\jump{v\otimes n},
+\]
+plus the one-sided (Nitsche) version on the bed. Degenerate columns, where the Piola map is singular, are excluded:\ a column is a \emph{margin column} if $\min s<\max(h_{tol},\theta\max s)$ over its base-mesh vertices ($\theta=0.3$), else a \emph{thick column}. Stokes is posed only on thick columns; margin-column dofs are pinched, and facets between thick and margin columns get hydrostatic normal stress $p_h=\rho g(s-z)$. Mass leaving thick columns enters margin columns through the SKE source (conservative; compare [B21] on why margins limit local conservation anyway).
+
+\textbf{Geometric penalty.} With column taper $\tau=t_{\min}/t_{\text{avg}}$ and shear factor $S=m_z(s_{\max}-s_{\min})/s_{\min}$ (layer slope $\times$ cell width / cell height), a trace-inequality estimate gives
+$\kappa_F=\alpha\,|F|\max_{K=K^\pm}(1+S_K^2)/(|K|\,\tau_K)$.
+At $k=0$ (first time step) on 9 meshes $\times$ $\alpha\in\{3,5,10\}$:\ $\tau$ alone $\to$ 19/27 converge; $\tau$ and $S$ $\to$ 24/27. All failures are at $m_x=50$ with large $m_z$; horizontal refinement is harmless. Q2\,$\times$\,DQ1 converges in 9--15 Newton iterations on the same meshes, so the nonlinear problem itself is not hard.
+
+\textbf{Eigenvalue test.} Freeze $\nu$ at a converged state and compute the smallest $\lambda$ in $A x=\lambda M x$, where $A$ is the SIP velocity operator (pinched dofs removed) and $M$ is the broken $H^1$ norm ($\int D(u){:}D(v)+\sum_F\tfrac{|F|}{|K|}\jump{u}{:}\jump{v}$ + bed term; no $\nu$, no $\alpha$):
+\begin{center}\small
+\begin{tabular}{lccl}
+\toprule
+mesh & $\lambda_{\min}$, $\alpha=10$ & $\lambda_{\min}$, $\alpha=3$ & location of eigenvector \\
+\midrule
+$m_x=50$, $m_z=4$ (solves) & $+9.6\times10^{11}$ & $+9.6\times10^{11}$ & bed, thick column next to margin ($S=1.9$)\\
+$m_x=100$, $m_z=8$ (solves) & $+5.6\times10^{11}$ & $+5.6\times10^{11}$ & bed, thick column next to margin ($S=6.5$)\\
+$m_x=50$, $m_z=24$ (fails) & $\mathbf{-2.9\times10^{13}}$ & $\mathbf{-7.4\times10^{13}}$ & bed, \textbf{under the divide} ($S=0.25$, $\tau=0.99$)\\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Conclusions.} (i) Indefiniteness of the discrete SIP form and solver failure go together (3 meshes). (ii) The geometric $\kappa$ handles sheared margin cells; the remaining indefiniteness is where we were not looking:\ the very stiff ice at the bed under the divide. There $D(u)\to0$, so $\nu$ rises to its regularized ceiling $\tfrac12 B_3(\epsilon D_{\text{typ}})^{-2/3}\approx1.6\times10^{15}$\,Pa\,s ($\epsilon=10^{-4}$), versus $10^{13}$--$10^{14}$ nearby, in flat cells (42\,m\,$\times$\,600\,m at $m_z=24$). Coercivity of SIP requires $\kappa$ to dominate $\nu$-weighted trace terms, so it needs roughly $\kappa\gtrsim C_{tr}\,\nu_{\max}/\nu_{\min}$ near each facet; a fixed $\alpha$ with the arithmetic mean $\avgb{2\nu}$ does not provide this.
+
+\textbf{Next:\ viscosity-weighted averages [ESZ].}
+\begin{itemize}
+\item Consistency terms:\ replace $\avgb{2\nu D(u)}$ by $\omega^+(2\nu D(u))^+ + \omega^-(2\nu D(u))^-$ with $\omega^\pm=\nu^\mp/(\nu^++\nu^-)$ (weight toward the softer side).
+\item Penalty:\ replace $\avgb{2\nu}$ by the harmonic mean $2\nu_h$, $\nu_h=2\nu^+\nu^-/(\nu^++\nu^-)$. This makes coercivity robust to $\nu$ \emph{jumps across} facets.
+\item Contrast \emph{within} a cell (as under the divide) is not covered:\ add a factor $\nu_{\max,K}/\nu_{\min,K}$ to $\kappa$, estimated from quadrature-point values.
+\item Related levers:\ larger $\epsilon$ lowers the viscosity ceiling, hence the contrast (a physical, not numerical, choice). For Newton, the power-law tangent viscosity is $2\nu/n$ in the $D(u)$ direction, so the Jacobian may need about $n$ times more penalty than the frozen-$\nu$ form.
+\end{itemize}
+\textbf{Open.} Source for the $\mathrm{avg}(|K|)$ penalty (suggested by C.\ Cotter, attributed to Houston \& S\"uli; not verified). Repeat the eigenvalue test after each change.
+
+{\small
+[CKS] B.\ Cockburn, G.\ Kanschat, D.\ Sch\"otzau, A note on discontinuous Galerkin divergence-free solutions of the Navier--Stokes equations, \emph{J.\ Sci.\ Comput.}\ 31 (2007) 61--73.
+[ESZ] A.\ Ern, A.\ F.\ Stephansen, P.\ Zunino, A discontinuous Galerkin method with weighted averages for advection--diffusion equations with locally small and anisotropic diffusivity, \emph{IMA J.\ Numer.\ Anal.}\ 29 (2009) 235--256.
+[B21] E.\ Bueler, Conservation laws for free-boundary fluid layers, \emph{SIAM J.\ Appl.\ Math.}\ 81 (2021) 2007--2032.
+}
+\end{document}
