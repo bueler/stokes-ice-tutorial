@@ -6,6 +6,7 @@
 #   * PinchColumnPressure is a class for Dirichlet-type conditions for
 #     trivializing the pressure in zero-height columns
 #   * PinchColumnVelocity is the same, but for velocity
+#   * PinchColumnHdiv is the same, but for H(div) velocity
 #   * set_mesh_geometry() sets the extruded mesh geometry from a
 #     surface elevation on the base mesh
 #   * extend_from_p1base() extends a scalar P1 function on the base mesh
@@ -66,6 +67,47 @@ class PinchColumnVelocity(fd.DirichletBC):
         # return vector P2 nodes in columns with height (thickness) less than htol
         ss = fd.Function(V).interpolate(fd.as_vector([ctx["sR"], ctx["sR"]]))  # also need bR if b is not zero
         return np.where(ss.dat.data_ro_with_halos < self.htol)[0]
+
+
+class PinchColumnHdiv(fd.DirichletBC):
+    """For H(div) velocity on an extruded mesh over an interval base mesh.  Compare PinchColumnVelocity.  H(div) dofs are not point values, so the criterion is applied by mesh entity:  dofs on vertical facets (normal flux of u_x) are pinned if s<htol at that base mesh vertex, and dofs interior to a column (horizontal facets and cell interiors) are pinned if s<htol at the base mesh cell midpoint."""
+
+    def __init__(self, V, g, sub_domain, htol=0.01):
+        self.htol = htol
+        # zero Function in V, so no projection (compare bcs_stokes() in solve.py)
+        super().__init__(V, fd.Function(V), None)
+
+    @cached_property
+    def nodes(self):
+        V = self.function_space()
+        ctx = get_appctx(V.mesh().coordinates.function_space().dm)
+        assert ctx is not None, f"got None for appctx from {V.mesh()} coordinates DM"
+        assert "sR" in ctx, f"key 'sR' not in context dictionary returned by DM"
+        sR = ctx["sR"]  # one value per base mesh vertex; also need bR if b is not zero
+        svert = sR.dat.data_ro_with_halos[sR.function_space().cell_node_list]
+        # local dofs of one cell, by entity: (0, *) = on vertical facets, at
+        #   base mesh vertex i;  (1, *) = interior to the column
+        edofs = V.finat_element.entity_dofs()
+        ncelllayers = V.mesh().layers - 1
+        pinned = set()
+        for c, cnodes in enumerate(V.cell_node_list):
+            for (dimh, dimv), ents in edofs.items():
+                for i, ldofs in ents.items():
+                    if len(ldofs) == 0:
+                        continue
+                    if dimh == 0:
+                        # (0,1) entities are vertical edges, numbered by base
+                        #   mesh vertex; (0,0) are cell vertices, 2 per base
+                        #   mesh vertex (none have dofs for RTCF2)
+                        ib = i if dimv == 1 else i // 2
+                        thin = svert[c, ib] < self.htol
+                    else:
+                        thin = 0.5 * (svert[c, 0] + svert[c, 1]) < self.htol
+                    if thin:
+                        for ld in ldofs:
+                            for l in range(ncelllayers):
+                                pinned.add(cnodes[ld] + l * V.offset[ld])
+        return np.array(sorted(pinned), dtype=np.int32)
 
 
 def set_mesh_geometry(mesh, s, xzorig=None):
