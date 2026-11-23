@@ -278,8 +278,12 @@ def evaluate_speed(mesh, u):
     one = Function(R).assign(1.0)
     area = assemble(dot(one, one) * dx)  # integrate 1 to get area of domain
     P1 = FunctionSpace(mesh, "CG", 1)
-    umagav = assemble(sqrt(dot(u, u)) * dx) / area
-    umag = Function(P1).interpolate(sqrt(dot(u, u)))
+    # pointwise guard: with -hdiv, the Piola map divides by det J, which is
+    #   zero in zero-height cells and at zero-thickness corners of margin cells
+    detJ = JacobianDeterminant(mesh)
+    speed = conditional(gt(abs(detJ), 0.0), sqrt(dot(u, u)), 0.0)
+    umagav = assemble(speed * dx) / area
+    umag = Function(P1).interpolate(speed)
     with umag.dat.vec_ro as vumag:
         umagmax = vumag.max()[1]
     return umagav, umagmax
