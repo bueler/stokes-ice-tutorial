@@ -7,6 +7,8 @@ parser = argparse.ArgumentParser(
     description="""stage4/  Solve the coupled free-surface (kinematical) equation and power-law Stokes momentum equations for a 2D ice sheet.  Initial dome shape is from the Halfar solution.  Uses an extruded mesh of quadrilaterals, and defaults to Q2 x DQ1 for (u,p) in the Stokes equations.  Uses first-order, mostly-explicit, adaptive time-stepping based on the Swedish stabilizations (see slides), supplemented by a CFL condition motivated by margin-advance considerations.  The free-surface update is by a variational inequality (free-boundary) method.""",
     add_help=False,
 )
+hs = "-hdiv only: minimum taper min(s)/max(s) of thick columns (default=0.3)"
+parser.add_argument("-theta", type=float, metavar="T", default=0.3, help=hs)
 hs = "-hdiv only: interior penalty constant (default=10)"
 parser.add_argument("-alpha", type=float, metavar="A", default=10.0, help=hs)
 hs = "coefficient to use in CFL scheme for time-stepping (default=0.25)"
@@ -84,6 +86,7 @@ from geometry import (
     PinchColumnVelocityHdiv,
     PinchColumnPressureHdiv,
     set_thick_columns,
+    margin_inflow,
     set_mesh_geometry,
     trace_top_to_basemesh,
     extend_from_p1base,
@@ -151,7 +154,11 @@ v, q = TestFunctions(Z)
 if args.hdiv:
     DG0base = FunctionSpace(basemesh, "DG", 0)
     chibm = Function(DG0base)  # thick-column indicator on base mesh
-    chiR = Function(FunctionSpace(mesh, "DG", 0, vfamily="R", vdegree=0))  # same
+    DG0R = FunctionSpace(mesh, "DG", 0, vfamily="R", vdegree=0)
+    chiR = Function(DG0R)  # same
+    tauR = Function(DG0R)  # column taper min(s)/avg(s), used in SIP penalty
+    SR = Function(DG0R)  # column shear factor, used in SIP penalty
+    qinflow = Function(DG0base)  # inflow into margin columns, per base area
 
 # parameters for Stokes solver
 stokespar = {
@@ -246,7 +253,12 @@ def form_hdiv_sip(u, v, nu):
     degds = 4
 
     # interior facets: SIP weak form
-    kappa = args.alpha * fa("+") / avg(vol)  # FIXME find Houston & Suli ref?
+    # geometric penalty:  the trace-inequality constant for a column cell
+    #   with taper tau = t_min/t_avg and shear factor S (layer slope times
+    #   cell width over cell height) is about (1 + S^2) |F| / (|K| tau), so
+    #   use the worse of the two neighbors
+    geo = (1.0 + SR**2) / (vol * tauR)
+    kappa = args.alpha * fa("+") * max_value(geo("+"), geo("-"))
     sip = (
         -inner(avg(2.0 * nu * D(u)), jmp(v))
         - inner(avg(2.0 * nu * D(v)), jmp(u))
@@ -259,7 +271,7 @@ def form_hdiv_sip(u, v, nu):
 
     # on ice bed: tangential no-slip by Nitsche
     #   (similar to one-sided version of SIP, but bed *facets* do not degenerate)
-    kappab = args.alpha * fa / vol
+    kappab = args.alpha * fa * geo
     sipb = (
         -inner(2.0 * nu * D(u), outer(v, nn))
         - inner(2.0 * nu * D(v), outer(u, nn))
@@ -299,8 +311,8 @@ def bcs_stokes(Z):
     if not args.walls:
         if args.hdiv:
             bcs += [
-                PinchColumnPressureHdiv(Z.sub(1), None, None),
-                PinchColumnVelocityHdiv(Z.sub(0), None, None),
+                PinchColumnPressureHdiv(Z.sub(1), None, None, theta=args.theta),
+                PinchColumnVelocityHdiv(Z.sub(0), None, None, theta=args.theta),
             ]
         else:
             bcs += [
@@ -316,10 +328,12 @@ def evaluate_speed(mesh, u):
     one = Function(R).assign(1.0)
     area = assemble(dot(one, one) * dx)  # integrate 1 to get area of domain
     P1 = FunctionSpace(mesh, "CG", 1)
-    # pointwise guard: with -hdiv, the Piola map divides by det J, which is
-    #   zero in zero-height cells and at zero-thickness corners of margin cells
+    # guard: with -hdiv, use only thick columns; in margin columns u is pinned
+    #   or meaningless, and the Piola map divides by det J, which is zero in
+    #   zero-height cells and at zero-thickness corners
     detJ = JacobianDeterminant(mesh)
-    speed = conditional(gt(abs(detJ), 0.0), sqrt(dot(u, u)), 0.0)
+    ok = And(gt(abs(detJ), 0.0), gt(chiR, 0.5)) if args.hdiv else gt(abs(detJ), 0.0)
+    speed = conditional(ok, sqrt(dot(u, u)), 0.0)
     umagav = assemble(speed * dx) / area
     umag = Function(P1).interpolate(speed)
     with umag.dat.vec_ro as vumag:
@@ -351,10 +365,10 @@ def stresses(mesh, u):
     if args.hdiv:
         # with H(div) u, evaluating at vertices of a cell with a zero-thickness
         #   corner gives NaN (Piola map divides by det J = 0); DG0 evaluates
-        #   at cell midpoints, and the pointwise guard skips zero-height cells
+        #   at cell midpoints, and the guard skips margin columns
         S = FunctionSpace(mesh, "DG", 0)
         TS = TensorFunctionSpace(mesh, "DG", 0)
-        ok = gt(abs(JacobianDeterminant(mesh)), 0.0)
+        ok = And(gt(abs(JacobianDeterminant(mesh)), 0.0), gt(chiR, 0.5))
         nu = Function(S).interpolate(conditional(ok, nuexpr, 0.0))
         tau = Function(TS).interpolate(conditional(ok, 2.0 * nu * D(u), zero((2, 2))))
     else:
@@ -434,7 +448,7 @@ for k in range(args.maxN):
     # report on current geometry
     printpar(f"t={t / secpera:.3f} a (k={k}):")
     if args.hdiv:
-        set_thick_columns(s, chibm, chiR)
+        set_thick_columns(s, chibm, chiR, tauR, SR, theta=args.theta)
     iarea = report_shape(s)
     if args.ots is not None:
         tsfile.write(f"{t / secpera:.6f} {iarea / 1.0e6:.6f}\n")
@@ -486,6 +500,13 @@ for k in range(args.maxN):
     nsR = as_vector([-sRtr.dx(0), Constant(1.0)])
     trace_top_to_basemesh(basemesh, mesh, dot(u, nsR), qsurf)
     trace_top_to_basemesh(basemesh, mesh, sqrt(dot(u, u)), speedsurf)
+    if args.hdiv:
+        # in margin columns the trace is meaningless; instead use the inflow
+        #   from thick columns, so mass leaving them is not lost
+        margin_inflow(basemesh, mesh, u, chiR, qinflow)
+        act = gt(chibm, 0.5)
+        qsurf.interpolate(conditional(act, Function(qsurf), qinflow))
+        speedsurf.interpolate(conditional(act, Function(speedsurf), 0.0))
     snew.interpolate(s)  # initial condition
     dt_ske.assign(dt)
     solverske.solve(bounds=(lb, ub))
